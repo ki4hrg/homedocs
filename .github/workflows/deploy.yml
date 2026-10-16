@@ -46,7 +46,10 @@ jobs:
 
   image:
     needs: [check, e2e]
-    runs-on: ubuntu-latest
+    # The deploy host (isaiah) is arm64. Built natively on GitHub's arm runner
+    # rather than under QEMU, which would make the Next build crawl. If the host
+    # ever moves to x86, this is the line to change.
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
@@ -75,6 +78,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           # Stamps org.opencontainers.image.revision, for checking what is running.
           labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/arm64
           build-args: |
             GIT_REVISION=${{ github.sha }}
           cache-from: type=gha
