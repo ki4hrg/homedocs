@@ -37,8 +37,7 @@ export default async function SettingsPage() {
       <Section title="Connected apps">
         <Card className="flex flex-col gap-3 p-4">
           <p className="text-sm text-ink-3">
-            Connect Claude (or another assistant) to ask homedocs questions — “what bulb does the living room light take?”.
-            In Claude, add a custom connector with this address:
+            Add this as a custom connector in Claude:
           </p>
           <code className="break-all rounded bg-sunk px-2 py-1.5 text-xs text-ink">{mcpUrl}</code>
           <CopyButton text={mcpUrl} label="Copy address" />
@@ -72,7 +71,7 @@ export default async function SettingsPage() {
       {user.role === 'admin' ? (
         <Section title="Homebox and paperless">
           <p className="mb-2 px-1 text-sm text-ink-3">
-            Connect them to search and link items and documents from any page, with thumbnails. Pasting a link works without this.
+            For searching and linking their items and documents.
           </p>
           <div className="flex flex-col gap-3">
             {(['homebox', 'paperless'] as const).map((system) => {

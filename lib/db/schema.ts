@@ -189,6 +189,12 @@ export const properties = pgTable('properties', {
    */
   homeNetworks: text('home_networks').array().notNull().default(sql`'{}'::text[]`),
   homeHostname: text('home_hostname').notNull().default(''),
+  /**
+   * The family's list of what a contact can do, grouped as the contact form
+   * shows it; null until they change it, meaning DEFAULT_TRADE_GROUPS. Labels
+   * keep their casing ("HVAC"); contact_trades stores them lower-cased.
+   */
+  tradeGroups: jsonb('trade_groups').$type<{ label: string; trades: string[] }[]>(),
   ...authored,
 })
 
@@ -575,12 +581,13 @@ export const attachments = pgTable(
     contactId: uuid('contact_id').references(() => contacts.id),
     projectId: uuid('project_id').references(() => projects.id),
     quoteId: uuid('quote_id').references(() => quotes.id),
+    systemId: uuid('system_id').references(() => systems.id),
     ...authored,
   },
   (t) => [
     check(
       'attachments_one_owner',
-      sql`num_nonnulls(${t.spaceId}, ${t.fixtureId}, ${t.supplyId}, ${t.logId}, ${t.contactId}, ${t.projectId}, ${t.quoteId}) = 1`,
+      sql`num_nonnulls(${t.spaceId}, ${t.fixtureId}, ${t.supplyId}, ${t.logId}, ${t.contactId}, ${t.projectId}, ${t.quoteId}, ${t.systemId}) = 1`,
     ),
     index('attachments_sha').on(t.sha256),
     index('attachments_space').on(t.spaceId),
@@ -590,6 +597,7 @@ export const attachments = pgTable(
     index('attachments_contact').on(t.contactId),
     index('attachments_project').on(t.projectId),
     index('attachments_quote').on(t.quoteId),
+    index('attachments_system').on(t.systemId),
   ],
 )
 
@@ -613,17 +621,22 @@ export const externalRefs = pgTable(
     contactId: uuid('contact_id').references(() => contacts.id),
     projectId: uuid('project_id').references(() => projects.id),
     quoteId: uuid('quote_id').references(() => quotes.id),
+    /** A house system (Water & plumbing) — not to be confused with `system`, the other app. */
+    systemId: uuid('system_id').references(() => systems.id),
     ...authored,
   },
   (t) => [
     check(
       'external_refs_one_owner',
-      sql`num_nonnulls(${t.spaceId}, ${t.fixtureId}, ${t.supplyId}, ${t.logId}, ${t.contactId}, ${t.projectId}, ${t.quoteId}) = 1`,
+      sql`num_nonnulls(${t.spaceId}, ${t.fixtureId}, ${t.supplyId}, ${t.logId}, ${t.contactId}, ${t.projectId}, ${t.quoteId}, ${t.systemId}) = 1`,
     ),
     index('external_refs_lookup').on(t.system, t.externalId),
     index('external_refs_fixture').on(t.fixtureId),
     index('external_refs_supply').on(t.supplyId),
     index('external_refs_space').on(t.spaceId),
+    index('external_refs_owner_project').on(t.projectId),
+    index('external_refs_owner_contact').on(t.contactId),
+    index('external_refs_owner_system').on(t.systemId),
   ],
 )
 

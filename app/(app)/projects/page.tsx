@@ -17,12 +17,11 @@ export default async function ProjectsPage() {
     <>
       <PageHeader
         title="Projects"
-        subtitle="Jobs around the house, from idea to done"
         actions={canEdit ? <LinkButton href="/projects/new" variant="primary">Add</LinkButton> : null}
       />
       {projects.length === 0 ? (
         <EmptyState action={canEdit ? <LinkButton href="/projects/new" variant="primary">Add a project</LinkButton> : null}>
-          Replace the electrical panel, regrade the yard, paint the hall — anything you’ll want to track to done.
+          No projects yet.
         </EmptyState>
       ) : (
         STATUSES.filter((s) => projects.some((p) => p.status === s)).map((s) => (

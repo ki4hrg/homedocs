@@ -21,11 +21,14 @@ import {
   linkedThumb,
   linkPicked,
   listIntegrations,
-  paperlessDocsHere,
+  paperlessDocsFor,
   refreshStale,
   saveIntegration,
   searchSystem,
 } from '../lib/integrations/integrations'
+import { createContact } from '../lib/contacts/contacts'
+import { createProject } from '../lib/projects/projects'
+import { listSystems } from '../lib/systems/systems'
 import { createSpace } from '../lib/places/places'
 import { listFixtures } from '../lib/fixtures/fixtures'
 import { parseExternalUrl } from '../lib/links/links'
@@ -92,11 +95,21 @@ beforeAll(async () => {
     if (url.pathname.startsWith('/pl/api')) {
       if (!plAuth) return send(401, { detail: 'Invalid token.' })
       const p = url.pathname.slice('/pl/api'.length)
-      if (p === '/tags/') {
-        const q = url.searchParams.get('name__icontains') ?? ''
-        return send(200, { count: 1, results: 'garage'.includes(q.toLowerCase()) ? [{ id: 7, name: 'Garage', document_count: 2 }] : [] })
+      if (p === '/tags/' || p === '/correspondents/') {
+        const all = p === '/tags/' ? [{ id: 7, name: 'Garage', document_count: 2 }, { id: 8, name: 'Panel upgrade', document_count: 0 }] : [{ id: 3, name: 'Ace Plumbing', document_count: 1 }]
+        const q = (url.searchParams.get('name__icontains') ?? '').toLowerCase()
+        const results = all.filter((t) => t.name.toLowerCase().includes(q))
+        return send(200, { count: results.length, results })
       }
       if (p === '/tags/7/') return send(200, { id: 7, name: 'Garage', document_count: 2 })
+      if (p === '/tags/8/') return send(200, { id: 8, name: 'Panel upgrade', document_count: 0 })
+      if (p === '/correspondents/3/') return send(200, { id: 3, name: 'Ace Plumbing', document_count: 1 })
+      if (p === '/documents/' && url.searchParams.get('correspondent__id') === '3') {
+        return send(200, { count: 1, results: [{ id: 45, title: 'Ace invoice', created_date: '2025-06-01' }] })
+      }
+      if (p === '/documents/' && url.searchParams.get('tags__id__all') === '8') return send(200, { count: 0, results: [] })
+      if (p === '/documents/45/') return send(200, { id: 45, title: 'Ace invoice', tags: [], correspondent: 3 })
+      if (p === '/documents/45/thumb/') return send(200, png, 'image/png')
       if (p === '/documents/' && url.searchParams.get('tags__id__all') === '7') {
         return send(200, { count: 2, results: [{ id: 43, title: 'Garage door opener manual', created_date: '2025-03-02' }, { id: 42, title: 'Water heater manual', created_date: '2024-05-01' }] })
       }
@@ -191,14 +204,17 @@ describe('linking and thumbnails', () => {
     const { scope, admin, member } = await household()
     await saveIntegration(db, scope, admin, 'paperless', { baseUrl: `${base}/pl`, token: 'pl_good' })
     const garage = await createSpace(db, scope, member, { name: 'Garage' })
-    expect(await paperlessDocsHere(db, scope, garage.id)).toEqual({ state: 'none' })
+    const owner = { kind: 'space' as const, id: garage.id }
+    expect(await paperlessDocsFor(db, scope, owner, 'tag')).toEqual({ state: 'none' })
 
-    const [tag] = await searchSystem(db, scope, 'paperless', 'gar', { tags: true })
+    // An empty search lists every tag to browse; typing narrows it.
+    expect((await searchSystem(db, scope, 'paperless', '', 'tag')).map((t) => t.title)).toEqual(['Garage', 'Panel upgrade'])
+    const [tag] = await searchSystem(db, scope, 'paperless', 'gar', 'tag')
     expect(tag).toMatchObject({ externalId: 'tag:7', title: 'Garage', subtitle: 'Tag · 2 documents', url: `${base}/pl/documents?tags__id__all=7` })
     await linkPicked(db, scope, member, { kind: 'space', id: garage.id }, 'paperless', tag!.externalId)
 
-    const here = await paperlessDocsHere(db, scope, garage.id)
-    expect(here).toMatchObject({ state: 'ok', total: 2, tag: { title: 'Garage' } })
+    const here = await paperlessDocsFor(db, scope, owner, 'tag')
+    expect(here).toMatchObject({ state: 'ok', total: 2, filter: { title: 'Garage' } })
     if (here.state !== 'ok') throw new Error('unreachable')
     expect(here.documents.map((d) => d.title)).toEqual(['Garage door opener manual', 'Water heater manual'])
 
@@ -206,6 +222,36 @@ describe('linking and thumbnails', () => {
     expect(await linkedThumb(db, scope, 'paperless', '43')).not.toBeNull()
     expect(await linkedThumb(db, scope, 'paperless', '44')).toBeNull()
     expect(await linkedThumb(db, scope, 'paperless', 'tag:7')).toBeNull()
+
+    // Picking another tag replaces the first.
+    await linkPicked(db, scope, member, owner, 'paperless', 'tag:8')
+    expect(await paperlessDocsFor(db, scope, owner, 'tag')).toMatchObject({ state: 'ok', total: 0, filter: { title: 'Panel upgrade' } })
+    const live = await db.select().from(externalRefs).where(eq(externalRefs.spaceId, garage.id))
+    expect(live.filter((r) => !r.deletedAt).map((r) => r.externalId)).toEqual(['tag:8'])
+  })
+
+  it('lists a contact’s documents by paperless correspondent, and a system’s or project’s by tag', async () => {
+    const { scope, admin, member } = await household()
+    await saveIntegration(db, scope, admin, 'paperless', { baseUrl: `${base}/pl`, token: 'pl_good' })
+    const ace = await createContact(db, scope, member, { name: 'Ace Plumbing' })
+    const [corr] = await searchSystem(db, scope, 'paperless', '', 'correspondent')
+    expect(corr).toMatchObject({
+      externalId: 'correspondent:3',
+      subtitle: 'Correspondent · 1 document',
+      url: `${base}/pl/documents?correspondent__id__in=3`,
+    })
+    await linkPicked(db, scope, member, { kind: 'contact', id: ace.id }, 'paperless', corr!.externalId)
+    const docs = await paperlessDocsFor(db, scope, { kind: 'contact', id: ace.id }, 'correspondent')
+    expect(docs.state === 'ok' && docs.documents.map((d) => d.title)).toEqual(['Ace invoice'])
+    // Filed under a linked correspondent: its thumbnail is reachable.
+    expect(await linkedThumb(db, scope, 'paperless', '45')).not.toBeNull()
+
+    const water = (await listSystems(db, scope)).find((s) => s.name === 'Water & plumbing')!
+    await linkPicked(db, scope, member, { kind: 'system', id: water.id }, 'paperless', 'tag:7')
+    expect(await paperlessDocsFor(db, scope, { kind: 'system', id: water.id }, 'tag')).toMatchObject({ state: 'ok', total: 2 })
+    const panel = await createProject(db, scope, member, { title: 'Panel upgrade' })
+    await linkPicked(db, scope, member, { kind: 'project', id: panel.id }, 'paperless', 'tag:8')
+    expect(await paperlessDocsFor(db, scope, { kind: 'project', id: panel.id }, 'tag')).toMatchObject({ state: 'ok', filter: { title: 'Panel upgrade' } })
   })
 
   it('marks a deleted item as missing, keeping its title', async () => {
@@ -232,7 +278,7 @@ describe('a place linked to a Homebox location', () => {
     const basement = await createSpace(db, scope, member, { name: 'Basement' })
     expect(await homeboxItemsHere(db, scope, basement.id)).toEqual({ state: 'none' })
 
-    const [loc] = await searchSystem(db, scope, 'homebox', 'basement', { locations: true })
+    const [loc] = await searchSystem(db, scope, 'homebox', 'basement', 'location')
     expect(seen.at(-1)!.url).toContain('isLocation=true')
     expect(loc).toMatchObject({ externalId: BASEMENT, url: `${base}/hb/location/${BASEMENT}`, subtitle: '2 items' })
     await linkPicked(db, scope, member, { kind: 'space', id: basement.id }, 'homebox', BASEMENT)

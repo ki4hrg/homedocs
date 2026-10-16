@@ -37,10 +37,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       <h1 className="sr-only">Search</h1>
       <SearchBox defaultValue={q} autoFocus={!q} />
       <div className="mt-4">
-        {q.trim() === '' ? (
-          <p className="px-1 text-[15px] text-ink-3">Search by room, fixture, part, colour, contact or trade.</p>
-        ) : hits.length === 0 ? (
-          <EmptyState>Nothing matches “{q}”. Try fewer words, or a room name.</EmptyState>
+        {q.trim() === '' ? null : hits.length === 0 ? (
+          <EmptyState>Nothing matches “{q}”.</EmptyState>
         ) : (
           <List>
             {hits.map((hit) => (

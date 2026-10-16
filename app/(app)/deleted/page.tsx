@@ -17,7 +17,7 @@ export default async function DeletedPage() {
   const canEdit = roleAtLeast(user.role, 'member')
   return (
     <>
-      <PageHeader title="Recently deleted" subtitle="The last 90 days. Bring anything back." back={{ href: '/more', label: 'More' }} />
+      <PageHeader title="Recently deleted" subtitle="Last 90 days" back={{ href: '/more', label: 'More' }} />
       {rows.length ? (
         <List>
           {rows.map((r) => (

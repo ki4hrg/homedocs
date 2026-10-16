@@ -32,7 +32,7 @@ export function ShareForm({ action, places }: { action: FormAction; places: { id
       </Field>
       <Field
         label="PIN (optional)"
-        hint="Opens the codes and address when they’re away from the house. Send it separately — by text, not with the link."
+        hint="Shows codes and the address away from the house. Send it separately from the link."
       >
         <div className="flex gap-2">
           <TextInput name="pin" inputMode="numeric" pattern="[0-9]{4,8}" maxLength={8} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} />
@@ -42,7 +42,7 @@ export function ShareForm({ action, places }: { action: FormAction; places: { id
         </div>
       </Field>
       {places.length ? (
-        <Field label="Only part of the property?" hint="Optional. Fixtures with no place (like the main shutoff) always show.">
+        <Field label="Limit to a place" hint="Fixtures with no place always show.">
           <PlaceSelect name="rootSpaceId" options={places} emptyLabel="The whole property" />
         </Field>
       ) : null}

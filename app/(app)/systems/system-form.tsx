@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { ActionForm, type FormAction } from '@/components/ActionForm'
+import { TradeChips } from '@/components/TradeChips'
 import { Icon } from '@/components/ui/icons'
+import type { TradeGroup } from '@/lib/contacts/trade-labels'
 import { Field, SubmitButton, TextArea, TextInput } from '@/components/ui/Field'
 import { SYSTEM_ICONS, type SystemIcon } from '@/lib/systems/seeds'
 
@@ -20,19 +22,18 @@ const ICON_LABEL: Record<SystemIcon, string> = {
 
 export function SystemForm({
   action,
-  trades,
+  groups,
   initial,
   submit,
 }: {
   action: FormAction
-  /** Every trade a contact can have, so "who to call" can be ticked rather than typed. */
-  trades: string[]
+  /** The family's list of what contacts do, so "who to call" can be ticked rather than typed. */
+  groups: TradeGroup[]
   initial?: { name?: string; icon?: string; trades?: string[]; notes?: string; updatedAt?: string }
   submit: string
 }) {
   const [icon, setIcon] = useState(initial?.icon ?? 'system')
   const [chosen, setChosen] = useState<string[]>(initial?.trades ?? [])
-  const shown = [...new Set([...trades, ...chosen])]
   return (
     <ActionForm action={action}>
       {initial?.updatedAt ? <input type="hidden" name="updatedAt" value={initial.updatedAt} /> : null}
@@ -57,36 +58,9 @@ export function SystemForm({
         </div>
       </fieldset>
 
-      <fieldset>
-        <legend className="mb-1.5 text-sm font-medium text-ink-2">Who to call for it</legend>
-        <p className="mb-2 text-xs text-ink-3">The system page shows your preferred contact for each one you tick.</p>
-        <div className="flex flex-wrap gap-2">
-          {shown.map((t) => {
-            const on = chosen.includes(t)
-            return (
-              <label
-                key={t}
-                className={`inline-flex min-h-11 cursor-pointer items-center rounded-full border px-3 text-sm capitalize ${
-                  on ? 'border-accent bg-accent-soft text-accent' : 'border-line bg-card text-ink-2'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  name="trades"
-                  value={t}
-                  checked={on}
-                  onChange={(e) => setChosen((c) => (e.target.checked ? [...c, t] : c.filter((x) => x !== t)))}
-                  className="sr-only"
-                />
-                {t}
-              </label>
-            )
-          })}
-        </div>
-        <TextInput name="customTrades" className="mt-2" placeholder="Something else? e.g. pool service, solar" aria-label="Other trades" />
-      </fieldset>
+      <TradeChips legend="Who to call" groups={groups} chosen={chosen} onChange={setChosen} />
 
-      <Field label="Notes" hint="How it works, its quirks, what to check first.">
+      <Field label="Notes">
         <TextArea name="notes" defaultValue={initial?.notes} />
       </Field>
       <SubmitButton>{submit}</SubmitButton>

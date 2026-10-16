@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { createContact, deleteContact, updateContact } from '@/lib/contacts/contacts'
+import { saveTradeGroups } from '@/lib/contacts/trades'
 import { act, checkbox, field, readUpdatedAt, type ActionResult } from '@/lib/web/action'
 
 function methods(fd: FormData, prefix: string) {
@@ -26,8 +27,10 @@ function input(fd: FormData) {
     notes: field(fd, 'notes'),
     accountNumber: field(fd, 'accountNumber'),
     inGuide: checkbox(fd, 'inGuide'),
-    trades: [...fd.getAll('trades').map(String), ...custom],
-    preferred: fd.getAll('preferred').map(String).concat(checkbox(fd, 'preferCustom') ? custom : []),
+    trades: fd.getAll('trades').map(String),
+    preferred: fd.getAll('preferred').map(String),
+    newTrades: custom,
+    preferNew: checkbox(fd, 'preferCustom'),
   }
 }
 
@@ -51,4 +54,16 @@ export async function deleteContactAction(id: string): Promise<ActionResult> {
   })
   if (r.error) return r
   redirect('/contacts')
+}
+
+export async function saveTradesAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  return act(async ({ scope, actor }) => {
+    let groups: unknown
+    try {
+      groups = JSON.parse(field(fd, 'groups'))
+    } catch {
+      groups = null
+    }
+    await saveTradeGroups(db, scope, actor, groups)
+  })
 }

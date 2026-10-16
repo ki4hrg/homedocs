@@ -18,7 +18,6 @@ export default async function SystemsPage() {
     <>
       <PageHeader
         title="Systems"
-        subtitle="How the house works: shutoffs, what each part takes, and who to call"
         back={{ href: '/more', label: 'More' }}
         actions={canEdit ? <LinkButton href="/systems/new">Add</LinkButton> : null}
       />

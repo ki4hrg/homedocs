@@ -59,7 +59,7 @@ test('link a place to its Homebox location and add what is kept there', async ({
   await expect(page.getByRole('heading', { name: 'Garage' })).toBeVisible()
 
   // The search starts from the place's own name.
-  await page.getByRole('button', { name: 'Pick the Homebox location' }).click()
+  await page.getByRole('button', { name: 'Link a Homebox location' }).click()
   await expect(page.getByRole('textbox', { name: 'Search' })).toHaveValue('Garage')
   await expect(page.getByRole('button', { name: /Garage.*1 item/ })).not.toContainText('global.')
   await page.getByRole('button', { name: /Garage.*1 item/ }).click()

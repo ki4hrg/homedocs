@@ -45,13 +45,13 @@ export function HomeForm({
       <Field label="Name">
         <TextInput name="name" defaultValue={initial.name} required />
       </Field>
-      <Field label="Address" hint="Shown on the house guide, for a housesitter giving directions or calling 911.">
+      <Field label="Address" hint="Shown on the house guide.">
         <TextArea name="address" rows={2} defaultValue={initial.address} />
       </Field>
       <fieldset className="flex flex-col gap-3 rounded-card border border-line p-4">
         <legend className="px-1 text-sm font-semibold text-ink-2">Home network</legend>
         <p className="text-sm text-ink-3">
-          On the house guide, codes (alarm, lockbox) show without a PIN when the phone is on the home network.
+          On the home network, the house guide shows codes without a PIN.
           {seenAs ? (
             <>
               {' '}
@@ -59,10 +59,10 @@ export function HomeForm({
             </>
           ) : null}
         </p>
-        <Field label="Home network ranges" hint="e.g. 192.168.1.0/24 — one per line or comma-separated.">
+        <Field label="Home network ranges" hint="E.g. 192.168.1.0/24, one per line.">
           <TextArea name="homeNetworks" rows={2} defaultValue={initial.homeNetworks.join('\n')} />
         </Field>
-        <Field label="Home internet address name" hint="Your dynamic-DNS name (home.example.com). Its address counts as home too.">
+        <Field label="Home internet address name" hint="A dynamic-DNS name for the home’s internet address.">
           <TextInput name="homeHostname" defaultValue={initial.homeHostname} />
         </Field>
       </fieldset>

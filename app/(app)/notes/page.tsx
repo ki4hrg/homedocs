@@ -20,7 +20,6 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
     <>
       <PageHeader
         title={place ? `Notes: ${place.name}` : 'Notes'}
-        subtitle="What happened, newest first"
         back={place ? { href: `/places/${place.id}`, label: place.name } : { href: '/more', label: 'More' }}
         actions={canEdit ? <LinkButton href={place ? `/notes/new?space=${place.id}` : '/notes/new'} variant="primary">Add</LinkButton> : null}
       />

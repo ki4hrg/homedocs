@@ -1,6 +1,6 @@
 /*
  * Contacts: the companies and people the house relies on — the plumber, the
- * electric company, the HOA, the neighbor with a key.
+ * electric company, the neighbor with a key.
  *
  * Trades are rows, not a column, so one contact can be "plumber" and "gas" and a
  * trade can have one *preferred* contact — which is what "who's our plumber?"
@@ -14,40 +14,9 @@ import { cleanText, cleanUrl, requireText, softDelete } from '../core/records'
 import { assertCanEdit, NotFoundError, type ActorContext, type Executor, type PropertyScope } from '../core/types'
 import { contacts, contactTrades, type ContactMethod } from '../db/schema'
 import { cascadeContact, rebuildContact } from '../search/rebuild'
+import { addToTradeList } from './trades'
 
 export type Contact = typeof contacts.$inferSelect
-
-/*
- * What a contact does, grouped the way the form shows it. A utility is a
- * company as often as not — "Our electric" is Duke Energy, with an account
- * number — so utilities get their own group rather than one "utility" chip.
- */
-export const TRADE_GROUPS: { label: string; trades: string[] }[] = [
-  {
-    label: 'Repairs and services',
-    trades: [
-      'plumber',
-      'electrician',
-      'hvac',
-      'handyman',
-      'roofer',
-      'landscaper',
-      'pest control',
-      'appliance repair',
-      'locksmith',
-      'painter',
-      'pool',
-      'cleaning',
-    ],
-  },
-  {
-    label: 'Utilities',
-    trades: ['electric', 'gas', 'water & sewer', 'trash & recycling', 'internet', 'phone & tv', 'propane', 'septic'],
-  },
-  { label: 'Other', trades: ['hoa', 'insurance', 'neighbor', 'vet'] },
-]
-
-export const COMMON_TRADES = TRADE_GROUPS.flatMap((g) => g.trades)
 
 export type ContactInput = {
   name: string
@@ -61,6 +30,10 @@ export type ContactInput = {
   /** Lower-cased trade names; `preferred` is the subset this contact is "our" one for. */
   trades?: string[]
   preferred?: string[]
+  /** Trades typed in rather than ticked: added to the family's list, and to this contact. */
+  newTrades?: string[]
+  /** Make this contact "ours" for the typed trades too. */
+  preferNew?: boolean
 }
 
 function cleanMethods(list: ContactMethod[] | undefined): ContactMethod[] {
@@ -72,6 +45,15 @@ function cleanMethods(list: ContactMethod[] | undefined): ContactMethod[] {
 
 export function normalizeTrades(raw: string[] | undefined): string[] {
   return [...new Set((raw ?? []).map((t) => t.trim().toLowerCase()).filter(Boolean))].slice(0, 12)
+}
+
+/** The ticked and typed trades, with typed ones added to the family's list. */
+async function resolveTrades(tx: Executor, scope: PropertyScope, input: Partial<ContactInput>) {
+  const typed = await addToTradeList(tx, scope, input.newTrades ?? [])
+  return {
+    trades: normalizeTrades([...(input.trades ?? []), ...typed]),
+    preferred: normalizeTrades([...(input.preferred ?? []), ...(input.preferNew ? typed : [])]),
+  }
 }
 
 async function writeTrades(tx: Executor, scope: PropertyScope, contactId: string, trades: string[], preferred: string[]) {
@@ -145,7 +127,8 @@ export async function createContact(exec: Executor, scope: PropertyScope, actor:
         updatedBy: actor.userId,
       })
       .returning()
-    await writeTrades(tx, scope, row!.id, normalizeTrades(input.trades), normalizeTrades(input.preferred))
+    const t = await resolveTrades(tx, scope, input)
+    await writeTrades(tx, scope, row!.id, t.trades, t.preferred)
     await rebuildContact(tx, row!.id)
     await recordAudit(tx, actor, { action: 'create', entityType: 'contact', entityId: row!.id, after: { name: row!.name } })
     return row!
@@ -174,9 +157,10 @@ export async function updateContact(
     if (input.accountNumber !== undefined) patch.accountNumber = cleanText(input.accountNumber, 100)
     if (input.inGuide !== undefined) patch.inGuide = input.inGuide
     const changes = diff(current!, patch)
-    if (input.trades !== undefined) {
-      await writeTrades(tx, scope, id, normalizeTrades(input.trades), normalizeTrades(input.preferred))
-      changes.after.trades = normalizeTrades(input.trades)
+    if (input.trades !== undefined || input.newTrades?.length) {
+      const t = await resolveTrades(tx, scope, input)
+      await writeTrades(tx, scope, id, t.trades, t.preferred)
+      changes.after.trades = t.trades
     }
     if (Object.keys(changes.after).length === 0) return current!
     const [row] = await tx

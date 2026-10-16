@@ -61,7 +61,7 @@ export function NoteForm({
   return (
     <ActionForm action={action}>
       {initial?.updatedAt ? <input type="hidden" name="updatedAt" value={initial.updatedAt} /> : null}
-      <Field label="What happened?">
+      <Field label="Title">
         <TextInput name="title" defaultValue={v('title')} placeholder="Put down mulch, Replaced furnace filter" required autoFocus={!initial?.title} />
       </Field>
       <Field label="When">
@@ -80,10 +80,10 @@ export function NoteForm({
           <TextInput name="unit" defaultValue={v('unit')} placeholder="bags" />
         </Field>
       </div>
-      <Field label="Next time…" hint="The lesson for future you: “needed 3 more bags”, “buy the 4-pack”.">
+      <Field label="Next time" hint="E.g. “needed 3 more bags”.">
         <TextArea name="nextTime" rows={2} defaultValue={v('nextTime')} />
       </Field>
-      <Field label="Remind me around" hint="Optional. It shows on Home a few weeks either side of this date.">
+      <Field label="Remind around" hint="Shows on Home near this date.">
         <TextInput name="remindAfter" type="date" defaultValue={v('remindAfter')} />
       </Field>
       {more ? (

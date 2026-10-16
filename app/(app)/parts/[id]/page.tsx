@@ -74,7 +74,7 @@ export default async function PartPage({ params }: { params: Promise<{ id: strin
             ))}
           </List>
         ) : (
-          <p className="px-1 text-sm text-ink-3">Not linked to anything yet.</p>
+          <p className="px-1 text-sm text-ink-3">Not used anywhere yet.</p>
         )}
       </Section>
 
@@ -90,13 +90,13 @@ export default async function PartPage({ params }: { params: Promise<{ id: strin
         title="History"
         action={canEdit ? <Link href={`/notes/new?part=${id}`} className="text-sm text-accent">Add note</Link> : null}
       >
-        {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">No purchases or changes logged.</p>}
+        {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">None yet.</p>}
       </Section>
 
       <Section title="Photos">
         <div className="flex flex-col gap-3">
           <Photos items={photos} remove={canEdit ? removeAttachmentAction : undefined} />
-          {canEdit ? <PhotoUpload owner={`supply:${id}`} label={part.category === 'paint' ? 'Add photo of the can label' : 'Add photo'} /> : null}
+          {canEdit ? <PhotoUpload owner={`supply:${id}`} label={part.category === 'paint' ? 'Add photo of the label' : 'Add photo'} /> : null}
         </div>
       </Section>
 

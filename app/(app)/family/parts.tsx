@@ -28,7 +28,7 @@ export function InviteForm({ action }: { action: FormAction }) {
   const [state, formAction] = useActionState<ActionResult, FormData>(action, {})
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <Field label="Who is it for?" hint="Just so you can tell links apart.">
+      <Field label="Who is it for?">
         <TextInput name="label" placeholder="Mom" />
       </Field>
       <Field label="What can they do?">
@@ -68,9 +68,8 @@ export function AddMemberForm({
         label="Email address"
         hint={
           sso
-            ? `The address they use with ${sso}. Their first ${sso} sign-in finds this account.` +
-              (needsVerifiedEmail ? ` ${sso} has to show the address as verified.` : '')
-            : 'What they type to sign in.'
+            ? `The one they use with ${sso}.` + (needsVerifiedEmail ? ` ${sso} must show it as verified.` : '')
+            : undefined
         }
       >
         <TextInput name="email" type="email" inputMode="email" required />
@@ -89,8 +88,8 @@ export function AddMemberForm({
           label={sso ? 'Password (optional)' : 'Password'}
           hint={
             sso
-              ? `Leave it blank if they will use ${sso}.`
-              : 'Or leave it blank, and make them a password link once they are added.'
+              ? `Blank if they use ${sso}.`
+              : 'Or leave blank and send a password link.'
           }
         >
           <TextInput name="password" type="password" minLength={8} />

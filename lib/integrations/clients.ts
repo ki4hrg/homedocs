@@ -35,17 +35,25 @@ export type Hit = { externalId: string; title: string; subtitle: string; url: st
 const TIMEOUT_MS = 8_000
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-/* A paperless document is its number; a paperless tag is stored as "tag:<number>", so the two never collide. */
+/*
+ * A paperless document is its number. A paperless *filter* — a tag, or a
+ * correspondent — is stored as "tag:<number>" or "correspondent:<number>", so
+ * it never collides with a document: linking one means "everything filed
+ * under it".
+ */
 const PL_DOC = /^\d{1,12}$/
-const PL_TAG = /^tag:(\d{1,12})$/
+const PL_FILTER = /^(tag|correspondent):(\d{1,12})$/
+
+export type PaperlessFilterKind = 'tag' | 'correspondent'
 
 export function validExternalId(system: System, id: string): boolean {
-  return system === 'homebox' ? UUID.test(id) : PL_DOC.test(id) || PL_TAG.test(id)
+  return system === 'homebox' ? UUID.test(id) : PL_DOC.test(id) || PL_FILTER.test(id)
 }
 
-/** A stored paperless link is a tag (everything filed under it) rather than one document. */
-export function isPaperlessTag(externalId: string): boolean {
-  return PL_TAG.test(externalId)
+/** What a stored paperless link filters on, or null when it is one document. */
+export function paperlessFilter(externalId: string): { kind: PaperlessFilterKind; id: number } | null {
+  const m = PL_FILTER.exec(externalId)
+  return m ? { kind: m[1] as PaperlessFilterKind, id: Number(m[2]) } : null
 }
 
 function base(conn: Connection): string {
@@ -128,16 +136,22 @@ function hbHit(conn: Connection, e: HbEntity): Hit {
 
 type PlDoc = { id: number; title?: string; created?: string; created_date?: string; original_file_name?: string }
 
-type PlTag = { id: number; name?: string; document_count?: number }
+type PlNamed = { id: number; name?: string; document_count?: number }
 
-function plTagHit(conn: Connection, t: PlTag): Hit {
+const FILTER = {
+  // API path, the documents filter for the API, and the one paperless's own document list reads.
+  tag: { path: '/api/tags/', api: 'tags__id__all', ui: 'tags__id__all', word: 'Tag' },
+  correspondent: { path: '/api/correspondents/', api: 'correspondent__id', ui: 'correspondent__id__in', word: 'Correspondent' },
+} as const
+
+function plFilterHit(conn: Connection, kind: PaperlessFilterKind, t: PlNamed): Hit {
   const n = typeof t.document_count === 'number' ? `${t.document_count} document${t.document_count === 1 ? '' : 's'}` : ''
+  const f = FILTER[kind]
   return {
-    externalId: `tag:${t.id}`,
-    title: t.name || `Tag #${t.id}`,
-    subtitle: ['Tag', n].filter(Boolean).join(' · '),
-    // paperless's document list, filtered to the tag.
-    url: `${base(conn)}/documents?tags__id__all=${t.id}`,
+    externalId: `${kind}:${t.id}`,
+    title: t.name || `${f.word} #${t.id}`,
+    subtitle: [f.word, n].filter(Boolean).join(' · '),
+    url: `${base(conn)}/documents?${f.ui}=${t.id}`,
     hasThumb: false,
   }
 }
@@ -185,40 +199,46 @@ export function isHomeboxLocation(url: string): boolean {
   return /\/location\/[0-9a-f-]{36}$/i.test(url)
 }
 
-/** Search items, or with `locations`, Homebox's locations (rooms, shelves, bins); paperless documents, or with `tags`, its tags. */
-export async function searchRemote(
-  conn: Connection,
-  query: string,
-  opts: { locations?: boolean; tags?: boolean } = {},
-): Promise<Hit[]> {
+export type SearchKind = 'location' | PaperlessFilterKind
+
+/**
+ * Search Homebox items, or its locations (rooms, shelves, bins); paperless
+ * documents, or its tags or correspondents. Tags and correspondents are a short
+ * list, so an empty query lists them all to browse.
+ */
+export async function searchRemote(conn: Connection, query: string, kind?: SearchKind): Promise<Hit[]> {
   const q = encodeURIComponent(query.trim().slice(0, 100))
   if (conn.system === 'homebox') {
-    const kind = opts.locations ? '&isLocation=true' : ''
-    const page = await json<{ items?: HbEntity[] }>(conn, `/api/v1/entities?q=${q}${kind}&pageSize=20&orderBy=name`)
+    const narrow = kind === 'location' ? '&isLocation=true' : ''
+    const page = await json<{ items?: HbEntity[] }>(conn, `/api/v1/entities?q=${q}${narrow}&pageSize=20&orderBy=name`)
     return (page.items ?? []).filter((e) => UUID.test(e.id)).map((e) => hbHit(conn, e))
   }
-  if (opts.tags) {
-    const tags = await json<{ results?: PlTag[] }>(conn, `/api/tags/?name__icontains=${q}&page_size=20&ordering=name`)
-    return (tags.results ?? []).filter((t) => Number.isInteger(t.id)).map((t) => plTagHit(conn, t))
+  if (kind === 'tag' || kind === 'correspondent') {
+    const named = q ? `name__icontains=${q}&` : ''
+    const page = await json<{ results?: PlNamed[] }>(conn, `${FILTER[kind].path}?${named}page_size=100&ordering=name`)
+    return (page.results ?? []).filter((t) => Number.isInteger(t.id)).map((t) => plFilterHit(conn, kind, t))
   }
   const page = await json<{ results?: PlDoc[] }>(conn, `/api/documents/?query=${q}&page_size=20`)
   return (page.results ?? []).filter((d) => Number.isInteger(d.id)).map((d) => plHit(conn, d))
 }
 
-/** A paperless document's tag ids. */
-export async function documentTags(conn: Connection, docId: string): Promise<number[]> {
+/** What a paperless document is filed under: its tag ids and its correspondent. */
+export async function documentFiling(conn: Connection, docId: string): Promise<{ tags: number[]; correspondent: number | null }> {
   if (conn.system !== 'paperless' || !PL_DOC.test(docId)) throw new IntegrationError('Not found.', 'missing')
-  const doc = await json<{ tags?: number[] }>(conn, `/api/documents/${docId}/`)
-  return (doc.tags ?? []).filter((t) => Number.isInteger(t))
+  const doc = await json<{ tags?: number[]; correspondent?: number | null }>(conn, `/api/documents/${docId}/`)
+  return {
+    tags: (doc.tags ?? []).filter((t) => Number.isInteger(t)),
+    correspondent: Number.isInteger(doc.correspondent) ? (doc.correspondent as number) : null,
+  }
 }
 
-/** The documents filed under a paperless tag, newest first. Capped like itemsInLocation. */
-export async function documentsTagged(conn: Connection, tagRef: string, limit = 50): Promise<{ hits: Hit[]; total: number }> {
-  const tag = PL_TAG.exec(tagRef)
-  if (conn.system !== 'paperless' || !tag) throw new IntegrationError('Not found.', 'missing')
+/** The documents filed under a paperless tag or correspondent, newest first. Capped like itemsInLocation. */
+export async function documentsFiled(conn: Connection, filterRef: string, limit = 50): Promise<{ hits: Hit[]; total: number }> {
+  const f = paperlessFilter(filterRef)
+  if (conn.system !== 'paperless' || !f) throw new IntegrationError('Not found.', 'missing')
   const page = await json<{ results?: PlDoc[]; count?: number }>(
     conn,
-    `/api/documents/?tags__id__all=${tag[1]}&page_size=${limit}&ordering=-created`,
+    `/api/documents/?${FILTER[f.kind].api}=${f.id}&page_size=${limit}&ordering=-created`,
   )
   const hits = (page.results ?? []).filter((d) => Number.isInteger(d.id)).map((d) => plHit(conn, d))
   return { hits, total: typeof page.count === 'number' ? page.count : hits.length }
@@ -242,8 +262,8 @@ export async function itemsInLocation(conn: Connection, locationId: string, limi
 export async function fetchRemote(conn: Connection, externalId: string): Promise<Hit> {
   if (!validExternalId(conn.system, externalId)) throw new IntegrationError('Not found.', 'missing')
   if (conn.system === 'homebox') return hbHit(conn, await json<HbEntity>(conn, `/api/v1/entities/${externalId}`))
-  const tag = PL_TAG.exec(externalId)
-  if (tag) return plTagHit(conn, await json<PlTag>(conn, `/api/tags/${tag[1]}/`))
+  const f = paperlessFilter(externalId)
+  if (f) return plFilterHit(conn, f.kind, await json<PlNamed>(conn, `${FILTER[f.kind].path}${f.id}/`))
   return plHit(conn, await json<PlDoc>(conn, `/api/documents/${externalId}/`))
 }
 
@@ -264,7 +284,7 @@ export async function fetchThumb(conn: Connection, externalId: string): Promise<
     }
     return null
   }
-  if (!PL_DOC.test(externalId)) return null // a tag has no picture
+  if (!PL_DOC.test(externalId)) return null // a tag or correspondent has no picture
   const res = await request(conn, `/api/documents/${externalId}/thumb/`, 'image/*')
   return Buffer.from(await res.arrayBuffer())
 }

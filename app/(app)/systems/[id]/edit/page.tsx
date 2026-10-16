@@ -1,7 +1,7 @@
 import { DeleteButton } from '@/components/DeleteButton'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { requireRole } from '@/lib/auth/guards'
-import { COMMON_TRADES } from '@/lib/contacts/contacts'
+import { getTradeGroups } from '@/lib/contacts/trades'
 import { db } from '@/lib/db'
 import { getSystem } from '@/lib/systems/systems'
 import { viewer } from '@/lib/web/context'
@@ -20,7 +20,7 @@ export default async function EditSystemPage({ params }: { params: Promise<{ id:
       <PageHeader title={`Edit ${system.name}`} back={{ href: `/systems/${id}`, label: system.name }} />
       <SystemForm
         action={updateSystemAction.bind(null, id)}
-        trades={COMMON_TRADES}
+        groups={await getTradeGroups(db, scope)}
         initial={{ ...system, updatedAt: system.updatedAt.toISOString() }}
         submit="Save"
       />

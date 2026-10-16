@@ -12,6 +12,9 @@ import { db } from '@/lib/db'
 import { listAttachments } from '@/lib/files/attachments'
 import { listNotes } from '@/lib/notes/notes'
 import { getContact, telHref } from '@/lib/contacts/contacts'
+import { tradeLabeler } from '@/lib/contacts/trade-labels'
+import { getTradeGroups } from '@/lib/contacts/trades'
+import { PaperlessDocs } from '@/components/PaperlessDocs'
 import { editedBy } from '@/lib/web/attribution'
 import { viewer } from '@/lib/web/context'
 import { removeAttachmentAction } from '@/lib/web/shared-actions'
@@ -20,11 +23,13 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
   const { id } = await params
   const { scope, user } = await viewer()
   const contact = await getContact(db, scope, id)
-  const [notes, photos, edited] = await Promise.all([
+  const [notes, photos, edited, groups] = await Promise.all([
     listNotes(db, scope, { contactId: id, limit: 20 }),
     listAttachments(db, scope, { kind: 'contact', id }),
     editedBy(contact),
+    getTradeGroups(db, scope),
   ])
+  const label = tradeLabeler(groups)
   const canEdit = roleAtLeast(user.role, 'member')
 
   return (
@@ -40,7 +45,11 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
         <div className="mb-4 flex flex-wrap gap-2">
           {contact.trades.map((t) => (
             <Pill key={t.trade} tone={t.preferred ? 'accent' : 'neutral'}>
-              {t.preferred ? `Our ${t.trade}` : t.trade}
+              {t.preferred ? <>
+                  <span aria-hidden>★{'\u00a0'}</span>
+                  <span className="sr-only">Go-to </span>
+                  {label(t.trade)}
+                </> : label(t.trade)}
             </Pill>
           ))}
           {contact.inGuide ? <Pill tone="neutral">On the house guide</Pill> : null}
@@ -101,16 +110,18 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
       ) : null}
 
       <Section
-        title="Work they’ve done"
+        title="Notes"
         action={canEdit ? <Link href={`/notes/new?contact=${id}`} className="text-sm text-accent">Add note</Link> : null}
       >
-        {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">Nothing logged yet.</p>}
+        {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">None yet.</p>}
       </Section>
+
+      <PaperlessDocs owner={{ kind: 'contact', id }} kind="correspondent" canEdit={canEdit} />
 
       <Section title="Photos and files">
         <div className="flex flex-col gap-3">
           <Photos items={photos} remove={canEdit ? removeAttachmentAction : undefined} />
-          {canEdit ? <PhotoUpload owner={`contact:${id}`} label="Add business card or file" /> : null}
+          {canEdit ? <PhotoUpload owner={`contact:${id}`} /> : null}
         </div>
       </Section>
 

@@ -26,8 +26,8 @@ export function UseFields({
         </Field>
       </div>
       {ownerKind === 'place' ? (
-        <Field label="Where exactly" hint="e.g. walls, trim, ceiling, north bed">
-          <TextInput name="surface" defaultValue={initial?.surface} />
+        <Field label="Where exactly">
+          <TextInput name="surface" defaultValue={initial?.surface} placeholder="Walls, trim, north bed" />
         </Field>
       ) : (
         <input type="hidden" name="surface" value={initial?.surface ?? ''} />
@@ -44,7 +44,7 @@ export function UseFields({
       ) : (
         <input type="hidden" name="finish" value={initial?.finish ?? ''} />
       )}
-      <Field label="How many it really needs" hint="If it took more (or less) than you bought — next time you’ll know.">
+      <Field label="How many it really needs" hint="If it took more or less than this.">
         <TextInput name="quantityNeeded" inputMode="decimal" defaultValue={initial?.quantityNeeded ?? ''} />
       </Field>
       <Field label="Note">

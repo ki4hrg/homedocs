@@ -6,11 +6,11 @@ import { createSystem, deleteSystem, updateSystem } from '@/lib/systems/systems'
 import { act, field, readUpdatedAt, type ActionResult } from '@/lib/web/action'
 
 function input(fd: FormData) {
-  const custom = field(fd, 'customTrades').split(',')
   return {
     name: field(fd, 'name'),
     icon: field(fd, 'icon'),
-    trades: [...fd.getAll('trades').map(String), ...custom],
+    trades: fd.getAll('trades').map(String),
+    newTrades: field(fd, 'customTrades').split(','),
     notes: field(fd, 'notes'),
   }
 }

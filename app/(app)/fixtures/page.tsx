@@ -21,7 +21,6 @@ export default async function FixturesPage() {
     <>
       <PageHeader
         title="Fixtures"
-        subtitle="Everything installed, by place"
         back={{ href: '/more', label: 'More' }}
         actions={canEdit ? <LinkButton href="/fixtures/new" variant="primary">Add</LinkButton> : null}
       />
@@ -38,7 +37,7 @@ export default async function FixturesPage() {
           ))}
         </List>
       ) : (
-        <EmptyState>No fixtures yet. Open a place and tap “What’s here?”.</EmptyState>
+        <EmptyState>No fixtures yet.</EmptyState>
       )}
     </>
   )

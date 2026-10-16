@@ -6,6 +6,8 @@ import { requireRole } from '@/lib/auth/guards'
 import { db } from '@/lib/db'
 import { listSecrets, listSections, SECRET_KINDS } from '@/lib/guide/guide'
 import { listContacts } from '@/lib/contacts/contacts'
+import { tradeLabeler } from '@/lib/contacts/trade-labels'
+import { getTradeGroups } from '@/lib/contacts/trades'
 import { listFixtures } from '@/lib/fixtures/fixtures'
 import { viewer } from '@/lib/web/context'
 
@@ -14,12 +16,14 @@ export const metadata = { title: 'Edit the guide' }
 export default async function EditGuidePage() {
   await requireRole('member')
   const { scope } = await viewer()
-  const [sections, codes, fixtures, contacts] = await Promise.all([
+  const [sections, codes, fixtures, contacts, groups] = await Promise.all([
     listSections(db, scope),
     listSecrets(db, scope),
     listFixtures(db, scope),
     listContacts(db, scope),
+    getTradeGroups(db, scope),
   ])
+  const label = tradeLabeler(groups)
   const guideFixtures = fixtures.filter((t) => t.inGuide)
   const guideContacts = contacts.filter((p) => p.inGuide || p.trades.some((t) => t.preferred))
   return (
@@ -27,13 +31,10 @@ export default async function EditGuidePage() {
       <PageHeader title="Edit the guide" back={{ href: '/guide', label: 'House guide' }} />
 
       <Section title="Emergency fixtures">
-        <p className="mb-2 px-1 text-sm text-ink-3">
-          Shutoffs, the breaker panel, the water heater. Open a fixture and tick “Show on the house guide” to add it.
-        </p>
         {guideFixtures.length ? (
           <List>
             {guideFixtures.map((t) => (
-              <Row key={t.id} href={`/fixtures/${t.id}/edit`} icon="fixture" title={t.name} detail={t.guideNote || 'No note for housesitters yet'} />
+              <Row key={t.id} href={`/fixtures/${t.id}/edit`} icon="fixture" title={t.name} detail={t.guideNote || 'No note yet'} />
             ))}
           </List>
         ) : (
@@ -43,12 +44,12 @@ export default async function EditGuidePage() {
 
       <Section title="Contacts">
         <p className="mb-2 px-1 text-sm text-ink-3">
-          Our go-to contact for each trade shows automatically, plus anyone marked for the guide.
+          Go-to contacts show automatically.
         </p>
         {guideContacts.length ? (
           <List>
             {guideContacts.map((p) => (
-              <Row key={p.id} href={`/contacts/${p.id}/edit`} icon="contact" title={p.name} detail={p.trades.map((t) => t.trade).join(', ')} />
+              <Row key={p.id} href={`/contacts/${p.id}/edit`} icon="contact" title={p.name} detail={p.trades.map((t) => label(t.trade)).join(', ')} />
             ))}
           </List>
         ) : (
@@ -74,7 +75,7 @@ export default async function EditGuidePage() {
         )}
       </Section>
 
-      <Section title="Notes for the housesitter" action={<Link href="/guide/sections/new" className="text-sm text-accent">Add</Link>}>
+      <Section title="Notes" action={<Link href="/guide/sections/new" className="text-sm text-accent">Add</Link>}>
         {sections.length ? (
           <List>
             {sections.map((s) => (
@@ -89,7 +90,7 @@ export default async function EditGuidePage() {
           </List>
         ) : (
           <EmptyState action={<LinkButton href="/guide/sections/new">Add a note</LinkButton>}>
-            Trash day, the pets, the thermostat, the door that sticks.
+            None yet.
           </EmptyState>
         )}
       </Section>

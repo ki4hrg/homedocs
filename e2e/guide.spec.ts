@@ -64,7 +64,7 @@ test('a turned-off link stops working', async ({ page, browser }) => {
   await page.goto('/share')
   page.on('dialog', (d) => d.accept())
   await page.getByRole('button', { name: 'Turn off' }).click()
-  await expect(page.getByText('Expired or turned off')).toBeVisible()
+  await expect(page.getByText('Expired or off')).toBeVisible()
 
   const ctx = await browser.newContext({ storageState: undefined })
   const res = await (await ctx.newPage()).goto(link)

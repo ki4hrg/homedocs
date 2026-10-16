@@ -56,13 +56,10 @@ export default async function FixturePage({ params }: { params: Promise<{ id: st
       {photos.length ? (
         <div className="flex flex-col gap-2">
           <Photos items={photos} hero remove={canEdit ? removeAttachmentAction : undefined} />
-          {canEdit ? <PhotoUpload owner={`fixture:${id}`} label="Add another photo" /> : null}
+          {canEdit ? <PhotoUpload owner={`fixture:${id}`} label="Add photo" /> : null}
         </div>
       ) : canEdit ? (
-        <PhotoUpload
-          owner={`fixture:${id}`}
-          tile={{ title: 'Add a photo', hint: 'Where it is, and its label. A picture beats directions when you’re looking for a shutoff.' }}
-        />
+        <PhotoUpload owner={`fixture:${id}`} tile={{ title: 'Add photo', hint: 'Where it is, or its label.' }} />
       ) : null}
 
       <Lessons rows={tips} />
@@ -74,9 +71,7 @@ export default async function FixturePage({ params }: { params: Promise<{ id: st
         {uses.length ? (
           <UseList uses={uses} show="part" />
         ) : (
-          <p className="px-1 text-sm text-ink-3">
-            No parts yet. Add the bulb, filter or battery it takes, so nobody has to climb up and check.
-          </p>
+          <p className="px-1 text-sm text-ink-3">None yet.</p>
         )}
       </Section>
 
@@ -101,7 +96,7 @@ export default async function FixturePage({ params }: { params: Promise<{ id: st
         title="Notes"
         action={canEdit ? <Link href={`/notes/new?fixture=${id}`} className="text-sm text-accent">Add note</Link> : null}
       >
-        {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">Nothing logged yet.</p>}
+        {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">None yet.</p>}
       </Section>
 
       <LinksSection owner={{ kind: 'fixture', id }} canEdit={canEdit} />

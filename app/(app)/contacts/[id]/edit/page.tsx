@@ -2,7 +2,8 @@ import { DeleteButton } from '@/components/DeleteButton'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { requireRole } from '@/lib/auth/guards'
 import { db } from '@/lib/db'
-import { TRADE_GROUPS, getContact } from '@/lib/contacts/contacts'
+import { getContact } from '@/lib/contacts/contacts'
+import { getTradeGroups } from '@/lib/contacts/trades'
 import { viewer } from '@/lib/web/context'
 import { deleteContactAction, updateContactAction } from '../../actions'
 import { ContactForm } from '../../contact-form'
@@ -19,7 +20,7 @@ export default async function EditContactPage({ params }: { params: Promise<{ id
       <PageHeader title={`Edit ${contact.name}`} back={{ href: `/contacts/${id}`, label: contact.name }} />
       <ContactForm
         action={updateContactAction.bind(null, id)}
-        groups={TRADE_GROUPS}
+        groups={await getTradeGroups(db, scope)}
         initial={{ ...contact, updatedAt: contact.updatedAt.toISOString() }}
         submit="Save"
       />

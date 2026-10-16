@@ -17,13 +17,13 @@ export function SectionForm({
       <Field label="Title">
         <TextInput name="title" defaultValue={initial?.title} placeholder="Trash day, The dog, Thermostat" required autoFocus={!initial} />
       </Field>
-      <Field label="What they need to know">
+      <Field label="Note">
         <TextArea name="body" rows={6} defaultValue={initial?.body} />
       </Field>
       <Checkbox
         name="sensitive"
         label="Private"
-        hint="Only shown at the house, or with the link’s PIN (e.g. where the spare key is)."
+        hint="Only at the house, or with the link’s PIN."
         defaultChecked={initial?.sensitive}
       />
       <SubmitButton>Save</SubmitButton>
@@ -73,7 +73,7 @@ export function SecretForm({
           </Field>
         </>
       ) : null}
-      <Field label="Label" hint={kind === 'wifi' ? 'Optional, e.g. “Guest Wi-Fi”.' : 'e.g. “Front door alarm”.'}>
+      <Field label="Label" hint={kind === 'wifi' ? 'Optional.' : undefined}>
         <TextInput name="label" defaultValue={initial?.label} />
       </Field>
       <Field
@@ -82,7 +82,7 @@ export function SecretForm({
       >
         <TextInput name="value" type="text" autoComplete="off" spellCheck={false} />
       </Field>
-      <Field label="Who can see it on a shared guide link?">
+      <Field label="On a shared link, who sees it">
         {/* Keyed by kind: an uncontrolled select keeps its first default, so
             switching Wi-Fi → Alarm would otherwise leave the code visible to
             anyone with the link. */}
@@ -93,11 +93,11 @@ export function SecretForm({
       </Field>
       {kind === 'wifi' ? (
         <p className="-mt-2 text-xs text-ink-3">
-          A housesitter needs the Wi-Fi password before they’re on the Wi-Fi, so “anyone with the link” is usually right for it.
+          They need the password before they’re on the Wi-Fi.
         </p>
       ) : null}
       <Checkbox name="inGuide" label="Show on the house guide" defaultChecked={initial?.inGuide ?? true} />
-      <Field label="Notes" hint="e.g. “Keypad is inside the garage door, on the left.”">
+      <Field label="Notes">
         <TextArea name="notes" rows={2} defaultValue={initial?.notes} />
       </Field>
       <SubmitButton>Save</SubmitButton>

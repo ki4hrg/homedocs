@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { HomeboxHere } from '@/components/HomeboxHere'
-import { PaperlessHere } from '@/components/PaperlessHere'
+import { PaperlessDocs } from '@/components/PaperlessDocs'
 import { Lessons } from '@/components/Lessons'
 import { LinksSection } from '@/components/LinksSection'
 import { NoteList } from '@/components/NoteList'
@@ -49,9 +49,9 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
       {canEdit ? (
         <div className="grid grid-cols-3 gap-2" role="group" aria-label="Add to this place">
           {[
-            { href: `/fixtures/new?space=${id}`, label: 'What’s here?', sub: 'A fixture', icon: 'fixture' as const },
-            { href: `/use?space=${id}`, label: 'What did we use?', sub: 'Paint, mulch…', icon: 'part' as const },
-            { href: `/notes/new?space=${id}`, label: 'What happened?', sub: 'A note', icon: 'note' as const },
+            { href: `/fixtures/new?space=${id}`, label: 'Add fixture', icon: 'fixture' as const },
+            { href: `/use?space=${id}`, label: 'Add part', icon: 'part' as const },
+            { href: `/notes/new?space=${id}`, label: 'Add note', icon: 'note' as const },
           ].map((a) => (
             <Link
               key={a.href}
@@ -60,7 +60,6 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
             >
               <Icon name={a.icon} className="h-6 w-6 text-accent" />
               <span className="text-[13px] font-medium leading-tight text-ink">{a.label}</span>
-              <span className="text-[11px] text-ink-3">{a.sub}</span>
             </Link>
           ))}
         </div>
@@ -87,7 +86,7 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
         </Section>
       ) : null}
 
-      <Section title="Fixtures here">
+      <Section title="Fixtures">
         {fixtures.length ? (
           <List>
             {fixtures.map((t) => (
@@ -95,12 +94,12 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
             ))}
           </List>
         ) : (
-          <p className="px-1 text-sm text-ink-3">No fixtures yet — lights, fans, shutoffs, appliances.</p>
+          <p className="px-1 text-sm text-ink-3">None yet.</p>
         )}
       </Section>
 
       <HomeboxHere spaceId={id} placeName={place.name} canEdit={canEdit} />
-      <PaperlessHere spaceId={id} placeName={place.name} canEdit={canEdit} />
+      <PaperlessDocs owner={{ kind: 'space', id }} kind="tag" canEdit={canEdit} />
 
       {uses.length ? (
         <Section title="Used here">

@@ -95,10 +95,10 @@ export default async function NotePage({ params }: { params: Promise<{ id: strin
         </Section>
       ) : null}
 
-      <Section title="Photos and receipts">
+      <Section title="Photos and files">
         <div className="flex flex-col gap-3">
           <Photos items={photos} remove={canEdit ? removeAttachmentAction : undefined} />
-          {canEdit ? <PhotoUpload owner={`log:${id}`} label="Add photo or receipt" /> : null}
+          {canEdit ? <PhotoUpload owner={`log:${id}`} label="Add photo or file" /> : null}
         </div>
       </Section>
 

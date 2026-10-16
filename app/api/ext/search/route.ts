@@ -1,5 +1,5 @@
 /*
- * Search Homebox (items, or `kind=location`) or paperless (documents, or `kind=tag`) for the link picker. Guard: requireApiRole('member')
+ * Search Homebox (items, or `kind=location`) or paperless (documents, or `kind=tag|correspondent`) for the link picker. Guard: requireApiRole('member')
  * — viewers cannot link, so they have no reason to search the other apps.
  * The token never leaves the server; the browser gets titles and ids.
  */
@@ -21,10 +21,14 @@ export async function GET(request: Request) {
   const [property] = await listProperties()
   if (!property) return Response.json({ hits: [] })
   try {
-    const kind = url.searchParams.get('kind')
-    const locations = system === 'homebox' && kind === 'location'
-    const tags = system === 'paperless' && kind === 'tag'
-    const hits = await searchSystem(db, { propertyId: property.id }, system, url.searchParams.get('q') ?? '', { locations, tags })
+    const asked = url.searchParams.get('kind')
+    const kind =
+      system === 'homebox' && asked === 'location'
+        ? 'location'
+        : system === 'paperless' && (asked === 'tag' || asked === 'correspondent')
+          ? asked
+          : undefined
+    const hits = await searchSystem(db, { propertyId: property.id }, system, url.searchParams.get('q') ?? '', kind)
     return Response.json({ hits }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (err) {
     if (err instanceof AppError) return Response.json({ error: err.message }, { status: 400 })

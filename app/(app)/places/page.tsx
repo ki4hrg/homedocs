@@ -39,12 +39,11 @@ export default async function PlacesPage() {
     <>
       <PageHeader
         title="Places"
-        subtitle="Rooms, floors and outdoor areas"
         actions={canEdit ? <LinkButton href="/places/new" variant="primary">Add</LinkButton> : null}
       />
       {tree.length === 0 ? (
-        <EmptyState action={canEdit ? <LinkButton href="/places/new" variant="primary">Add the first place</LinkButton> : null}>
-          Start with the rooms you ask questions about most — the living room, the kitchen, the yard.
+        <EmptyState action={canEdit ? <LinkButton href="/places/new" variant="primary">Add a place</LinkButton> : null}>
+          No places yet.
         </EmptyState>
       ) : (
         <Card>

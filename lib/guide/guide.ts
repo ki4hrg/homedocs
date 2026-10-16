@@ -20,6 +20,8 @@ import { assertCanEdit, NotFoundError, ValidationError, type ActorContext, type 
 import { seal, tryUnseal } from '../crypto/sealed'
 import { attachments, contacts, contactTrades, fixtures, guideSections, properties, secrets, systems } from '../db/schema'
 import { spacePath, subtreeIds } from '../search/rebuild'
+import { tradeLabeler } from '../contacts/trade-labels'
+import { getTradeGroups } from '../contacts/trades'
 import { whoToCall } from '../systems/systems'
 
 export type GuideSection = typeof guideSections.$inferSelect
@@ -276,6 +278,7 @@ export async function buildGuide(
   const trades = contactRows.length
     ? await exec.select().from(contactTrades).where(inArray(contactTrades.contactId, contactRows.map((c) => c.id)))
     : []
+  const label = tradeLabeler(await getTradeGroups(exec, scope))
   const guideContacts: GuideContact[] = contactRows
     .map((c) => {
       const preferred = trades.filter((t) => t.contactId === c.id && t.preferred).map((t) => t.trade)
@@ -286,7 +289,7 @@ export async function buildGuide(
       id: c.id,
       name: c.name,
       company: c.company,
-      roles: preferred.length ? preferred : trades.filter((t) => t.contactId === c.id).map((t) => t.trade),
+      roles: (preferred.length ? preferred : trades.filter((t) => t.contactId === c.id).map((t) => t.trade)).map(label),
       phones: c.phones,
     }))
 
@@ -303,7 +306,7 @@ export async function buildGuide(
     if (items.length === 0) continue
     const calls = (await whoToCall(exec, scope, sys.trades))
       .filter((c) => onGuide.has(c.id) && c.phone)
-      .map((c) => ({ id: c.id, name: c.name, trade: c.trade, phone: c.phone! }))
+      .map((c) => ({ id: c.id, name: c.name, trade: label(c.trade), phone: c.phone! }))
     groups.push({ id: sys.id, name: sys.name, icon: sys.icon, fixtures: items.map(stripSystem), calls })
   }
   const grouped = new Set(groups.flatMap((g) => g.fixtures.map((f) => f.id)))
