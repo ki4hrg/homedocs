@@ -26,6 +26,16 @@ const PATHS = {
   alert: 'M12 4 2 20h20zm0 6v4m0 3h.01',
   external: 'M14 4h6v6m0-6-9 9M18 14v6H4V6h6',
   printer: 'M7 9V4h10v5M7 17H4v-7h16v7h-3M7 14h10v6H7z',
+  // Systems (lib/systems/seeds.ts SYSTEM_ICONS).
+  system: 'M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z',
+  water: 'M12 3s-6 6.8-6 11a6 6 0 0 0 12 0c0-4.2-6-11-6-11z',
+  bolt: 'M13 3 5 13.5h6L10 21l8-10.5h-6z',
+  climate: 'M10 13.5V5a2 2 0 1 1 4 0v8.5a4 4 0 1 1-4 0zM12 17v-6',
+  flame: 'M12 21a6 6 0 0 0 6-6c0-3.5-2.5-5.5-4-9.5-1.5 2-2.5 3.5-2.5 5.5-1-.8-1.8-1.8-2-3-2 2-3.5 4.3-3.5 7a6 6 0 0 0 6 6z',
+  drain: 'M4 7h16M6 7v4a6 6 0 0 0 12 0V7M10 17v4m4-4v4',
+  leaf: 'M5 19C5 10.5 11 5 20 4c0 9-5.5 15-14 15zm0 0 8-8',
+  shield: 'M12 3l8 3v6c0 4.5-3.4 7.8-8 9-4.6-1.2-8-4.5-8-9V6z',
+  wifi: 'M2.5 9a14 14 0 0 1 19 0M5.5 12.5a9.5 9.5 0 0 1 13 0M9 16a4.5 4.5 0 0 1 6 0M12 19.5h.01',
 } as const
 
 export type IconName = keyof typeof PATHS

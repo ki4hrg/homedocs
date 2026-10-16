@@ -9,6 +9,7 @@ export const metadata = { title: 'Search' }
 
 const ICON: Record<SearchKind, IconName> = {
   place: 'place',
+  system: 'system',
   fixture: 'fixture',
   part: 'part',
   note: 'note',
@@ -18,6 +19,7 @@ const ICON: Record<SearchKind, IconName> = {
 
 const KIND_LABEL: Record<SearchKind, string> = {
   place: 'Place',
+  system: 'System',
   fixture: 'Fixture',
   part: 'Part',
   note: 'Note',

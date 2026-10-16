@@ -1,7 +1,7 @@
 'use server'
 
 import { createInvite, createReset, revokeInvite } from '@/lib/auth/invites'
-import { removeUser, setUserRole } from '@/lib/auth/users'
+import { addFamilyMember, removeUser, setUserRole } from '@/lib/auth/users'
 import { ValidationError, type Role } from '@/lib/core/types'
 import { act, field, type ActionResult } from '@/lib/web/action'
 
@@ -14,6 +14,16 @@ export async function inviteAction(_: ActionResult, fd: FormData): Promise<Actio
   return act(async ({ actor }) => {
     const { url } = await createInvite({ role: role(field(fd, 'role')), label: field(fd, 'label') }, actor)
     return { message: url }
+  })
+}
+
+export async function addMemberAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  return act(async ({ actor }) => {
+    const user = await addFamilyMember(
+      { displayName: field(fd, 'displayName'), email: field(fd, 'email'), role: role(field(fd, 'role')), password: String(fd.get('password') ?? '') },
+      actor,
+    )
+    return { message: `${user.displayName} can sign in now.` }
   })
 }
 

@@ -28,7 +28,8 @@ housesitter.
 | UI name | Table | What it is |
 |---|---|---|
 | Place | `spaces` | A tree of rooms, floors and outdoor areas, shaped like Home Assistant's floor › area. |
-| Fixture | `fixtures` | Something installed: a light, a shutoff, the water heater. Serial numbers and warranties belong in Homebox; link to it. |
+| System | `systems` | One part of how the house works: water & plumbing, electrical, heating & cooling. Seeded per property from `lib/systems/seeds.ts` (`seed_key`); the family can rename, add and delete them. `trades` name who to call. |
+| Fixture | `fixtures` | Something installed: a light, a shutoff, the water heater. In at most one system (`system_id`); left out on create, it is guessed from the kind and name (`guessSystemKey`). Serial numbers and warranties belong in Homebox; link to it. |
 | Part | `supplies` | A reusable spec, defined once: a bulb type, a paint colour, a filter. `fields` jsonb is validated by the category template in `lib/parts/templates.ts`. |
 | (use) | `supply_uses` | A part used by exactly one fixture **or** one place. Holds the quantity, `quantity_needed` (the "really takes 15 bags" figure), surface and finish. Paint sheen lives here. |
 | Note | `logs` | A dated record of what happened, with a "next time" lesson and a `remind_after` date. |
@@ -40,8 +41,8 @@ housesitter.
 **Rules on every table:**
 - `property_id` on every table, and every domain call takes a `PropertyScope`. There is one property
   today, and the UI hides the property switcher until there are two.
-- Soft delete (`deleted_at`). "Recently deleted" restores places, fixtures, parts, notes, contacts and
-  projects. There is no hard delete in the UI.
+- Soft delete (`deleted_at`). "Recently deleted" restores places, systems, fixtures, parts, notes,
+  contacts and projects. There is no hard delete in the UI.
 - `created_by`/`updated_by` drive "Edited by Mom, 2 days ago". Edit forms send `updatedAt` for
   optimistic concurrency (`StaleWriteError`).
 - Every mutation writes an `audit_log` row in the same transaction. The source is `web`, `mcp` or
@@ -81,22 +82,23 @@ A page under `app/(app)/` is authenticated by its layout. Everything else authen
 | `GET /api/health` | none (returns status and git revision only) |
 | `POST /api/files` | `requireApiRole('member')`; the property comes from the owning record |
 | `GET /api/files/[sha]` | `requireApiUser()`, and the sha must belong to a live attachment |
-| `GET /api/ext/search` | `requireApiRole('member')`; `kind=location` searches Homebox locations |
-| `GET /api/ext/[system]/[id]/thumb` | `requireApiUser()`, plus a strict id format and a live `external_refs` row (cannot browse paperless) |
+| `GET /api/ext/search` | `requireApiRole('member')`; `kind=location` searches Homebox locations, `kind=tag` paperless tags |
+| `GET /api/ext/[system]/[id]/thumb` | `requireApiUser()`, plus a strict id format and a live `external_refs` row, or for paperless a document whose tags (asked of paperless) include a linked tag (cannot browse paperless) |
 | `GET /g/[token]` | share-link token; rate limited per IP; preview bots get a stub |
 | `POST` unlock (server action) | link token + PIN; per-IP limit; 10 failures lock the link in the DB |
 | `GET /g/[token]/files/[sha]` | link token, and the sha must be a photo on a record this guide shows |
 | `GET /g/[token]/offline` | link token; always built with `unlocked: false` |
 | `/mcp` | OAuth bearer (`lib/oauth/grants.ts`), then scope ∩ role per tool |
 | `/oauth/*`, `/.well-known/*` | public by design (OAuth 2.1 + PKCE, dynamic client registration, rate limited) |
-| `/login`, `/setup`, `/join/[token]` | public; setup disables itself once a user exists; invites are single-use HMAC tokens |
+| `/login`, `/login/oidc`, `/sso`, `/setup`, `/join/[token]` | public; setup disables itself once a user exists; invites are single-use HMAC tokens; admins can also add someone directly from Family (no password, for single sign-on); `/sso` is Pocket ID's launch URL and only redirects |
 
 ## Search
 
 - **Where it lives:** each searchable table has a `search_doc` tsvector, rebuilt in app code inside the
   same transaction as the write (`lib/search/rebuild.ts`).
-- **What a fixture's document holds:** the path of its place and the names and fields of the parts it
-  uses, which is how "living room bulb" finds the overhead light.
+- **What a fixture's document holds:** the path of its place, its system's name, and the names and
+  fields of the parts it uses, which is how "living room bulb" finds the overhead light and "plumbing
+  shutoff" finds the main shutoff.
 - **Cascades:** the cascade table at the top of `rebuild.ts` is the contract. A rename of a place, part
   or contact rebuilds every document that includes its text.
 - **Rebuilding everything:** `rebuildAll()` rebuilds every document. Run it after a restore.
@@ -110,8 +112,9 @@ A page under `app/(app)/` is authenticated by its layout. Everything else authen
 ## The house guide
 
 - **Emergency card:** generated, not typed. It shows fixtures marked "Show on the house guide" with
-  their photos and housesitter notes, plus the preferred contact for each trade and anyone marked for
-  the guide.
+  their photos and housesitter notes, grouped by system ("Water & plumbing: main shutoff, call Ace
+  Plumbing"; fixtures in no system come last). A system's call buttons are its trades' contacts that
+  are already on the guide. Then the preferred contact for each trade and anyone marked for the guide.
 - **Guide sections:** free text only.
 - **Gated content:** secrets with gate `home_or_pin`, sections marked private, and the street address.
   A share-link visitor sees them when:
@@ -172,6 +175,12 @@ anyway, so that gains nothing.
     column). The place page then lists what Homebox keeps there (`GET /v1/entities?parentIds=`),
     marks the items already linked to a fixture, and adds the others as a linked fixture in one tap
     (`addFixtureFromHomebox`, which fetches the item's name again server-side).
+  - **Places ↔ paperless tags:** a place can link to a paperless tag, stored with `external_id`
+    `tag:<id>` so it never collides with a document number. The place page lists the newest 50
+    documents with that tag (`GET /api/documents/?tags__id__all=`); tagging in paperless is the only
+    upkeep. Their thumbnails go through the proxy, which checks the document's tags first.
+  - **Homebox type names:** built-in entity types come back as translation keys
+    (`global.location`) and are left out of subtitles.
 - These response shapes come from the projects' published APIs and are tested against a fake server.
   They have **not** yet been verified against live instances.
 

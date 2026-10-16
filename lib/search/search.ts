@@ -9,7 +9,7 @@
 import { sql } from 'drizzle-orm'
 import type { Executor, PropertyScope } from '../core/types'
 
-export type SearchKind = 'place' | 'fixture' | 'part' | 'note' | 'contact' | 'project'
+export type SearchKind = 'place' | 'system' | 'fixture' | 'part' | 'note' | 'contact' | 'project'
 
 export type SearchHit = { kind: SearchKind; id: string; title: string; detail: string; rank: number }
 
@@ -34,6 +34,9 @@ export async function search(exec: Executor, scope: PropertyScope, q: string, li
     select * from (
       select 'place' as kind, s.id, s.name as title, s.kind::text as detail, ts_rank(s.search_doc, q.query) as rank
         from spaces s, q where s.property_id = ${p} and s.deleted_at is null and s.search_doc @@ q.query
+      union all
+      select 'system', y.id, y.name, 'system', ts_rank(y.search_doc, q.query)
+        from systems y, q where y.property_id = ${p} and y.deleted_at is null and y.search_doc @@ q.query
       union all
       select 'fixture', f.id, f.name, coalesce(sp.name, ''), ts_rank(f.search_doc, q.query)
         from fixtures f left join spaces sp on sp.id = f.space_id, q
@@ -63,6 +66,9 @@ export async function search(exec: Executor, scope: PropertyScope, q: string, li
       select 'place' as kind, id, name as title, kind::text as detail, similarity(name, ${typed}) as rank
         from spaces where property_id = ${p} and deleted_at is null and name % ${typed}
       union all
+      select 'system', id, name, 'system', similarity(name, ${typed}) from systems
+        where property_id = ${p} and deleted_at is null and name % ${typed}
+      union all
       select 'fixture', id, name, category, similarity(name, ${typed}) from fixtures
         where property_id = ${p} and deleted_at is null and name % ${typed}
       union all
@@ -79,6 +85,7 @@ export async function search(exec: Executor, scope: PropertyScope, q: string, li
 
 export const KIND_PATH: Record<SearchKind, string> = {
   place: '/places',
+  system: '/systems',
   fixture: '/fixtures',
   part: '/parts',
   note: '/notes',

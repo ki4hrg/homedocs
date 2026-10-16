@@ -38,10 +38,23 @@ git rev-parse HEAD
 | `TRUSTED_PROXY_HOPS` | default `1` | How many proxies append to `X-Forwarded-For`. Must match reality for the guide's "at home" check. |
 | `CLIENT_IP_HEADER` | | `cf-connecting-ip` behind Cloudflare Tunnel. |
 | `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | | Pocket ID. All three or none. Redirect URI: `<PUBLIC_BASE_URL>/login/oidc/callback`. |
-| `OIDC_DISPLAY_NAME`, `OIDC_ONLY`, `OIDC_TRUST_EMAIL` | | As in Biblios. |
+| `OIDC_DISPLAY_NAME`, `OIDC_ONLY` | | The button's name; `OIDC_ONLY` hides the password form while sign-on works. |
+| `OIDC_TRUST_EMAIL` | | Link a sign-on to an existing account by email even when the provider doesn't mark the address verified. Safe for a Pocket ID you run yourself. |
 | `OIDC_DEFAULT_ROLE` | default `viewer` | Role for a sign-on that matches no account (`viewer` or `member`). |
 | `BACKUP_KEEP_DAYS`, `BACKUP_AT_HOUR` | 30, 3 | The backup sidecar. |
 | `TZ` | | Default `America/New_York`. |
+
+## Adding family who use Pocket ID
+
+In Pocket ID, set the client's **Launch URL** to `<PUBLIC_BASE_URL>/sso`. Tapping homedocs there
+opens it signed in: straight in if a session exists, otherwise through a sign-on round trip.
+
+
+On the Family page, **Add someone** with their name, the email address they have in Pocket ID, and a
+role. Leave the password blank. Their first Pocket ID sign-in finds the account by that address and
+links to it, keeping the role you picked. After that, the link is by Pocket ID identity, so a later
+email change there doesn't matter. Linking needs Pocket ID to mark the address verified, or
+`OIDC_TRUST_EMAIL=true`. Invite links still work for anyone who'd rather set their own password.
 
 ## Reverse proxy
 

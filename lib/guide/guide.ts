@@ -18,8 +18,9 @@ import { assertFresh, inTransaction, liveIn } from '../core/internal'
 import { cleanText, requireText, softDelete } from '../core/records'
 import { assertCanEdit, NotFoundError, ValidationError, type ActorContext, type Executor, type PropertyScope } from '../core/types'
 import { seal, tryUnseal } from '../crypto/sealed'
-import { attachments, contacts, contactTrades, fixtures, guideSections, properties, secrets } from '../db/schema'
+import { attachments, contacts, contactTrades, fixtures, guideSections, properties, secrets, systems } from '../db/schema'
 import { spacePath, subtreeIds } from '../search/rebuild'
+import { whoToCall } from '../systems/systems'
 
 export type GuideSection = typeof guideSections.$inferSelect
 export type Secret = typeof secrets.$inferSelect
@@ -180,6 +181,19 @@ export type GuideFixture = {
   photos: { sha256: string; caption: string }[]
 }
 
+/**
+ * The emergency card, one group per system ("Water & plumbing: main shutoff,
+ * water heater — call Ace Plumbing"), then fixtures in no system. `calls` are
+ * only contacts already on the guide.
+ */
+export type GuideGroup = {
+  id: string | null
+  name: string
+  icon: string
+  fixtures: GuideFixture[]
+  calls: { id: string; name: string; trade: string; phone: string }[]
+}
+
 export type GuideContact = { id: string; name: string; company: string; roles: string[]; phones: { label: string; value: string }[] }
 
 export type GuideSecret = {
@@ -200,6 +214,7 @@ export type Guide = {
   /** Present only when unlocked. */
   address?: string
   fixtures: GuideFixture[]
+  groups: GuideGroup[]
   contacts: GuideContact[]
   sections: { id: string; title: string; body: string; sensitive: boolean; hidden: boolean }[]
   secrets: GuideSecret[]
@@ -237,11 +252,12 @@ export async function buildGuide(
         .orderBy(asc(attachments.sort), asc(attachments.createdAt))
     : []
 
-  const guideFixtures: GuideFixture[] = []
+  const guideFixtures: (GuideFixture & { systemId: string | null })[] = []
   for (const t of fixtureRows) {
     const path = await spacePath(exec, t.spaceId)
     guideFixtures.push({
       id: t.id,
+      systemId: t.systemId,
       name: t.name,
       where: path.map((p) => p.name).join(' › ') || 'Whole house',
       note: t.guideNote || t.notes,
@@ -274,6 +290,26 @@ export async function buildGuide(
       phones: c.phones,
     }))
 
+  // Group the card by system, in the family's order; a system's calls are its trades' contacts already on the guide.
+  const onGuide = new Set(guideContacts.map((c) => c.id))
+  const systemRows = await exec
+    .select()
+    .from(systems)
+    .where(and(eq(systems.propertyId, scope.propertyId), isNull(systems.deletedAt)))
+    .orderBy(asc(systems.sort), asc(systems.name))
+  const groups: GuideGroup[] = []
+  for (const sys of systemRows) {
+    const items = guideFixtures.filter((f) => f.systemId === sys.id)
+    if (items.length === 0) continue
+    const calls = (await whoToCall(exec, scope, sys.trades))
+      .filter((c) => onGuide.has(c.id) && c.phone)
+      .map((c) => ({ id: c.id, name: c.name, trade: c.trade, phone: c.phone! }))
+    groups.push({ id: sys.id, name: sys.name, icon: sys.icon, fixtures: items.map(stripSystem), calls })
+  }
+  const grouped = new Set(groups.flatMap((g) => g.fixtures.map((f) => f.id)))
+  const loose = guideFixtures.filter((f) => !grouped.has(f.id))
+  if (loose.length) groups.push({ id: null, name: 'Around the house', icon: 'system', fixtures: loose.map(stripSystem), calls: [] })
+
   const sectionRows = await listSections(exec, scope)
   const sections = sectionRows.map((s) => ({
     id: s.id,
@@ -303,13 +339,19 @@ export async function buildGuide(
   return {
     homeName: property.name,
     address: opts.unlocked && property.address ? property.address : undefined,
-    fixtures: guideFixtures,
+    fixtures: guideFixtures.map(stripSystem),
+    groups,
     contacts: guideContacts,
     sections,
     secrets: secretList,
     locked,
     files: new Set(guideFixtures.flatMap((t) => t.photos.map((p) => p.sha256))),
   }
+}
+
+function stripSystem({ systemId, ...f }: GuideFixture & { systemId: string | null }): GuideFixture {
+  void systemId
+  return f
 }
 
 /** Record that a signed-in contact opened the codes. */

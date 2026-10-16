@@ -144,6 +144,8 @@ export type NoteFilter = {
   id?: string
   spaceId?: string
   fixtureId?: string
+  /** Notes about any fixture in this system. */
+  systemId?: string
   supplyId?: string
   contactId?: string
   projectId?: string
@@ -174,6 +176,7 @@ export async function listNotes(exec: Executor, scope: PropertyScope, filter: No
         filter.id ? eq(logs.id, filter.id) : undefined,
         filter.spaceId ? sql`(${logs.spaceId} = ${filter.spaceId} or ${fixtures.spaceId} = ${filter.spaceId})` : undefined,
         filter.fixtureId ? eq(logs.fixtureId, filter.fixtureId) : undefined,
+        filter.systemId ? eq(fixtures.systemId, filter.systemId) : undefined,
         filter.supplyId ? eq(logs.supplyId, filter.supplyId) : undefined,
         filter.contactId ? eq(logs.contactId, filter.contactId) : undefined,
         filter.projectId ? eq(logs.projectId, filter.projectId) : undefined,

@@ -9,7 +9,7 @@ import { RestoreButton } from './restore-button'
 
 export const metadata = { title: 'Recently deleted' }
 
-const LABEL = { place: 'Place', fixture: 'Fixture', part: 'Part', note: 'Note', contact: 'Contact', project: 'Project' } as const
+const LABEL = { place: 'Place', system: 'System', fixture: 'Fixture', part: 'Part', note: 'Note', contact: 'Contact', project: 'Project' } as const
 
 export default async function DeletedPage() {
   const { scope, user } = await viewer()

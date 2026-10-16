@@ -4,11 +4,11 @@ import { listLinks, SYSTEM_LABEL } from '@/lib/links/links'
 import { addLinkAction, linkPickedAction, removeLinkAction } from '@/lib/web/link-actions'
 import { listIntegrations, refreshStale, SYSTEM_NAME } from '@/lib/integrations/integrations'
 import { LinkPicker } from './LinkPicker'
+import { LinkThumb } from './LinkThumb'
 import { viewer } from '@/lib/web/context'
 import { DeleteButton } from './DeleteButton'
 import { LinkForm } from './LinkForm'
 import { List, Pill, Section } from './ui/Card'
-import { Icon } from './ui/icons'
 
 /* Links from a record to Homebox, paperless and Home Assistant. */
 export async function LinksSection({ owner, canEdit }: { owner: Owner; canEdit: boolean }) {
@@ -30,14 +30,7 @@ export async function LinksSection({ owner, canEdit }: { owner: Owner; canEdit: 
             {links.map((l) => (
               <li key={l.id} className="flex min-h-14 items-center gap-3 px-4 py-2">
                 <a href={l.url} target="_blank" rel="noreferrer" className="flex min-w-0 flex-1 items-center gap-3">
-                  {thumbable.has(l.system) && l.status === 'ok' ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- proxied through our own guarded route
-                    <img src={`/api/ext/${l.system}/${l.externalId}/thumb`} alt="" className="h-10 w-10 shrink-0 rounded-md bg-sunk object-cover" loading="lazy" />
-                  ) : (
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sunk text-ink-2">
-                      <Icon name="external" className="h-[18px] w-[18px]" />
-                    </span>
-                  )}
+                  <LinkThumb src={thumbable.has(l.system) && l.status === 'ok' ? `/api/ext/${l.system}/${l.externalId}/thumb` : null} />
                   <span className="min-w-0">
                     <span className="block truncate text-[15px] font-medium text-ink">{l.title}</span>
                     <span className="flex items-center gap-2 text-sm text-ink-3">

@@ -47,7 +47,63 @@ export function InviteForm({ action }: { action: FormAction }) {
   )
 }
 
-export function ResetLink({ action }: { action: FormAction }) {
+export function AddMemberForm({
+  action,
+  sso,
+  password,
+  needsVerifiedEmail,
+}: {
+  action: FormAction
+  sso: string | null
+  password: boolean
+  needsVerifiedEmail: boolean
+}) {
+  const [state, formAction] = useActionState<ActionResult, FormData>(action, {})
+  return (
+    <form action={formAction} className="flex flex-col gap-3">
+      <Field label="Their name">
+        <TextInput name="displayName" required placeholder="Mom" />
+      </Field>
+      <Field
+        label="Email address"
+        hint={
+          sso
+            ? `The address they use with ${sso}. Their first ${sso} sign-in finds this account.` +
+              (needsVerifiedEmail ? ` ${sso} has to show the address as verified.` : '')
+            : 'What they type to sign in.'
+        }
+      >
+        <TextInput name="email" type="email" inputMode="email" required />
+      </Field>
+      <Field label="What can they do?">
+        <Select name="role" defaultValue="member">
+          {Object.entries(ROLE_HELP).map(([v, l]) => (
+            <option key={v} value={v}>
+              {l}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      {password ? (
+        <Field
+          label={sso ? 'Password (optional)' : 'Password'}
+          hint={
+            sso
+              ? `Leave it blank if they will use ${sso}.`
+              : 'Or leave it blank, and make them a password link once they are added.'
+          }
+        >
+          <TextInput name="password" type="password" minLength={8} />
+        </Field>
+      ) : null}
+      {state.error ? <p role="alert" className="text-sm text-danger">{state.error}</p> : null}
+      {state.message ? <p role="status" className="text-sm text-accent">{state.message}</p> : null}
+      <SubmitButton pendingText="Adding…">Add them</SubmitButton>
+    </form>
+  )
+}
+
+export function ResetLink({ action, label = 'Make a password reset link' }: { action: FormAction; label?: string }) {
   const [state, formAction] = useActionState<ActionResult, FormData>(action, {})
   return (
     <form action={formAction} className="flex flex-col gap-2">
@@ -55,7 +111,7 @@ export function ResetLink({ action }: { action: FormAction }) {
       {state.error ? <p className="text-sm text-danger">{state.error}</p> : null}
       {!state.message ? (
         <SubmitButton variant="ghost" className="min-h-9 self-start px-2 text-sm" pendingText="…">
-          Make a password reset link
+          {label}
         </SubmitButton>
       ) : null}
     </form>
@@ -86,7 +142,7 @@ export function RoleSelect({
           }
         })
       }
-      className="w-auto"
+      className="max-w-32 shrink-0"
     >
       <option value="admin">Admin</option>
       <option value="member">Member</option>

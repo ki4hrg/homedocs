@@ -49,7 +49,9 @@ export function createMcpServer(identity: BearerIdentity, exec: Executor): Serve
       capabilities: { tools: {} },
       instructions:
         'homedocs is a family\'s reference for their house. Places are rooms and outdoor areas ' +
-        '(a tree). Fixtures are things installed in a place (a light, a shutoff valve). Parts are ' +
+        '(a tree). Fixtures are things installed in a place (a light, a shutoff valve). Systems ' +
+        '(water & plumbing, electrical, heating…) group fixtures by what they do, with who to call; ' +
+        'for "where is the water shutoff" use get_system. Parts are ' +
         'reusable specs — a bulb type, a paint colour, a filter — linked to the fixtures and places ' +
         'that use them. Notes are dated records of what happened, with a "next time" lesson. ' +
         'Contacts are the companies and people the house relies on — contractors, utilities, services — ' +

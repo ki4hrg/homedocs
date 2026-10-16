@@ -1,0 +1,65 @@
+/*
+ * A place linked to a paperless tag, against a fake paperless (API v10): pick
+ * the tag from the place page, and the documents under it list themselves.
+ */
+
+import { createServer, type Server } from 'node:http'
+import type { AddressInfo } from 'node:net'
+import sharp from 'sharp'
+import { expect, test } from '@playwright/test'
+
+test.describe.configure({ mode: 'serial' })
+
+let server: Server
+let base = ''
+
+test.beforeAll(async () => {
+  const png = await sharp({ create: { width: 8, height: 8, channels: 3, background: '#888' } }).png().toBuffer()
+  server = createServer((req, res) => {
+    const url = new URL(req.url ?? '/', 'http://x')
+    const send = (status: number, body: unknown, type = 'application/json') => {
+      res.writeHead(status, { 'content-type': type })
+      res.end(type === 'application/json' ? JSON.stringify(body) : (body as Buffer))
+    }
+    if (req.headers.authorization !== 'Token pl_e2e') return send(401, {})
+    const p = url.pathname
+    if (p === '/api/tags/') return send(200, { count: 1, results: [{ id: 5, name: 'Pantry', document_count: 1 }] })
+    if (p === '/api/tags/5/') return send(200, { id: 5, name: 'Pantry', document_count: 1 })
+    if (p === '/api/documents/' && url.searchParams.get('tags__id__all') === '5') {
+      return send(200, { count: 1, results: [{ id: 12, title: 'Dishwasher manual', created_date: '2025-01-09' }] })
+    }
+    if (p === '/api/documents/') return send(200, { count: 3, results: [] })
+    if (p === '/api/documents/12/') return send(200, { id: 12, title: 'Dishwasher manual', tags: [5] })
+    if (p === '/api/documents/12/thumb/') return send(200, png, 'image/png')
+    send(404, {})
+  })
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r))
+  base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+})
+
+test.afterAll(() => new Promise<void>((r) => server.close(() => r())))
+
+test('link a place to its paperless tag and see its documents', async ({ page }) => {
+  await page.goto('/settings')
+  const paperless = page.locator('form').filter({ has: page.getByText('API token') })
+  await paperless.locator('[name=baseUrl]').fill(base)
+  await paperless.locator('[name=token]').fill('pl_e2e')
+  await paperless.getByRole('button', { name: 'Connect' }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Connected: paperless' })).toBeVisible()
+
+  await page.goto('/places/new')
+  await page.locator('[name=name]').fill('Pantry')
+  await page.getByRole('button', { name: 'Add place' }).click()
+  await expect(page.getByRole('heading', { name: 'Pantry' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Pick the paperless tag' }).click()
+  await expect(page.getByRole('textbox', { name: 'Search' })).toHaveValue('Pantry')
+  await page.getByRole('button', { name: /Pantry.*Tag · 1 document/ }).click()
+
+  await expect(page.getByRole('heading', { name: 'Documents · Pantry' })).toBeVisible()
+  const doc = page.getByRole('link', { name: /Dishwasher manual/ })
+  await expect(doc).toHaveAttribute('href', `${base}/documents/12/details`)
+  // The thumbnail loads through the proxy (a broken one would fall back to the icon).
+  await expect(doc.locator('img')).toHaveJSProperty('complete', true)
+  await expect.poll(() => doc.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0)
+})

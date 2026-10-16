@@ -6,6 +6,7 @@ import { PhotoUpload } from '@/components/PhotoUpload'
 import { Photos } from '@/components/Photos'
 import { UseList } from '@/components/UseList'
 import { LinkButton } from '@/components/ui/Button'
+import { Icon } from '@/components/ui/icons'
 import { Card, Pill, Section } from '@/components/ui/Card'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { roleAtLeast } from '@/lib/core/types'
@@ -14,6 +15,7 @@ import { listAttachments } from '@/lib/files/attachments'
 import { lessons, listNotes } from '@/lib/notes/notes'
 import { listUses } from '@/lib/parts/parts'
 import { getFixture } from '@/lib/fixtures/fixtures'
+import { systemIcon } from '@/lib/systems/seeds'
 import { editedBy } from '@/lib/web/attribution'
 import { viewer } from '@/lib/web/context'
 import { removeAttachmentAction } from '@/lib/web/shared-actions'
@@ -40,6 +42,16 @@ export default async function FixturePage({ params }: { params: Promise<{ id: st
         back={place ? { href: `/places/${place.id}`, label: place.name } : { href: '/fixtures', label: 'Fixtures' }}
         actions={canEdit ? <LinkButton href={`/fixtures/${id}/edit`}>Edit</LinkButton> : null}
       />
+
+      {fixture.system ? (
+        <Link
+          href={`/systems/${fixture.system.id}`}
+          className="mb-3 inline-flex min-h-11 items-center gap-2 rounded-full bg-accent-soft px-4 text-sm font-medium text-accent"
+        >
+          <Icon name={systemIcon(fixture.system.icon)} className="h-4 w-4" />
+          {fixture.system.name}
+        </Link>
+      ) : null}
 
       {photos.length ? (
         <div className="flex flex-col gap-2">

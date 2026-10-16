@@ -3,25 +3,29 @@ import { requireRole } from '@/lib/auth/guards'
 import { db } from '@/lib/db'
 import { buildTree, flattenTree, listSpaces } from '@/lib/places/places'
 import { FIXTURE_CATEGORIES } from '@/lib/fixtures/fixtures'
+import { listSystemChoices } from '@/lib/systems/systems'
 import { viewer } from '@/lib/web/context'
 import { createFixtureAction } from '../actions'
 import { FixtureForm } from '../fixture-form'
 
 export const metadata = { title: 'New fixture' }
 
-export default async function NewFixturePage({ searchParams }: { searchParams: Promise<{ space?: string }> }) {
+export default async function NewFixturePage({ searchParams }: { searchParams: Promise<{ space?: string; system?: string }> }) {
   await requireRole('member')
   const { scope } = await viewer()
-  const places = flattenTree(buildTree(await listSpaces(db, scope)))
-  const { space } = await searchParams
+  const [places, systems] = await Promise.all([
+    listSpaces(db, scope).then((rows) => flattenTree(buildTree(rows))),
+    listSystemChoices(db, scope),
+  ])
+  const { space, system } = await searchParams
   return (
     <>
       <PageHeader
         title="New fixture"
         subtitle="Something installed: a light, a fan, a shutoff, an appliance"
-        back={{ href: space ? `/places/${space}` : '/fixtures', label: 'Back' }}
+        back={{ href: space ? `/places/${space}` : system ? `/systems/${system}` : '/fixtures', label: 'Back' }}
       />
-      <FixtureForm action={createFixtureAction} places={places} categories={FIXTURE_CATEGORIES} initial={{ spaceId: space }} submit="Add fixture" />
+      <FixtureForm action={createFixtureAction} places={places} systems={systems} categories={FIXTURE_CATEGORIES} initial={{ spaceId: space, systemId: systems.some((s) => s.id === system) ? system : undefined }} submit="Add fixture" />
     </>
   )
 }

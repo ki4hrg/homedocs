@@ -8,11 +8,12 @@ import { and, desc, eq, gt, isNotNull, sql } from 'drizzle-orm'
 import { inTransaction } from '../core/internal'
 import { restoreRow } from '../core/records'
 import { ValidationError, type ActorContext, type Executor, type PropertyScope } from '../core/types'
-import { contacts, fixtures, logs, projects, spaces, supplies, users } from '../db/schema'
-import { cascadeContact, cascadeFixture, cascadeProject, cascadeSpace, cascadeSupply, rebuildLog } from '../search/rebuild'
+import { contacts, fixtures, logs, projects, spaces, supplies, systems, users } from '../db/schema'
+import { cascadeContact, cascadeFixture, cascadeProject, cascadeSpace, cascadeSupply, cascadeSystem, rebuildLog } from '../search/rebuild'
 
 const TABLES = {
   place: { table: spaces, entity: 'space', title: spaces.name, cascade: cascadeSpace },
+  system: { table: systems, entity: 'system', title: systems.name, cascade: cascadeSystem },
   fixture: { table: fixtures, entity: 'fixture', title: fixtures.name, cascade: cascadeFixture },
   part: { table: supplies, entity: 'supply', title: supplies.name, cascade: cascadeSupply },
   note: { table: logs, entity: 'log', title: logs.title, cascade: rebuildLog },

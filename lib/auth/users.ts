@@ -5,7 +5,7 @@
  * the question an audit log exists to answer.
  */
 
-import { and, asc, count, eq, isNull, sql } from 'drizzle-orm'
+import { and, asc, count, eq, isNotNull, isNull, sql } from 'drizzle-orm'
 import { recordAudit } from '../core/audit'
 import { inTransaction } from '../core/internal'
 import {
@@ -17,6 +17,7 @@ import {
 } from '../core/types'
 import { db } from '../db'
 import { properties, users } from '../db/schema'
+import { seedSystems } from '../systems/systems'
 import { hashPassword } from './password'
 import { passwordProblem } from './password-policy'
 import { revokeAllSessions, type AuthUser } from './sessions'
@@ -98,6 +99,49 @@ export async function createUser(
 }
 
 /**
+ * An admin adds someone directly, without an invite link. Most often for
+ * single sign-on: the account has no password, and their first Pocket ID
+ * sign-in with this address links to it (see `oidc-accounts.ts`). A password
+ * is optional; without one, a password link from the Family page sets it.
+ */
+export async function addFamilyMember(
+  input: { email: string; displayName: string; role: Role; password?: string },
+  actor: ActorContext,
+  exec: Executor = db,
+): Promise<AuthUser> {
+  assertAdmin(actor)
+  const email = input.email.trim().toLowerCase()
+  const displayName = input.displayName.trim()
+  if (displayName === '') throw new ValidationError('Enter their name.')
+  if (!/^[^\s@]+@[^\s@]+$/.test(email)) throw new ValidationError('Enter a valid email address.')
+  const password = input.password ?? ''
+  if (password) {
+    const problem = passwordProblem(password)
+    if (problem) throw new ValidationError(problem)
+  }
+  const passwordHash = password ? await hashPassword(password) : null
+
+  return inTransaction(exec, async (tx) => {
+    if (await findUserByEmail(email, tx)) throw new ValidationError('Someone already signs in with that email address.')
+    /* A removed account keeps its address: re-adding them is a restore, not a second account. */
+    const [removed] = await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(and(sql`lower(${users.email}) = ${email}`, isNotNull(users.deletedAt)))
+      .limit(1)
+    if (removed) {
+      await tx
+        .update(users)
+        .set({ deletedAt: null, displayName, role: input.role, passwordHash, oidcIssuer: null, oidcSubject: null, updatedAt: new Date() })
+        .where(eq(users.id, removed.id))
+      await recordAudit(tx, actor, { action: 'restore', entityType: 'user', entityId: removed.id, after: { email, role: input.role } })
+      return { id: removed.id, email, displayName, role: input.role }
+    }
+    return insertUser(tx, { email, displayName, passwordHash, role: input.role }, actor)
+  })
+}
+
+/**
  * The insert and its audit row, shared by passwords, invites and single
  * sign-on. Validation and the email check are the caller's.
  */
@@ -145,6 +189,7 @@ export async function ensureProperty(tx: Executor, name: string, actorId: string
     .insert(properties)
     .values({ name: name.trim() || 'Our home', createdBy: actorId, updatedBy: actorId })
     .returning({ id: properties.id })
+  await seedSystems(tx, created!.id, actorId)
   return created!.id
 }
 

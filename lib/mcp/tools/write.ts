@@ -95,6 +95,7 @@ export const writeTools = [
     input: z.object({
       name: z.string().min(1).max(200),
       place: ref('place').optional().describe('Leave out for whole-house fixtures like the main shutoff'),
+      system: ref('system').optional().describe('Water & plumbing, Electrical… (list_systems). Left out, it is guessed from the name and category'),
       category: z.string().max(100).optional(),
       notes: z.string().max(20_000).optional(),
     }),
@@ -103,10 +104,11 @@ export const writeTools = [
       const row = await createFixture(ctx.exec, scope, ctx.actor, {
         name: input.name,
         spaceId: await optionalRef(ctx.exec, scope, 'place', input.place),
+        systemId: input.system ? await optionalRef(ctx.exec, scope, 'system', input.system) : undefined,
         category: input.category,
         notes: input.notes,
       })
-      return { id: row.id, name: row.name }
+      return { id: row.id, name: row.name, system_id: row.systemId }
     },
   }),
 

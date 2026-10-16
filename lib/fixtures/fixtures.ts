@@ -1,6 +1,6 @@
 /*
- * Fixtures: installed fixtures and systems — the overhead light, the water
- * heater, the main shutoff. Not inventory: serial numbers, warranties and
+ * Fixtures: what's installed — the overhead light, the water heater, the main
+ * shutoff. Each can belong to one system (lib/systems). Not inventory: serial numbers, warranties and
  * manuals belong to Homebox, and a fixture links to its Homebox item instead.
  */
 
@@ -16,8 +16,9 @@ import {
   type Executor,
   type PropertyScope,
 } from '../core/types'
-import { fixtures, spaces } from '../db/schema'
+import { fixtures, spaces, systems } from '../db/schema'
 import { cascadeFixture, rebuildFixture, spacePath } from '../search/rebuild'
+import { assertSystem, guessSystemId } from '../systems/systems'
 
 export type Fixture = typeof fixtures.$inferSelect
 
@@ -41,6 +42,8 @@ export const FIXTURE_CATEGORIES = [
 export type FixtureInput = {
   name: string
   spaceId?: string | null
+  /** Undefined on create means "guess from the kind and name" (guessSystemKey); null means none. */
+  systemId?: string | null
   category?: string
   notes?: string
   inGuide?: boolean
@@ -53,7 +56,7 @@ async function assertSpace(exec: Executor, scope: PropertyScope, spaceId: string
   if (!row) throw new ValidationError('That place no longer exists.')
 }
 
-export async function listFixtures(exec: Executor, scope: PropertyScope, filter: { spaceId?: string } = {}) {
+export async function listFixtures(exec: Executor, scope: PropertyScope, filter: { spaceId?: string; systemId?: string } = {}) {
   return exec
     .select()
     .from(fixtures)
@@ -62,6 +65,7 @@ export async function listFixtures(exec: Executor, scope: PropertyScope, filter:
         eq(fixtures.propertyId, scope.propertyId),
         isNull(fixtures.deletedAt),
         filter.spaceId ? eq(fixtures.spaceId, filter.spaceId) : undefined,
+        filter.systemId ? eq(fixtures.systemId, filter.systemId) : undefined,
       ),
     )
     .orderBy(asc(fixtures.name))
@@ -70,7 +74,10 @@ export async function listFixtures(exec: Executor, scope: PropertyScope, filter:
 export async function getFixture(exec: Executor, scope: PropertyScope, id: string) {
   const [row] = await exec.select().from(fixtures).where(liveIn(fixtures, scope.propertyId, id))
   if (!row) throw new NotFoundError('fixture')
-  return { ...row, path: await spacePath(exec, row.spaceId) }
+  const [system] = row.systemId
+    ? await exec.select({ id: systems.id, name: systems.name, icon: systems.icon }).from(systems).where(liveIn(systems, scope.propertyId, row.systemId))
+    : []
+  return { ...row, path: await spacePath(exec, row.spaceId), system: system ?? null }
 }
 
 export async function createFixture(exec: Executor, scope: PropertyScope, actor: ActorContext, input: FixtureInput) {
@@ -78,11 +85,14 @@ export async function createFixture(exec: Executor, scope: PropertyScope, actor:
   return inTransaction(exec, async (tx) => {
     const spaceId = input.spaceId || null
     await assertSpace(tx, scope, spaceId)
+    const systemId = input.systemId === undefined ? await guessSystemId(tx, scope, input.category, input.name) : input.systemId || null
+    await assertSystem(tx, scope, systemId)
     const [row] = await tx
       .insert(fixtures)
       .values({
         propertyId: scope.propertyId,
         spaceId,
+        systemId,
         name: requireText(input.name, 'Give the fixture a name.'),
         category: cleanText(input.category, 100),
         notes: cleanText(input.notes),
@@ -119,6 +129,10 @@ export async function updateFixture(
     if (input.spaceId !== undefined) {
       patch.spaceId = input.spaceId || null
       await assertSpace(tx, scope, patch.spaceId)
+    }
+    if (input.systemId !== undefined) {
+      patch.systemId = input.systemId || null
+      await assertSystem(tx, scope, patch.systemId)
     }
     const changes = diff(current!, patch)
     if (Object.keys(changes.after).length === 0) return current!
