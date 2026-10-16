@@ -3,12 +3,12 @@
  *
  * The point of the model: "A19 LED 2700K E26" is defined once and linked to the
  * living-room light, the hall light and the porch light. Change the bulb you buy
- * and every thing that uses it says so. A part can also be used by a *place*
+ * and every fixture that uses it says so. A part can also be used by a *place*
  * (paint on the bedroom walls, mulch in the front bed), with a quantity and the
  * quantity it really needed.
  */
 
-import { and, asc, eq, isNull, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { diff, recordAudit } from '../core/audit'
 import { assertFresh, inTransaction, liveIn } from '../core/internal'
 import { cleanText, cleanUrl, parseQuantity, requireText, softDelete } from '../core/records'
@@ -41,7 +41,7 @@ function category(raw: string): Category {
   return raw
 }
 
-/** A part named after its most useful fields when the person left the name blank. */
+/** A part named after its most useful fields when the contact left the name blank. */
 export function suggestName(cat: Category, fields: Record<string, string>): string {
   switch (cat) {
     case 'paint':
@@ -166,14 +166,14 @@ export type UseInput = {
 
 export type UseView = SupplyUse & {
   part: Pick<Supply, 'id' | 'name' | 'category' | 'fields' | 'unit'>
-  owner: { kind: 'thing' | 'place'; id: string; name: string; path: string }
+  owner: { kind: 'fixture' | 'place'; id: string; name: string; path: string }
 }
 
 async function ownerLabel(exec: Executor, use: SupplyUse) {
   if (use.fixtureId) {
     const [f] = await exec.select({ id: fixtures.id, name: fixtures.name, spaceId: fixtures.spaceId }).from(fixtures).where(eq(fixtures.id, use.fixtureId))
     const path = await spacePath(exec, f?.spaceId ?? null)
-    return { kind: 'thing' as const, id: use.fixtureId, name: f?.name ?? '?', path: path.map((p) => p.name).join(' › ') }
+    return { kind: 'fixture' as const, id: use.fixtureId, name: f?.name ?? '?', path: path.map((p) => p.name).join(' › ') }
   }
   const path = await spacePath(exec, use.spaceId)
   return {
@@ -184,7 +184,7 @@ async function ownerLabel(exec: Executor, use: SupplyUse) {
   }
 }
 
-/** Uses of parts, filtered by part, thing or place. */
+/** Uses of parts, filtered by part, fixture or place. */
 export async function listUses(
   exec: Executor,
   scope: PropertyScope,
@@ -201,7 +201,7 @@ export async function listUses(
         eq(supplyUses.propertyId, scope.propertyId),
         isNull(supplyUses.deletedAt),
         isNull(supplies.deletedAt),
-        // A use whose thing or place was deleted is hidden along with it.
+        // A use whose fixture or place was deleted is hidden along with it.
         sql`(${supplyUses.fixtureId} is null or ${fixtures.deletedAt} is null)`,
         sql`(${supplyUses.spaceId} is null or ${spaces.deletedAt} is null)`,
         filter.supplyId ? eq(supplyUses.supplyId, filter.supplyId) : undefined,
@@ -219,12 +219,12 @@ export async function addUse(exec: Executor, scope: PropertyScope, actor: ActorC
   assertCanEdit(actor)
   const fixtureId = input.fixtureId || null
   const spaceId = input.spaceId || null
-  if ((fixtureId ? 1 : 0) + (spaceId ? 1 : 0) !== 1) throw new ValidationError('Say which thing or place uses this part.')
+  if ((fixtureId ? 1 : 0) + (spaceId ? 1 : 0) !== 1) throw new ValidationError('Say which fixture or place uses this part.')
   return inTransaction(exec, async (tx) => {
     const part = await getPart(tx, scope, input.supplyId)
     if (fixtureId) {
       const [f] = await tx.select({ id: fixtures.id }).from(fixtures).where(liveIn(fixtures, scope.propertyId, fixtureId))
-      if (!f) throw new ValidationError('That thing no longer exists.')
+      if (!f) throw new ValidationError('That fixture no longer exists.')
     } else {
       const [s] = await tx.select({ id: spaces.id }).from(spaces).where(liveIn(spaces, scope.propertyId, spaceId!))
       if (!s) throw new ValidationError('That place no longer exists.')
@@ -310,4 +310,44 @@ export async function removeUse(exec: Executor, scope: PropertyScope, actor: Act
     await softDelete(tx, supplyUses, 'supply_use', scope, id, actor)
     await cascadeUse(tx, current)
   })
+}
+
+/** The kinds of part a family re-buys, shown on Home: "what size filter do we need?" */
+export const REBUY: Category[] = ['filter', 'bulb', 'battery']
+
+/**
+ * The re-bought parts that something actually uses, each with the names of
+ * what uses it ("Furnace", "Living room overhead light"), filters first.
+ */
+export async function partsToRebuy(exec: Executor, scope: PropertyScope) {
+  const rows = await exec
+    .select({
+      id: supplies.id,
+      name: supplies.name,
+      category: supplies.category,
+      fields: supplies.fields,
+      usedBy: sql<string>`coalesce(${fixtures.name}, ${spaces.name})`,
+    })
+    .from(supplyUses)
+    .innerJoin(supplies, eq(supplies.id, supplyUses.supplyId))
+    .leftJoin(fixtures, eq(fixtures.id, supplyUses.fixtureId))
+    .leftJoin(spaces, eq(spaces.id, supplyUses.spaceId))
+    .where(
+      and(
+        eq(supplyUses.propertyId, scope.propertyId),
+        isNull(supplyUses.deletedAt),
+        isNull(supplies.deletedAt),
+        inArray(supplies.category, REBUY),
+        sql`(${supplyUses.fixtureId} is null or ${fixtures.deletedAt} is null)`,
+        sql`(${supplyUses.spaceId} is null or ${spaces.deletedAt} is null)`,
+      ),
+    )
+    .orderBy(asc(supplies.name))
+  const byPart = new Map<string, { id: string; name: string; category: Category; fields: Record<string, string>; usedBy: string[] }>()
+  for (const r of rows) {
+    const part = byPart.get(r.id) ?? { id: r.id, name: r.name, category: r.category as Category, fields: r.fields as Record<string, string>, usedBy: [] }
+    if (r.usedBy && !part.usedBy.includes(r.usedBy)) part.usedBy.push(r.usedBy)
+    byPart.set(r.id, part)
+  }
+  return [...byPart.values()].sort((a, b) => REBUY.indexOf(a.category) - REBUY.indexOf(b.category))
 }

@@ -6,7 +6,7 @@
  * three levels (House › Main floor › Living room; Yard › Front flowerbed).
  */
 
-import { and, asc, count, eq, isNull } from 'drizzle-orm'
+import { and, asc, count, eq, isNull, sql } from 'drizzle-orm'
 import { diff, recordAudit } from '../core/audit'
 import { assertFresh, inTransaction, liveIn } from '../core/internal'
 import { cleanText, requireText, softDelete } from '../core/records'
@@ -168,7 +168,7 @@ export async function updateSpace(
   })
 }
 
-/** Refused while things or places are still inside — move or delete those first. */
+/** Refused while fixtures or places are still inside — move or delete those first. */
 export async function deleteSpace(exec: Executor, scope: PropertyScope, actor: ActorContext, id: string) {
   return inTransaction(exec, async (tx) => {
     const [kids] = await tx
@@ -176,13 +176,32 @@ export async function deleteSpace(exec: Executor, scope: PropertyScope, actor: A
       .from(spaces)
       .where(and(eq(spaces.parentId, id), isNull(spaces.deletedAt)))
     if (Number(kids?.n) > 0) throw new ValidationError('Move or delete the places inside it first.')
-    const [things] = await tx
+    const [inside] = await tx
       .select({ n: count() })
       .from(fixtures)
       .where(and(eq(fixtures.spaceId, id), isNull(fixtures.deletedAt)))
-    if (Number(things?.n) > 0) {
-      throw new ValidationError(`Move or delete the ${things!.n} thing${Number(things!.n) === 1 ? '' : 's'} in it first.`)
+    if (Number(inside?.n) > 0) {
+      throw new ValidationError(`Move or delete the ${inside!.n} fixture${Number(inside!.n) === 1 ? '' : 's'} in it first.`)
     }
     await softDelete(tx, spaces, 'space', scope, id, actor)
   })
+}
+
+/**
+ * For each place, how many fixtures and part uses it holds directly — the
+ * line under a place's tile on Home ("3 fixtures · 2 parts").
+ */
+export async function placeCounts(exec: Executor, scope: PropertyScope): Promise<Map<string, { fixtures: number; parts: number }>> {
+  const rows = await exec.execute<{ space_id: string; fixtures: number; parts: number }>(sql`
+    select s.id as space_id,
+      (select count(*)::int from fixtures f where f.space_id = s.id and f.deleted_at is null) as fixtures,
+      (select count(*)::int from supply_uses u
+         left join fixtures f on f.id = u.fixture_id
+         join supplies p on p.id = u.supply_id and p.deleted_at is null
+         where u.deleted_at is null
+           and (u.space_id = s.id or (f.space_id = s.id and f.deleted_at is null))) as parts
+    from spaces s
+    where s.property_id = ${scope.propertyId} and s.deleted_at is null
+  `)
+  return new Map([...rows].map((r) => [r.space_id, { fixtures: r.fixtures, parts: r.parts }]))
 }

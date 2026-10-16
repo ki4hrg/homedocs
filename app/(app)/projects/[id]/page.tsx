@@ -11,7 +11,7 @@ import { roleAtLeast } from '@/lib/core/types'
 import { db } from '@/lib/db'
 import { listAttachments } from '@/lib/files/attachments'
 import { listNotes } from '@/lib/notes/notes'
-import { listPeople } from '@/lib/people/people'
+import { listContacts } from '@/lib/contacts/contacts'
 import { buildTree, flattenTree, listSpaces } from '@/lib/places/places'
 import { getProject, PRIORITY_LABEL, STATUS_LABEL } from '@/lib/projects/projects'
 import { editedBy } from '@/lib/web/attribution'
@@ -33,10 +33,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const { id } = await params
   const { scope, user } = await viewer()
   const project = await getProject(db, scope, id)
-  const [notes, photos, people, spaces, edited] = await Promise.all([
+  const [notes, photos, contacts, spaces, edited] = await Promise.all([
     listNotes(db, scope, { projectId: id, limit: 20 }),
     listAttachments(db, scope, { kind: 'project', id }),
-    listPeople(db, scope),
+    listContacts(db, scope),
     listSpaces(db, scope),
     editedBy(project),
   ])
@@ -110,7 +110,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                   <p className="text-[17px] font-semibold text-ink">{formatMoney(quote.amount) || 'No amount yet'}</p>
                   <p className="text-sm text-ink-3">
                     {quote.contactId ? (
-                      <Link href={`/people/${quote.contactId}`} className="text-accent">
+                      <Link href={`/contacts/${quote.contactId}`} className="text-accent">
                         {contactName}
                         {contactCompany ? ` (${contactCompany})` : ''}
                       </Link>
@@ -139,7 +139,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             </Card>
           ))}
           {canEdit ? (
-            <QuoteForm add={addQuoteAction.bind(null, id)} people={people.map((p) => ({ id: p.id, label: p.company ? `${p.name} (${p.company})` : p.name }))} />
+            <QuoteForm add={addQuoteAction.bind(null, id)} contacts={contacts.map((p) => ({ id: p.id, label: p.company ? `${p.name} (${p.company})` : p.name }))} />
           ) : project.quotes.length === 0 ? (
             <p className="px-1 text-sm text-ink-3">No quotes yet.</p>
           ) : null}

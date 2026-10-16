@@ -8,18 +8,19 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
+import { AddMenu } from './AddMenu'
 import { Icon, type IconName } from './ui/icons'
 
 const TABS: { href: string; label: string; icon: IconName }[] = [
   { href: '/', label: 'Home', icon: 'home' },
   { href: '/places', label: 'Places', icon: 'place' },
   { href: '/projects', label: 'Projects', icon: 'project' },
-  { href: '/people', label: 'People', icon: 'person' },
+  { href: '/contacts', label: 'Contacts', icon: 'contact' },
   { href: '/more', label: 'More', icon: 'more' },
 ]
 
 /* Pages reached from "More" light up the More tab. */
-const UNDER_MORE = ['/more', '/parts', '/things', '/notes', '/guide', '/settings', '/family', '/deleted', '/share']
+const UNDER_MORE = ['/more', '/parts', '/fixtures', '/notes', '/guide', '/settings', '/family', '/deleted', '/share']
 
 function activeTab(pathname: string): string {
   if (pathname === '/') return '/'
@@ -69,15 +70,7 @@ export function AppShell({
             >
               <Icon name="search" />
             </Link>
-            {canEdit ? (
-              <Link
-                href="/add"
-                aria-label="Add something"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-ink"
-              >
-                <Icon name="plus" />
-              </Link>
-            ) : null}
+            {canEdit ? <AddMenu /> : null}
           </div>
         </div>
       </header>

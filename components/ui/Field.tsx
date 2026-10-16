@@ -28,12 +28,24 @@ export function Field({
   )
 }
 
+/*
+ * Password managers read "name", "phone" and "email" as the person filling in
+ * the form, so they offer to fill a Place's name or a plumber's phone with your
+ * own. Fields here describe the house, not you: unless a field asks for an
+ * autocomplete token (sign-in, a new account), managers are told to stay out.
+ * 1Password ignores autocomplete="off" and needs its own attribute.
+ */
+function noAutofill(autoComplete: string | undefined) {
+  if (autoComplete && autoComplete !== 'off') return { autoComplete }
+  return { autoComplete: 'off', 'data-1p-ignore': '', 'data-lpignore': 'true', 'data-bwignore': '', 'data-form-type': 'other' }
+}
+
 export function TextInput(props: ComponentProps<'input'>) {
-  return <input {...props} className={`${CONTROL} ${props.className ?? ''}`} />
+  return <input {...props} {...noAutofill(props.autoComplete)} className={`${CONTROL} ${props.className ?? ''}`} />
 }
 
 export function TextArea(props: ComponentProps<'textarea'>) {
-  return <textarea rows={3} {...props} className={`${CONTROL} ${props.className ?? ''}`} />
+  return <textarea rows={3} {...props} {...noAutofill(props.autoComplete)} className={`${CONTROL} ${props.className ?? ''}`} />
 }
 
 export function Select(props: ComponentProps<'select'>) {

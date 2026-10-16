@@ -9,19 +9,19 @@ export const metadata = { title: 'Search' }
 
 const ICON: Record<SearchKind, IconName> = {
   place: 'place',
-  thing: 'thing',
+  fixture: 'fixture',
   part: 'part',
   note: 'note',
-  person: 'person',
+  contact: 'contact',
   project: 'project',
 }
 
 const KIND_LABEL: Record<SearchKind, string> = {
   place: 'Place',
-  thing: 'Thing',
+  fixture: 'Fixture',
   part: 'Part',
   note: 'Note',
-  person: 'Person',
+  contact: 'Contact',
   project: 'Project',
 }
 
@@ -36,7 +36,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       <SearchBox defaultValue={q} autoFocus={!q} />
       <div className="mt-4">
         {q.trim() === '' ? (
-          <p className="px-1 text-[15px] text-ink-3">Search by room, thing, part, colour, person or trade.</p>
+          <p className="px-1 text-[15px] text-ink-3">Search by room, fixture, part, colour, contact or trade.</p>
         ) : hits.length === 0 ? (
           <EmptyState>Nothing matches “{q}”. Try fewer words, or a room name.</EmptyState>
         ) : (

@@ -3,7 +3,7 @@
 import { db } from '../db'
 import { parseOwner } from '../files/attachments'
 import { addLink, removeLink } from '../links/links'
-import { linkPicked } from '../integrations/integrations'
+import { addFixtureFromHomebox, linkPicked } from '../integrations/integrations'
 import { act, field, type ActionResult } from './action'
 
 export async function addLinkAction(owner: string, _: ActionResult, fd: FormData): Promise<ActionResult> {
@@ -26,5 +26,11 @@ export async function linkPickedAction(owner: string, system: string, externalId
     const parsed = parseOwner(owner)
     if (!parsed || (system !== 'homebox' && system !== 'paperless')) throw new Error('bad link')
     await linkPicked(db, scope, actor, parsed, system, externalId)
+  })
+}
+
+export async function addFixtureFromHomeboxAction(spaceId: string, externalId: string) {
+  return act(async ({ scope, actor }) => {
+    await addFixtureFromHomebox(db, scope, actor, spaceId, externalId)
   })
 }

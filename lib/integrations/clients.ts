@@ -86,19 +86,27 @@ type HbEntity = {
   description?: string
   parent?: { id?: string; name?: string } | null
   location?: { id?: string; name?: string } | null
-  entityType?: { name?: string } | string | null
+  entityType?: { name?: string; isLocation?: boolean } | string | null
+  itemCount?: number
   thumbnailId?: string | null
   imageId?: string | null
+}
+
+function hbIsLocation(e: HbEntity): boolean {
+  return typeof e.entityType === 'object' && e.entityType?.isLocation === true
 }
 
 function hbHit(conn: Connection, e: HbEntity): Hit {
   const place = e.parent?.name ?? e.location?.name ?? ''
   const type = typeof e.entityType === 'string' ? e.entityType : (e.entityType?.name ?? '')
+  const location = hbIsLocation(e)
+  const count = location && typeof e.itemCount === 'number' ? `${e.itemCount} item${e.itemCount === 1 ? '' : 's'}` : ''
   return {
     externalId: e.id,
-    title: e.name || 'Untitled item',
-    subtitle: [place, type].filter(Boolean).join(' · '),
-    url: `${base(conn)}/item/${e.id}`,
+    title: e.name || (location ? 'Untitled location' : 'Untitled item'),
+    subtitle: [place, type, count].filter(Boolean).join(' · '),
+    // The UI route says which kind of record this is; see isHomeboxLocation().
+    url: `${base(conn)}/${location ? 'location' : 'item'}/${e.id}`,
     hasThumb: Boolean(e.thumbnailId || e.imageId),
   }
 }
@@ -145,14 +153,36 @@ export async function probe(conn: Connection): Promise<{ summary: string; warnin
   }
 }
 
-export async function searchRemote(conn: Connection, query: string): Promise<Hit[]> {
+/** A stored Homebox link is a location (a room, a shelf) rather than an item. */
+export function isHomeboxLocation(url: string): boolean {
+  return /\/location\/[0-9a-f-]{36}$/i.test(url)
+}
+
+/** Search items, or with `locations`, Homebox's locations (rooms, shelves, bins). */
+export async function searchRemote(conn: Connection, query: string, opts: { locations?: boolean } = {}): Promise<Hit[]> {
   const q = encodeURIComponent(query.trim().slice(0, 100))
   if (conn.system === 'homebox') {
-    const page = await json<{ items?: HbEntity[] }>(conn, `/api/v1/entities?q=${q}&pageSize=20`)
+    const kind = opts.locations ? '&isLocation=true' : ''
+    const page = await json<{ items?: HbEntity[] }>(conn, `/api/v1/entities?q=${q}${kind}&pageSize=20&orderBy=name`)
     return (page.items ?? []).filter((e) => UUID.test(e.id)).map((e) => hbHit(conn, e))
   }
   const page = await json<{ results?: PlDoc[] }>(conn, `/api/documents/?query=${q}&page_size=20`)
   return (page.results ?? []).filter((d) => Number.isInteger(d.id)).map((d) => plHit(conn, d))
+}
+
+/**
+ * The items directly inside a Homebox location — not sub-locations, which
+ * Homebox 0.26 leaves out of item queries. Capped: a place with more than
+ * this is a storage room, and search is the better tool there.
+ */
+export async function itemsInLocation(conn: Connection, locationId: string, limit = 100): Promise<{ hits: Hit[]; total: number }> {
+  if (conn.system !== 'homebox' || !UUID.test(locationId)) throw new IntegrationError('Not found.', 'missing')
+  const page = await json<{ items?: HbEntity[]; total?: number }>(
+    conn,
+    `/api/v1/entities?parentIds=${locationId}&pageSize=${limit}&orderBy=name`,
+  )
+  const hits = (page.items ?? []).filter((e) => UUID.test(e.id) && !hbIsLocation(e)).map((e) => hbHit(conn, e))
+  return { hits, total: typeof page.total === 'number' ? page.total : hits.length }
 }
 
 export async function fetchRemote(conn: Connection, externalId: string): Promise<Hit> {

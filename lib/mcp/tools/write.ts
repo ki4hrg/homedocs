@@ -1,7 +1,7 @@
 /*
  * Write tools (homedocs:write). Each calls the same domain function the web app
  * does, so the same validation, audit row (source: mcp) and search rebuild
- * happen. Nothing here deletes: removing things is done in the app, where
+ * happen. Nothing here deletes: removing fixtures is done in the app, where
  * "Recently deleted" is one tap away.
  */
 
@@ -9,10 +9,10 @@ import { z } from 'zod'
 import { createNote } from '../../notes/notes'
 import { addUse, createPart } from '../../parts/parts'
 import { CATEGORIES } from '../../parts/templates'
-import { createPerson } from '../../people/people'
+import { createContact } from '../../contacts/contacts'
 import { createSpace } from '../../places/places'
 import { addItem, createProject, setProjectStatus, STATUSES } from '../../projects/projects'
-import { createThing } from '../../things/things'
+import { createFixture } from '../../fixtures/fixtures'
 import { scopeOf } from './read'
 import { optionalRef, resolveRef } from './resolve'
 import { defineTool, ToolRefusal } from './types'
@@ -26,15 +26,15 @@ export const writeTools = [
     title: 'Add a note',
     description:
       'Record something that happened — mulch put down, a filter changed, a repair — optionally about a place, ' +
-      'thing, part, person or project, with a quantity, cost, and a "next time" lesson and reminder date.',
+      'fixture, part, contact or project, with a quantity, cost, and a "next time" lesson and reminder date.',
     scope: 'homedocs:write',
     input: z.object({
       title: z.string().min(1).max(200),
       happened_on: day.optional().describe('Defaults to today'),
       place: ref('place').optional(),
-      thing: ref('thing').optional(),
+      fixture: ref('fixture').optional(),
       part: ref('part').optional(),
-      person: ref('person').optional(),
+      contact: ref('contact').optional(),
       project: ref('project').optional(),
       quantity: z.number().nonnegative().optional(),
       unit: z.string().max(30).optional(),
@@ -49,9 +49,9 @@ export const writeTools = [
         title: input.title,
         happenedOn: input.happened_on,
         spaceId: await optionalRef(ctx.exec, scope, 'place', input.place),
-        fixtureId: await optionalRef(ctx.exec, scope, 'thing', input.thing),
+        fixtureId: await optionalRef(ctx.exec, scope, 'fixture', input.fixture),
         supplyId: await optionalRef(ctx.exec, scope, 'part', input.part),
-        contactId: await optionalRef(ctx.exec, scope, 'person', input.person),
+        contactId: await optionalRef(ctx.exec, scope, 'contact', input.contact),
         projectId: await optionalRef(ctx.exec, scope, 'project', input.project),
         quantity: input.quantity?.toString(),
         unit: input.unit,
@@ -88,19 +88,19 @@ export const writeTools = [
   }),
 
   defineTool({
-    name: 'create_thing',
-    title: 'Create a thing',
-    description: 'Add an installed thing (light, fan, shutoff valve, appliance) in a place. Serial numbers and warranties belong in Homebox.',
+    name: 'create_fixture',
+    title: 'Create a fixture',
+    description: 'Add an installed fixture (light, fan, shutoff valve, appliance) in a place. Serial numbers and warranties belong in Homebox.',
     scope: 'homedocs:write',
     input: z.object({
       name: z.string().min(1).max(200),
-      place: ref('place').optional().describe('Leave out for whole-house things like the main shutoff'),
+      place: ref('place').optional().describe('Leave out for whole-house fixtures like the main shutoff'),
       category: z.string().max(100).optional(),
       notes: z.string().max(20_000).optional(),
     }),
     handler: async (input, ctx) => {
       const scope = await scopeOf(ctx)
-      const row = await createThing(ctx.exec, scope, ctx.actor, {
+      const row = await createFixture(ctx.exec, scope, ctx.actor, {
         name: input.name,
         spaceId: await optionalRef(ctx.exec, scope, 'place', input.place),
         category: input.category,
@@ -144,12 +144,12 @@ export const writeTools = [
     name: 'link_part',
     title: 'Link a part',
     description:
-      'Say that a thing or place uses a part: the overhead light takes 3 of this bulb; the bedroom walls are this ' +
+      'Say that a fixture or place uses a part: the overhead light takes 3 of this bulb; the bedroom walls are this ' +
       'paint in eggshell; the front bed took 12 bags (really needs 15).',
     scope: 'homedocs:write',
     input: z.object({
       part: ref('part'),
-      thing: ref('thing').optional(),
+      fixture: ref('fixture').optional(),
       place: ref('place').optional(),
       quantity: z.number().nonnegative().optional(),
       unit: z.string().max(30).optional(),
@@ -160,10 +160,10 @@ export const writeTools = [
     }),
     handler: async (input, ctx) => {
       const scope = await scopeOf(ctx)
-      if (Boolean(input.thing) === Boolean(input.place)) throw new ToolRefusal('Give exactly one of thing or place.')
+      if (Boolean(input.fixture) === Boolean(input.place)) throw new ToolRefusal('Give exactly one of fixture or place.')
       const use = await addUse(ctx.exec, scope, ctx.actor, {
         supplyId: await resolveRef(ctx.exec, scope, 'part', input.part),
-        fixtureId: await optionalRef(ctx.exec, scope, 'thing', input.thing),
+        fixtureId: await optionalRef(ctx.exec, scope, 'fixture', input.fixture),
         spaceId: await optionalRef(ctx.exec, scope, 'place', input.place),
         quantity: input.quantity?.toString(),
         unit: input.unit,
@@ -177,8 +177,8 @@ export const writeTools = [
   }),
 
   defineTool({
-    name: 'create_person',
-    title: 'Create a person',
+    name: 'create_contact',
+    title: 'Create a contact',
     description: 'Add a contractor, service or contact, with trades and which trades they are our go-to for.',
     scope: 'homedocs:write',
     input: z.object({
@@ -193,7 +193,7 @@ export const writeTools = [
     }),
     handler: async (input, ctx) => {
       const scope = await scopeOf(ctx)
-      const row = await createPerson(ctx.exec, scope, ctx.actor, {
+      const row = await createContact(ctx.exec, scope, ctx.actor, {
         name: input.name,
         company: input.company,
         phones: input.phone ? [{ label: '', value: input.phone }] : [],

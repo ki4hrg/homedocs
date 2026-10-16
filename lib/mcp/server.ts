@@ -49,10 +49,11 @@ export function createMcpServer(identity: BearerIdentity, exec: Executor): Serve
       capabilities: { tools: {} },
       instructions:
         'homedocs is a family\'s reference for their house. Places are rooms and outdoor areas ' +
-        '(a tree). Things are installed fixtures (a light, a shutoff valve) in a place. Parts are ' +
-        'reusable specs — a bulb type, a paint colour, a filter — linked to the things and places ' +
+        '(a tree). Fixtures are things installed in a place (a light, a shutoff valve). Parts are ' +
+        'reusable specs — a bulb type, a paint colour, a filter — linked to the fixtures and places ' +
         'that use them. Notes are dated records of what happened, with a "next time" lesson. ' +
-        'People are contractors and services, with trades and a preferred person per trade. ' +
+        'Contacts are the companies and people the house relies on — contractors, utilities, services — ' +
+        'with trades and a preferred contact per trade. ' +
         'Projects are jobs with a status, a checklist and quotes. To answer "what bulb does X take", ' +
         'use find_part_for. Codes and passwords are never available here.',
     },
@@ -115,7 +116,7 @@ export function createMcpServer(identity: BearerIdentity, exec: Executor): Serve
 
       /* An AppError is homedocs refusing for a reason it can state — a
          stale write, a place cycle, a missing record. Those messages
-         were written to be read by a person and are the right thing to hand
+         were written to be read by a contact and are the right thing to hand
          back. Anything else is a bug, and a stack trace is not a thing a model
          can recover from. */
       if (err instanceof AppError) return errorResult(err.message)

@@ -42,7 +42,7 @@ export function ShareForm({ action, places }: { action: FormAction; places: { id
         </div>
       </Field>
       {places.length ? (
-        <Field label="Only part of the property?" hint="Optional. Things with no place (like the main shutoff) always show.">
+        <Field label="Only part of the property?" hint="Optional. Fixtures with no place (like the main shutoff) always show.">
           <PlaceSelect name="rootSpaceId" options={places} emptyLabel="The whole property" />
         </Field>
       ) : null}

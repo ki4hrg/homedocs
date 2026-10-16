@@ -1,7 +1,7 @@
 /*
  * Records by id or by name.
  *
- * A model talking to a person says "the living room light", not a uuid, so
+ * A model talking to a contact says "the living room light", not a uuid, so
  * every tool argument that names a record accepts either. An id is used as-is
  * (and must exist in this property); a name is matched exactly first
  * (case-insensitive), then by similarity. An ambiguous name is refused with the
@@ -20,9 +20,9 @@ type Named = PgTable & { id: PgColumn; propertyId: PgColumn; deletedAt: PgColumn
 
 const KINDS = {
   place: { table: spaces, name: spaces.name, label: 'place', list: 'list_places' },
-  thing: { table: fixtures, name: fixtures.name, label: 'thing', list: 'search' },
+  fixture: { table: fixtures, name: fixtures.name, label: 'fixture', list: 'search' },
   part: { table: supplies, name: supplies.name, label: 'part', list: 'search' },
-  person: { table: contacts, name: contacts.name, label: 'person', list: 'search' },
+  contact: { table: contacts, name: contacts.name, label: 'contact', list: 'search' },
   project: { table: projects, name: projects.title, label: 'project', list: 'list_projects' },
 } as const
 

@@ -2,7 +2,7 @@
 
 import { Field, TextInput } from '@/components/ui/Field'
 
-/* How a part is used by one thing or place. Shown when adding a part from a page. */
+/* How a part is used by one fixture or place. Shown when adding a part from a page. */
 export function UseFields({
   unit,
   finishes,
@@ -11,12 +11,12 @@ export function UseFields({
 }: {
   unit: string
   finishes?: string[]
-  ownerKind: 'thing' | 'place'
+  ownerKind: 'fixture' | 'place'
   initial?: { surface?: string; finish?: string; quantity?: string | null; unit?: string; quantityNeeded?: string | null; notes?: string }
 }) {
   return (
     <fieldset className="flex flex-col gap-4 rounded-card border border-line bg-card p-4">
-      <legend className="px-1 text-sm font-semibold text-ink-2">How it’s used {ownerKind === 'thing' ? 'by this thing' : 'here'}</legend>
+      <legend className="px-1 text-sm font-semibold text-ink-2">How it’s used {ownerKind === 'fixture' ? 'by this fixture' : 'here'}</legend>
       <div className="grid grid-cols-2 gap-3">
         <Field label="How many">
           <TextInput name="quantity" inputMode="decimal" defaultValue={initial?.quantity ?? ''} placeholder="3" />

@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
-import { createPerson, deletePerson, updatePerson } from '@/lib/people/people'
+import { createContact, deleteContact, updateContact } from '@/lib/contacts/contacts'
 import { act, checkbox, field, readUpdatedAt, type ActionResult } from '@/lib/web/action'
 
 function methods(fd: FormData, prefix: string) {
@@ -31,24 +31,24 @@ function input(fd: FormData) {
   }
 }
 
-export async function createPersonAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  const r = await act(async ({ scope, actor }) => ({ id: (await createPerson(db, scope, actor, input(fd))).id }))
+export async function createContactAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const r = await act(async ({ scope, actor }) => ({ id: (await createContact(db, scope, actor, input(fd))).id }))
   if (r.error) return r
-  redirect(`/people/${r.id}`)
+  redirect(`/contacts/${r.id}`)
 }
 
-export async function updatePersonAction(id: string, _: ActionResult, fd: FormData): Promise<ActionResult> {
+export async function updateContactAction(id: string, _: ActionResult, fd: FormData): Promise<ActionResult> {
   const r = await act(async ({ scope, actor }) => {
-    await updatePerson(db, scope, actor, id, input(fd), readUpdatedAt(fd))
+    await updateContact(db, scope, actor, id, input(fd), readUpdatedAt(fd))
   })
   if (r.error) return r
-  redirect(`/people/${id}`)
+  redirect(`/contacts/${id}`)
 }
 
-export async function deletePersonAction(id: string): Promise<ActionResult> {
+export async function deleteContactAction(id: string): Promise<ActionResult> {
   const r = await act(async ({ scope, actor }) => {
-    await deletePerson(db, scope, actor, id)
+    await deleteContact(db, scope, actor, id)
   })
   if (r.error) return r
-  redirect('/people')
+  redirect('/contacts')
 }

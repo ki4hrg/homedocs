@@ -7,26 +7,26 @@
 import { sql } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 import { createSpace, deleteSpace, updateSpace } from '../lib/places/places'
-import { createThing } from '../lib/things/things'
+import { createFixture } from '../lib/fixtures/fixtures'
 import { addUse, createPart, listUses, removeUse, updatePart } from '../lib/parts/parts'
 import { comingUp, createNote } from '../lib/notes/notes'
-import { createPerson, preferredByTrade, updatePerson } from '../lib/people/people'
+import { createContact, preferredByTrade, updateContact } from '../lib/contacts/contacts'
 import { search } from '../lib/search/search'
 import { listDeleted, restore } from '../lib/trash/trash'
-import { deleteThing } from '../lib/things/things'
+import { deleteFixture } from '../lib/fixtures/fixtures'
 import { db, resetBetweenTests } from './helpers/db'
 import { household, makeProperty } from './helpers/fixtures'
 import { supplyUses } from '../lib/db/schema'
 
 resetBetweenTests()
 
-describe('places, things and parts', () => {
+describe('places, fixtures and parts', () => {
   it('shares one bulb spec across several fixtures', async () => {
     const { scope, member } = await household()
     const living = await createSpace(db, scope, member, { name: 'Living room' })
     const hall = await createSpace(db, scope, member, { name: 'Hallway' })
-    const overhead = await createThing(db, scope, member, { name: 'Overhead light', spaceId: living.id })
-    const hallLight = await createThing(db, scope, member, { name: 'Hall light', spaceId: hall.id })
+    const overhead = await createFixture(db, scope, member, { name: 'Overhead light', spaceId: living.id })
+    const hallLight = await createFixture(db, scope, member, { name: 'Hall light', spaceId: hall.id })
     const bulb = await createPart(db, scope, member, {
       category: 'bulb',
       name: '',
@@ -43,16 +43,16 @@ describe('places, things and parts', () => {
     expect(uses.find((u) => u.owner.name === 'Overhead light')?.quantity).toBe('3.00')
   })
 
-  it('refuses a use that names both a thing and a place, at the database too', async () => {
+  it('refuses a use that names both a fixture and a place, at the database too', async () => {
     const { scope, member } = await household()
     const room = await createSpace(db, scope, member, { name: 'Bedroom' })
-    const thing = await createThing(db, scope, member, { name: 'Lamp', spaceId: room.id })
+    const fixture = await createFixture(db, scope, member, { name: 'Lamp', spaceId: room.id })
     const part = await createPart(db, scope, member, { category: 'other', name: 'Widget' })
-    await expect(addUse(db, scope, member, { supplyId: part.id, fixtureId: thing.id, spaceId: room.id })).rejects.toThrow(
-      /which thing or place/,
+    await expect(addUse(db, scope, member, { supplyId: part.id, fixtureId: fixture.id, spaceId: room.id })).rejects.toThrow(
+      /which fixture or place/,
     )
     await expect(
-      db.insert(supplyUses).values({ propertyId: scope.propertyId, supplyId: part.id, fixtureId: thing.id, spaceId: room.id }),
+      db.insert(supplyUses).values({ propertyId: scope.propertyId, supplyId: part.id, fixtureId: fixture.id, spaceId: room.id }),
     ).rejects.toThrow()
   })
 
@@ -98,13 +98,13 @@ describe('places, things and parts', () => {
     expect(upcoming[0]!.supplyName).toBe('Brown hardwood mulch')
   })
 
-  it('knows our plumber: one preferred person per trade', async () => {
+  it('knows our plumber: one preferred contact per trade', async () => {
     const { scope, member } = await household()
-    const a = await createPerson(db, scope, member, { name: 'Ace Plumbing', trades: ['Plumber'], preferred: ['plumber'] })
-    const b = await createPerson(db, scope, member, { name: 'Bob', trades: ['plumber', 'handyman'], preferred: ['plumber'] })
+    const a = await createContact(db, scope, member, { name: 'Ace Plumbing', trades: ['Plumber'], preferred: ['plumber'] })
+    const b = await createContact(db, scope, member, { name: 'Bob', trades: ['plumber', 'handyman'], preferred: ['plumber'] })
     let preferred = await preferredByTrade(db, scope)
     expect(preferred.filter((p) => p.trade === 'plumber').map((p) => p.contact.name)).toEqual(['Bob'])
-    await updatePerson(db, scope, member, a.id, { trades: ['plumber'], preferred: ['plumber'] })
+    await updateContact(db, scope, member, a.id, { trades: ['plumber'], preferred: ['plumber'] })
     preferred = await preferredByTrade(db, scope)
     expect(preferred.filter((p) => p.trade === 'plumber').map((p) => p.contact.id)).toEqual([a.id])
     expect(b.id).toBeTruthy()
@@ -115,18 +115,18 @@ describe('search', () => {
   it('finds a fixture by its room and the part it uses', async () => {
     const { scope, member } = await household()
     const living = await createSpace(db, scope, member, { name: 'Living room' })
-    const light = await createThing(db, scope, member, { name: 'Overhead light', spaceId: living.id })
+    const light = await createFixture(db, scope, member, { name: 'Overhead light', spaceId: living.id })
     const bulb = await createPart(db, scope, member, { category: 'bulb', name: 'Philips A19 LED' })
     await addUse(db, scope, member, { supplyId: bulb.id, fixtureId: light.id })
 
     const hits = await search(db, scope, 'living room bulb')
-    expect(hits[0]).toMatchObject({ kind: 'thing', id: light.id })
+    expect(hits[0]).toMatchObject({ kind: 'fixture', id: light.id })
   })
 
   it('follows a rename through the cascade: Den → Office', async () => {
     const { scope, member } = await household()
     const den = await createSpace(db, scope, member, { name: 'Den' })
-    const lamp = await createThing(db, scope, member, { name: 'Desk lamp', spaceId: den.id })
+    const lamp = await createFixture(db, scope, member, { name: 'Desk lamp', spaceId: den.id })
     const bulb = await createPart(db, scope, member, { category: 'bulb', name: 'Edison bulb' })
     await addUse(db, scope, member, { supplyId: bulb.id, fixtureId: lamp.id })
 
@@ -138,9 +138,9 @@ describe('search', () => {
     expect((doc as { d: string }).d).not.toMatch(/'den'/)
   })
 
-  it('follows a part rename to the things that use it', async () => {
+  it('follows a part rename to the fixtures that use it', async () => {
     const { scope, member } = await household()
-    const lamp = await createThing(db, scope, member, { name: 'Porch light' })
+    const lamp = await createFixture(db, scope, member, { name: 'Porch light' })
     const bulb = await createPart(db, scope, member, { category: 'bulb', name: 'Old bulb' })
     await addUse(db, scope, member, { supplyId: bulb.id, fixtureId: lamp.id })
     await updatePart(db, scope, member, bulb.id, { name: 'Cree BR30' })
@@ -149,7 +149,7 @@ describe('search', () => {
 
   it('tolerates a typo in a name', async () => {
     const { scope, member } = await household()
-    const p = await createPerson(db, scope, member, { name: 'Plumbing Pros' })
+    const p = await createContact(db, scope, member, { name: 'Plumbing Pros' })
     const hits = await search(db, scope, 'Plumbng Pro')
     expect(hits.map((h) => h.id)).toContain(p.id)
   })
@@ -170,19 +170,19 @@ describe('roles, deletes and restore', () => {
     await expect(createSpace(db, scope, viewer, { name: 'Attic' })).rejects.toThrow(/Viewers can look/)
   })
 
-  it('refuses to delete a place with things in it, and restores what was deleted', async () => {
+  it('refuses to delete a place with fixtures in it, and restores what was deleted', async () => {
     const { scope, member } = await household()
     const garage = await createSpace(db, scope, member, { name: 'Garage' })
-    const opener = await createThing(db, scope, member, { name: 'Door opener', spaceId: garage.id })
-    await expect(deleteSpace(db, scope, member, garage.id)).rejects.toThrow(/Move or delete the 1 thing/)
+    const opener = await createFixture(db, scope, member, { name: 'Door opener', spaceId: garage.id })
+    await expect(deleteSpace(db, scope, member, garage.id)).rejects.toThrow(/Move or delete the 1 fixture/)
 
-    await deleteThing(db, scope, member, opener.id)
+    await deleteFixture(db, scope, member, opener.id)
     await deleteSpace(db, scope, member, garage.id)
     const trash = await listDeleted(db, scope)
     expect(trash.map((t) => t.title).sort()).toEqual(['Door opener', 'Garage'])
 
     await restore(db, scope, member, 'place', garage.id)
-    await restore(db, scope, member, 'thing', opener.id)
+    await restore(db, scope, member, 'fixture', opener.id)
     expect((await search(db, scope, 'garage opener')).map((h) => h.id)).toContain(opener.id)
   })
 

@@ -35,7 +35,19 @@ async function shrink(file: File): Promise<Blob> {
   }
 }
 
-export function PhotoUpload({ owner, label = 'Add photo' }: { owner: string; label?: string }) {
+/**
+ * `tile` is the large empty-state version, for a record whose photo is the
+ * point of it (where the water shutoff is). On a phone it offers the camera.
+ */
+export function PhotoUpload({
+  owner,
+  label = 'Add photo',
+  tile,
+}: {
+  owner: string
+  label?: string
+  tile?: { title: string; hint: string }
+}) {
   const input = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const [busy, setBusy] = useState(false)
@@ -78,10 +90,23 @@ export function PhotoUpload({ owner, label = 'Add photo' }: { owner: string; lab
         onChange={onChange}
         aria-label={label}
       />
-      <button type="button" className={buttonClass('secondary')} disabled={busy} onClick={() => input.current?.click()}>
-        <Icon name="camera" />
-        {busy ? 'Uploading…' : label}
-      </button>
+      {tile ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => input.current?.click()}
+          className="flex min-h-36 w-full flex-col items-center justify-center gap-1.5 rounded-card border-2 border-dashed border-line bg-card px-4 py-6 text-center hover:bg-sunk disabled:opacity-60"
+        >
+          <Icon name="camera" className="h-8 w-8 text-accent" />
+          <span className="text-[15px] font-medium text-ink">{busy ? 'Uploading…' : tile.title}</span>
+          <span className="text-sm text-ink-3">{tile.hint}</span>
+        </button>
+      ) : (
+        <button type="button" className={buttonClass('secondary')} disabled={busy} onClick={() => input.current?.click()}>
+          <Icon name="camera" />
+          {busy ? 'Uploading…' : label}
+        </button>
+      )}
       {error ? (
         <p role="alert" className="text-sm text-danger">
           {error}

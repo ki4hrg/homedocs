@@ -14,14 +14,14 @@ export default async function MorePage() {
       <PageHeader title="More" subtitle={`Signed in as ${user.displayName}`} />
       <List>
         <Row href="/parts" icon="part" title="Parts" detail="Bulbs, paint colours, filters, batteries" />
-        <Row href="/things" icon="thing" title="Things" detail="Everything installed, by place" />
+        <Row href="/fixtures" icon="fixture" title="Fixtures" detail="Everything installed, by place" />
         <Row href="/notes" icon="note" title="Notes" detail="What happened, newest first" />
         <Row href="/guide" icon="guide" title="House guide" detail="Emergency info and the housesitter handoff" />
       </List>
       <Section title="Settings">
         <List>
           {admin ? <Row href="/share" icon="link" title="Share links" detail="Send the house guide to a housesitter" /> : null}
-          {admin ? <Row href="/family" icon="person" title="Family" detail="Who can sign in, and invite links" /> : null}
+          {admin ? <Row href="/family" icon="contact" title="Family" detail="Who can sign in, and invite links" /> : null}
           <Row href="/deleted" icon="trash" title="Recently deleted" detail="Bring back something deleted by mistake" />
           <Row href="/settings" icon="edit" title="Settings" detail={admin ? 'Your account, and the home' : 'Your name and password'} />
         </List>

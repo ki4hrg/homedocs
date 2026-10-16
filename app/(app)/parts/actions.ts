@@ -25,11 +25,11 @@ function useInput(fd: FormData) {
   }
 }
 
-/** Where to go after: back to the thing or place the part was added from, or the part. */
+/** Where to go after: back to the fixture or place the part was added from, or the part. */
 function after(fd: FormData, partId: string) {
   const fixtureId = field(fd, 'fixtureId')
   const spaceId = field(fd, 'spaceId')
-  if (fixtureId) return `/things/${fixtureId}`
+  if (fixtureId) return `/fixtures/${fixtureId}`
   if (spaceId) return `/places/${spaceId}`
   return `/parts/${partId}`
 }
@@ -62,7 +62,7 @@ export async function deletePartAction(id: string): Promise<ActionResult> {
   redirect('/parts')
 }
 
-/** Link an existing part to a thing or place. */
+/** Link an existing part to a fixture or place. */
 export async function addUseAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
   const supplyId = field(fd, 'supplyId')
   const r = await act(async ({ scope, actor }) => {

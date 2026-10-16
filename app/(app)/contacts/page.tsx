@@ -4,33 +4,33 @@ import { Icon } from '@/components/ui/icons'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { roleAtLeast } from '@/lib/core/types'
 import { db } from '@/lib/db'
-import { listPeople, telHref } from '@/lib/people/people'
+import { listContacts, telHref } from '@/lib/contacts/contacts'
 import { viewer } from '@/lib/web/context'
 
-export const metadata = { title: 'People' }
+export const metadata = { title: 'Contacts' }
 
-export default async function PeoplePage() {
+export default async function ContactsPage() {
   const { scope, user } = await viewer()
-  const people = await listPeople(db, scope)
+  const contacts = await listContacts(db, scope)
   const canEdit = roleAtLeast(user.role, 'member')
   return (
     <>
       <PageHeader
-        title="People"
+        title="Contacts"
         subtitle="Who we call"
-        actions={canEdit ? <LinkButton href="/people/new" variant="primary">Add</LinkButton> : null}
+        actions={canEdit ? <LinkButton href="/contacts/new" variant="primary">Add</LinkButton> : null}
       />
-      {people.length ? (
+      {contacts.length ? (
         <List>
-          {people.map((p) => {
+          {contacts.map((p) => {
             const phone = p.phones[0]?.value
             const ours = p.trades.filter((t) => t.preferred).map((t) => `our ${t.trade}`)
             const other = p.trades.filter((t) => !t.preferred).map((t) => t.trade)
             return (
               <Row
                 key={p.id}
-                href={`/people/${p.id}`}
-                icon="person"
+                href={`/contacts/${p.id}`}
+                icon="contact"
                 title={p.name}
                 detail={[p.company, [...ours, ...other].join(', ')].filter(Boolean).join(' · ')}
                 trailing={
@@ -49,7 +49,7 @@ export default async function PeoplePage() {
           })}
         </List>
       ) : (
-        <EmptyState action={canEdit ? <LinkButton href="/people/new" variant="primary">Add someone</LinkButton> : null}>
+        <EmptyState action={canEdit ? <LinkButton href="/contacts/new" variant="primary">Add a contact</LinkButton> : null}>
           Plumber, electrician, HVAC, the HOA, utilities — whoever you’d have to look up in a hurry.
         </EmptyState>
       )}

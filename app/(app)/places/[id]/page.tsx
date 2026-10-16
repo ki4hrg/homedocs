@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { HomeboxHere } from '@/components/HomeboxHere'
 import { Lessons } from '@/components/Lessons'
 import { LinksSection } from '@/components/LinksSection'
 import { NoteList } from '@/components/NoteList'
@@ -15,7 +16,7 @@ import { listAttachments } from '@/lib/files/attachments'
 import { lessons, listNotes } from '@/lib/notes/notes'
 import { listUses } from '@/lib/parts/parts'
 import { getSpace } from '@/lib/places/places'
-import { listThings } from '@/lib/things/things'
+import { listFixtures } from '@/lib/fixtures/fixtures'
 import { editedBy } from '@/lib/web/attribution'
 import { viewer } from '@/lib/web/context'
 import { removeAttachmentAction } from '@/lib/web/shared-actions'
@@ -24,8 +25,8 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
   const { id } = await params
   const { scope, user } = await viewer()
   const place = await getSpace(db, scope, id)
-  const [things, uses, notes, photos, tips, edited] = await Promise.all([
-    listThings(db, scope, { spaceId: id }),
+  const [fixtures, uses, notes, photos, tips, edited] = await Promise.all([
+    listFixtures(db, scope, { spaceId: id }),
     listUses(db, scope, { spaceId: id }),
     listNotes(db, scope, { spaceId: id, limit: 20 }),
     listAttachments(db, scope, { kind: 'space', id }),
@@ -47,7 +48,7 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
       {canEdit ? (
         <div className="grid grid-cols-3 gap-2" role="group" aria-label="Add to this place">
           {[
-            { href: `/things/new?space=${id}`, label: 'What’s here?', sub: 'A thing', icon: 'thing' as const },
+            { href: `/fixtures/new?space=${id}`, label: 'What’s here?', sub: 'A fixture', icon: 'fixture' as const },
             { href: `/use?space=${id}`, label: 'What did we use?', sub: 'Paint, mulch…', icon: 'part' as const },
             { href: `/notes/new?space=${id}`, label: 'What happened?', sub: 'A note', icon: 'note' as const },
           ].map((a) => (
@@ -85,17 +86,19 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
         </Section>
       ) : null}
 
-      <Section title="Things here">
-        {things.length ? (
+      <Section title="Fixtures here">
+        {fixtures.length ? (
           <List>
-            {things.map((t) => (
-              <Row key={t.id} href={`/things/${t.id}`} icon="thing" title={t.name} detail={t.category} />
+            {fixtures.map((t) => (
+              <Row key={t.id} href={`/fixtures/${t.id}`} icon="fixture" title={t.name} detail={t.category} />
             ))}
           </List>
         ) : (
-          <p className="px-1 text-sm text-ink-3">No things yet — lights, fans, shutoffs, appliances.</p>
+          <p className="px-1 text-sm text-ink-3">No fixtures yet — lights, fans, shutoffs, appliances.</p>
         )}
       </Section>
+
+      <HomeboxHere spaceId={id} placeName={place.name} canEdit={canEdit} />
 
       {uses.length ? (
         <Section title="Used here">

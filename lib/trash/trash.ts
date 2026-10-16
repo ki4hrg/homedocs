@@ -13,10 +13,10 @@ import { cascadeContact, cascadeFixture, cascadeProject, cascadeSpace, cascadeSu
 
 const TABLES = {
   place: { table: spaces, entity: 'space', title: spaces.name, cascade: cascadeSpace },
-  thing: { table: fixtures, entity: 'fixture', title: fixtures.name, cascade: cascadeFixture },
+  fixture: { table: fixtures, entity: 'fixture', title: fixtures.name, cascade: cascadeFixture },
   part: { table: supplies, entity: 'supply', title: supplies.name, cascade: cascadeSupply },
   note: { table: logs, entity: 'log', title: logs.title, cascade: rebuildLog },
-  person: { table: contacts, entity: 'contact', title: contacts.name, cascade: cascadeContact },
+  contact: { table: contacts, entity: 'contact', title: contacts.name, cascade: cascadeContact },
   project: { table: projects, entity: 'project', title: projects.title, cascade: cascadeProject },
 } as const
 

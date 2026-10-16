@@ -2,7 +2,7 @@ import QRCode from 'qrcode'
 import type { ReactNode } from 'react'
 import type { Guide } from '@/lib/guide/guide'
 import { wifiQrText } from '@/lib/guide/guide'
-import { telHref } from '@/lib/people/people'
+import { telHref } from '@/lib/contacts/contacts'
 import { Card, Pill, Section } from '../ui/Card'
 import { Icon } from '../ui/icons'
 import { PrintButton } from './PrintButton'
@@ -35,7 +35,7 @@ export async function GuideView({
   for (const s of guide.secrets) {
     if (s.kind === 'wifi' && s.value !== undefined && s.ssid) qrs.set(s.id, await wifiQr(s.ssid, s.value, s.security))
   }
-  const empty = !guide.things.length && !guide.people.length && !guide.sections.length && !guide.secrets.length
+  const empty = !guide.fixtures.length && !guide.contacts.length && !guide.sections.length && !guide.secrets.length
 
   return (
     <div className="guide">
@@ -56,10 +56,10 @@ export async function GuideView({
         <Card className="px-4 py-6 text-center text-[15px] text-ink-3">Nothing is on the house guide yet.</Card>
       ) : null}
 
-      {guide.things.length ? (
+      {guide.fixtures.length ? (
         <Section title="In an emergency">
           <div className="flex flex-col gap-3">
-            {guide.things.map((t) => (
+            {guide.fixtures.map((t) => (
               <Card key={t.id} className="overflow-hidden">
                 {t.photos[0] ? (
                   <a href={`${fileBase}/${t.photos[0].sha256}`} target="_blank" rel="noreferrer">
@@ -92,11 +92,11 @@ export async function GuideView({
         </Section>
       ) : null}
 
-      {guide.people.length ? (
+      {guide.contacts.length ? (
         <Section title="Who to call">
           <Card>
             <ul className="divide-y divide-line">
-              {guide.people.map((p) => (
+              {guide.contacts.map((p) => (
                 <li key={p.id} className="px-4 py-3">
                   <p className="text-[15px] font-semibold text-ink">
                     {p.name}

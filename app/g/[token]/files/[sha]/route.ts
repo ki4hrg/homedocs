@@ -1,6 +1,6 @@
 /*
  * A photo on a shared guide. Guard: the link token, and the file must be on a
- * record this guide shows (an emergency thing's photo). Anything else is a 404
+ * record this guide shows (an emergency fixture's photo). Anything else is a 404
  * — a hash alone is never a key.
  */
 

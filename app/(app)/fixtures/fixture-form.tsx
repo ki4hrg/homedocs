@@ -5,7 +5,7 @@ import { PlaceSelect } from '@/components/PlaceSelect'
 import { Checkbox, Field, SubmitButton, TextArea, TextInput } from '@/components/ui/Field'
 import { useState } from 'react'
 
-export function ThingForm({
+export function FixtureForm({
   action,
   places,
   categories,
@@ -36,9 +36,9 @@ export function ThingForm({
       <Field label="Where is it?">
         <PlaceSelect name="spaceId" defaultValue={initial?.spaceId ?? ''} options={places} />
       </Field>
-      <Field label="Kind of thing" hint="Pick one or type your own.">
-        <TextInput name="category" list="thing-categories" defaultValue={initial?.category} />
-        <datalist id="thing-categories">
+      <Field label="Kind of fixture" hint="Pick one or type your own.">
+        <TextInput name="category" list="fixture-categories" defaultValue={initial?.category} />
+        <datalist id="fixture-categories">
           {categories.map((c) => (
             <option key={c} value={c} />
           ))}

@@ -192,7 +192,7 @@ export const properties = pgTable('properties', {
   ...authored,
 })
 
-// ─── places, things, parts ───────────────────────────────────────────────────
+// ─── places, fixtures, parts ───────────────────────────────────────────────────
 
 export const spaces = pgTable(
   'spaces',
@@ -214,7 +214,7 @@ export const spaces = pgTable(
   ],
 )
 
-/** "Thing": an installed fixture or system that is not inventory. */
+/** "Fixture": something installed — a light, a valve, a system — that is not inventory. */
 export const fixtures = pgTable(
   'fixtures',
   {
@@ -239,7 +239,7 @@ export const fixtures = pgTable(
   ],
 )
 
-/** "Part": a reusable spec — defined once, used by many things and places. */
+/** "Part": a reusable spec — defined once, used by many fixtures and places. */
 export const supplies = pgTable(
   'supplies',
   {
@@ -263,7 +263,7 @@ export const supplies = pgTable(
   ],
 )
 
-/** Where a part is used: by exactly one thing or one place. */
+/** Where a part is used: by exactly one fixture or one place. */
 export const supplyUses = pgTable(
   'supply_uses',
   {
@@ -296,7 +296,7 @@ export const supplyUses = pgTable(
   ],
 )
 
-// ─── people ──────────────────────────────────────────────────────────────────
+// ─── contacts ──────────────────────────────────────────────────────────────────
 
 export type ContactMethod = { label: string; value: string }
 
@@ -449,7 +449,7 @@ export const logs = pgTable(
 
 // ─── house guide ─────────────────────────────────────────────────────────────
 
-/** Free text only — the emergency card is generated from things and people. */
+/** Free text only — the emergency card is generated from fixtures and contacts. */
 export const guideSections = pgTable('guide_sections', {
   id: uuid('id').primaryKey().defaultRandom(),
   propertyId: propertyId(),

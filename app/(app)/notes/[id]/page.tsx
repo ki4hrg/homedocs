@@ -41,9 +41,9 @@ export default async function NotePage({ params }: { params: Promise<{ id: strin
 
   const about = [
     row.spaceName && note.spaceId ? { href: `/places/${note.spaceId}`, label: row.spaceName, icon: 'place' as const } : null,
-    row.fixtureName && note.fixtureId ? { href: `/things/${note.fixtureId}`, label: row.fixtureName, icon: 'thing' as const } : null,
+    row.fixtureName && note.fixtureId ? { href: `/fixtures/${note.fixtureId}`, label: row.fixtureName, icon: 'fixture' as const } : null,
     row.supplyName && note.supplyId ? { href: `/parts/${note.supplyId}`, label: row.supplyName, icon: 'part' as const } : null,
-    row.contactName && note.contactId ? { href: `/people/${note.contactId}`, label: row.contactName, icon: 'person' as const } : null,
+    row.contactName && note.contactId ? { href: `/contacts/${note.contactId}`, label: row.contactName, icon: 'contact' as const } : null,
     row.projectTitle && note.projectId ? { href: `/projects/${note.projectId}`, label: row.projectTitle, icon: 'project' as const } : null,
   ].filter((x): x is NonNullable<typeof x> => x !== null)
 

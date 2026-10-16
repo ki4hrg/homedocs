@@ -4,38 +4,139 @@ import { EmptyState, List, Row, Section } from '@/components/ui/Card'
 import { LinkButton } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/icons'
 import { db } from '@/lib/db'
-import { comingUp, listNotes } from '@/lib/notes/notes'
-import { preferredByTrade, telHref } from '@/lib/people/people'
+import { comingUp } from '@/lib/notes/notes'
+import { partsToRebuy } from '@/lib/parts/parts'
+import { buildTree, listSpaces, placeCounts, type SpaceNode } from '@/lib/places/places'
+import { preferredByTrade, telHref } from '@/lib/contacts/contacts'
 import { listProjects, OPEN_STATUSES, STATUS_LABEL } from '@/lib/projects/projects'
 import { roleAtLeast } from '@/lib/core/types'
 import { formatDay } from '@/lib/web/format'
 import { viewer } from '@/lib/web/context'
 
+/*
+ * Home is organised the way questions come: by place ("the living-room
+ * light"), and by the parts a house keeps needing ("what size filter?").
+ * Contacts, reminders and projects follow. Systems (plumbing, HVAC) will sit
+ * beside places when they exist.
+ */
+
+type Tile = { id: string; name: string; counts?: { fixtures: number; parts: number } }
+
+function countLine(c?: { fixtures: number; parts: number }) {
+  if (!c || (c.fixtures === 0 && c.parts === 0)) return 'Nothing yet'
+  const bits = []
+  if (c.fixtures) bits.push(`${c.fixtures} fixture${c.fixtures === 1 ? '' : 's'}`)
+  if (c.parts) bits.push(`${c.parts} part${c.parts === 1 ? '' : 's'}`)
+  return bits.join(' · ')
+}
+
+function Tiles({ tiles }: { tiles: Tile[] }) {
+  return (
+    <ul className="grid grid-cols-2 gap-2">
+      {tiles.map((t) => (
+        <li key={t.id}>
+          <Link
+            href={`/places/${t.id}`}
+            className="flex min-h-18 flex-col justify-center gap-0.5 rounded-card border border-line bg-card px-3 py-3 hover:bg-sunk"
+          >
+            <span className="text-[15px] font-medium leading-tight text-ink">{t.name}</span>
+            <span className="text-xs text-ink-3">{countLine(t.counts)}</span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/*
+ * Floors and outdoor areas that have places inside become a heading with their
+ * rooms as tiles ("Upstairs": Bedroom, Bath). Every other top-level place is a
+ * tile of its own, so the living room is one tap from Home either way.
+ */
+function placeGroups(roots: SpaceNode[]) {
+  const loose: SpaceNode[] = []
+  const groups: { root: SpaceNode; tiles: SpaceNode[] }[] = []
+  for (const r of roots) {
+    if (r.children.length && (r.kind === 'floor' || r.kind === 'outdoor')) groups.push({ root: r, tiles: r.children })
+    else loose.push(r)
+  }
+  return { loose, groups }
+}
+
 export default async function HomePage() {
   const { scope, user } = await viewer()
-  const [upcoming, recent, preferred, projects] = await Promise.all([
+  const [upcoming, preferred, projects, spaces, counts, rebuy] = await Promise.all([
     comingUp(db, scope),
-    listNotes(db, scope, { limit: 5 }),
     preferredByTrade(db, scope),
     listProjects(db, scope, { statuses: OPEN_STATUSES }),
+    listSpaces(db, scope),
+    placeCounts(db, scope),
+    partsToRebuy(db, scope),
   ])
   const canEdit = roleAtLeast(user.role, 'member')
+  const { loose, groups } = placeGroups(buildTree(spaces))
+  const tile = (n: SpaceNode): Tile => ({ id: n.id, name: n.name, counts: counts.get(n.id) })
 
   return (
     <>
       <h1 className="sr-only">Home</h1>
       <SearchBox />
 
+      {spaces.length === 0 ? (
+        <Section title="Places">
+          <EmptyState action={canEdit ? <LinkButton href="/places/new" variant="primary">Add the first place</LinkButton> : null}>
+            Start with the rooms you ask questions about most — the living room, the kitchen, the yard.
+          </EmptyState>
+        </Section>
+      ) : (
+        <>
+          {loose.length ? (
+            <Section title="Places" action={<Link href="/places" className="text-sm text-accent">All</Link>}>
+              <Tiles tiles={loose.map(tile)} />
+            </Section>
+          ) : null}
+          {groups.map(({ root, tiles }) => (
+            <Section
+              key={root.id}
+              title={root.name}
+              action={
+                <Link href={`/places/${root.id}`} className="text-sm text-accent">
+                  Open
+                </Link>
+              }
+            >
+              <Tiles tiles={tiles.map(tile)} />
+            </Section>
+          ))}
+        </>
+      )}
+
+      {rebuy.length > 0 ? (
+        <Section title="What the house takes" action={<Link href="/parts" className="text-sm text-accent">All parts</Link>}>
+          <List>
+            {rebuy.slice(0, 8).map((p) => (
+              <Row
+                key={p.id}
+                href={`/parts/${p.id}`}
+                icon="part"
+                title={p.name}
+                detail={p.usedBy.slice(0, 3).join(', ') + (p.usedBy.length > 3 ? ` and ${p.usedBy.length - 3} more` : '')}
+              />
+            ))}
+          </List>
+        </Section>
+      ) : null}
+
       {preferred.length > 0 ? (
-        <Section title="Our people" action={<Link href="/people" className="text-sm text-accent">All</Link>}>
+        <Section title="Who to call" action={<Link href="/contacts" className="text-sm text-accent">All</Link>}>
           <List>
             {preferred.slice(0, 6).map(({ trade, contact }) => {
               const phone = contact.phones[0]?.value
               return (
                 <Row
                   key={`${trade}-${contact.id}`}
-                  href={`/people/${contact.id}`}
-                  icon="person"
+                  href={`/contacts/${contact.id}`}
+                  icon="contact"
                   title={contact.name}
                   detail={trade[0]!.toUpperCase() + trade.slice(1)}
                   trailing={
@@ -94,25 +195,6 @@ export default async function HomePage() {
         )}
       </Section>
 
-      <Section title="Recent notes" action={<Link href="/notes" className="text-sm text-accent">All</Link>}>
-        {recent.length > 0 ? (
-          <List>
-            {recent.map(({ note, spaceName, fixtureName, supplyName }) => (
-              <Row
-                key={note.id}
-                href={`/notes/${note.id}`}
-                icon="note"
-                title={note.title}
-                detail={[formatDay(note.happenedOn), fixtureName ?? spaceName ?? supplyName].filter(Boolean).join(' · ')}
-              />
-            ))}
-          </List>
-        ) : (
-          <EmptyState action={canEdit ? <LinkButton href="/places">Start with your places</LinkButton> : null}>
-            Nothing written down yet. Start by adding the rooms and outdoor areas of the house.
-          </EmptyState>
-        )}
-      </Section>
     </>
   )
 }

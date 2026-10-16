@@ -11,11 +11,11 @@ test.describe.configure({ mode: 'serial' })
 let link = ''
 
 test('the family sets up the guide and makes a link', async ({ page }) => {
-  await page.goto('/things/new')
+  await page.goto('/fixtures/new')
   await page.locator('[name=name]').fill('Main water shutoff')
   await page.getByLabel('Show on the house guide').check()
   await page.locator('[name=guideNote]').fill('Basement, behind the furnace. Quarter turn.')
-  await page.getByRole('button', { name: 'Add thing' }).click()
+  await page.getByRole('button', { name: 'Add fixture' }).click()
 
   await page.goto('/guide/codes/new')
   await page.locator('[name=kind]').selectOption('alarm')

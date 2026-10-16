@@ -5,8 +5,8 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { requireRole } from '@/lib/auth/guards'
 import { db } from '@/lib/db'
 import { listSecrets, listSections, SECRET_KINDS } from '@/lib/guide/guide'
-import { listPeople } from '@/lib/people/people'
-import { listThings } from '@/lib/things/things'
+import { listContacts } from '@/lib/contacts/contacts'
+import { listFixtures } from '@/lib/fixtures/fixtures'
 import { viewer } from '@/lib/web/context'
 
 export const metadata = { title: 'Edit the guide' }
@@ -14,45 +14,45 @@ export const metadata = { title: 'Edit the guide' }
 export default async function EditGuidePage() {
   await requireRole('member')
   const { scope } = await viewer()
-  const [sections, codes, things, people] = await Promise.all([
+  const [sections, codes, fixtures, contacts] = await Promise.all([
     listSections(db, scope),
     listSecrets(db, scope),
-    listThings(db, scope),
-    listPeople(db, scope),
+    listFixtures(db, scope),
+    listContacts(db, scope),
   ])
-  const guideThings = things.filter((t) => t.inGuide)
-  const guidePeople = people.filter((p) => p.inGuide || p.trades.some((t) => t.preferred))
+  const guideFixtures = fixtures.filter((t) => t.inGuide)
+  const guideContacts = contacts.filter((p) => p.inGuide || p.trades.some((t) => t.preferred))
   return (
     <>
       <PageHeader title="Edit the guide" back={{ href: '/guide', label: 'House guide' }} />
 
-      <Section title="Emergency things">
+      <Section title="Emergency fixtures">
         <p className="mb-2 px-1 text-sm text-ink-3">
-          Shutoffs, the breaker panel, the water heater. Open a thing and tick “Show on the house guide” to add it.
+          Shutoffs, the breaker panel, the water heater. Open a fixture and tick “Show on the house guide” to add it.
         </p>
-        {guideThings.length ? (
+        {guideFixtures.length ? (
           <List>
-            {guideThings.map((t) => (
-              <Row key={t.id} href={`/things/${t.id}/edit`} icon="thing" title={t.name} detail={t.guideNote || 'No note for housesitters yet'} />
+            {guideFixtures.map((t) => (
+              <Row key={t.id} href={`/fixtures/${t.id}/edit`} icon="fixture" title={t.name} detail={t.guideNote || 'No note for housesitters yet'} />
             ))}
           </List>
         ) : (
-          <EmptyState action={<LinkButton href="/things">Pick from things</LinkButton>}>None yet.</EmptyState>
+          <EmptyState action={<LinkButton href="/fixtures">Pick from fixtures</LinkButton>}>None yet.</EmptyState>
         )}
       </Section>
 
-      <Section title="People">
+      <Section title="Contacts">
         <p className="mb-2 px-1 text-sm text-ink-3">
-          Our go-to person for each trade shows automatically, plus anyone marked for the guide.
+          Our go-to contact for each trade shows automatically, plus anyone marked for the guide.
         </p>
-        {guidePeople.length ? (
+        {guideContacts.length ? (
           <List>
-            {guidePeople.map((p) => (
-              <Row key={p.id} href={`/people/${p.id}/edit`} icon="person" title={p.name} detail={p.trades.map((t) => t.trade).join(', ')} />
+            {guideContacts.map((p) => (
+              <Row key={p.id} href={`/contacts/${p.id}/edit`} icon="contact" title={p.name} detail={p.trades.map((t) => t.trade).join(', ')} />
             ))}
           </List>
         ) : (
-          <EmptyState action={<LinkButton href="/people">Go to people</LinkButton>}>None yet.</EmptyState>
+          <EmptyState action={<LinkButton href="/contacts">Go to contacts</LinkButton>}>None yet.</EmptyState>
         )}
       </Section>
 

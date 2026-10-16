@@ -1,9 +1,9 @@
 /*
  * The house guide: what a housesitter (or a family member in a hurry) needs.
  *
- * There is one source of truth. The emergency card is *generated* from things
- * marked "show on the house guide" (shutoffs, the panel) and from people (the
- * preferred person per trade, plus anyone marked for the guide). Guide sections
+ * There is one source of truth. The emergency card is *generated* from fixtures
+ * marked "show on the house guide" (shutoffs, the panel) and from contacts (the
+ * preferred contact per trade, plus anyone marked for the guide). Guide sections
  * are free text only — trash day, the dog's routine, which door sticks.
  *
  * What is gated: secrets with gate `home_or_pin`, sections marked sensitive,
@@ -172,7 +172,7 @@ export async function deleteSecret(exec: Executor, scope: PropertyScope, actor: 
 
 // ─── the assembled guide ─────────────────────────────────────────────────────
 
-export type GuideThing = {
+export type GuideFixture = {
   id: string
   name: string
   where: string
@@ -180,7 +180,7 @@ export type GuideThing = {
   photos: { sha256: string; caption: string }[]
 }
 
-export type GuidePerson = { id: string; name: string; company: string; roles: string[]; phones: { label: string; value: string }[] }
+export type GuideContact = { id: string; name: string; company: string; roles: string[]; phones: { label: string; value: string }[] }
 
 export type GuideSecret = {
   id: string
@@ -199,8 +199,8 @@ export type Guide = {
   homeName: string
   /** Present only when unlocked. */
   address?: string
-  things: GuideThing[]
-  people: GuidePerson[]
+  fixtures: GuideFixture[]
+  contacts: GuideContact[]
   sections: { id: string; title: string; body: string; sensitive: boolean; hidden: boolean }[]
   secrets: GuideSecret[]
   /** Something is held back that unlocking would show. */
@@ -217,11 +217,11 @@ export async function buildGuide(
   const [property] = await exec.select().from(properties).where(eq(properties.id, scope.propertyId))
   if (!property) throw new NotFoundError('home')
 
-  // Things: everything marked for the guide, limited to the link's part of the
-  // property when it has one. Whole-house things (no place) always show —
+  // Fixtures: everything marked for the guide, limited to the link's part of the
+  // property when it has one. Whole-house fixtures (no place) always show —
   // the main shutoff matters wherever you are.
   const within = opts.rootSpaceId ? new Set(await subtreeIds(exec, opts.rootSpaceId)) : null
-  const thingRows = (
+  const fixtureRows = (
     await exec
       .select()
       .from(fixtures)
@@ -229,18 +229,18 @@ export async function buildGuide(
       .orderBy(asc(fixtures.name))
   ).filter((t) => !within || !t.spaceId || within.has(t.spaceId))
 
-  const photoRows = thingRows.length
+  const photoRows = fixtureRows.length
     ? await exec
         .select({ fixtureId: attachments.fixtureId, sha256: attachments.sha256, caption: attachments.caption, mime: attachments.mime })
         .from(attachments)
-        .where(and(inArray(attachments.fixtureId, thingRows.map((t) => t.id)), isNull(attachments.deletedAt)))
+        .where(and(inArray(attachments.fixtureId, fixtureRows.map((t) => t.id)), isNull(attachments.deletedAt)))
         .orderBy(asc(attachments.sort), asc(attachments.createdAt))
     : []
 
-  const things: GuideThing[] = []
-  for (const t of thingRows) {
+  const guideFixtures: GuideFixture[] = []
+  for (const t of fixtureRows) {
     const path = await spacePath(exec, t.spaceId)
-    things.push({
+    guideFixtures.push({
       id: t.id,
       name: t.name,
       where: path.map((p) => p.name).join(' › ') || 'Whole house',
@@ -251,7 +251,7 @@ export async function buildGuide(
     })
   }
 
-  // People: the preferred person for each trade, and anyone marked for the guide.
+  // Contacts: the preferred contact for each trade, and anyone marked for the guide.
   const contactRows = await exec
     .select()
     .from(contacts)
@@ -260,7 +260,7 @@ export async function buildGuide(
   const trades = contactRows.length
     ? await exec.select().from(contactTrades).where(inArray(contactTrades.contactId, contactRows.map((c) => c.id)))
     : []
-  const people: GuidePerson[] = contactRows
+  const guideContacts: GuideContact[] = contactRows
     .map((c) => {
       const preferred = trades.filter((t) => t.contactId === c.id && t.preferred).map((t) => t.trade)
       return { c, preferred }
@@ -303,16 +303,16 @@ export async function buildGuide(
   return {
     homeName: property.name,
     address: opts.unlocked && property.address ? property.address : undefined,
-    things,
-    people,
+    fixtures: guideFixtures,
+    contacts: guideContacts,
     sections,
     secrets: secretList,
     locked,
-    files: new Set(things.flatMap((t) => t.photos.map((p) => p.sha256))),
+    files: new Set(guideFixtures.flatMap((t) => t.photos.map((p) => p.sha256))),
   }
 }
 
-/** Record that a signed-in person opened the codes. */
+/** Record that a signed-in contact opened the codes. */
 export async function auditReveal(exec: Executor, actor: ActorContext, propertyId: string) {
   await recordAudit(exec, actor, { action: 'reveal', entityType: 'guide', entityId: propertyId })
 }

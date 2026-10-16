@@ -12,15 +12,23 @@ import { TextInput } from './ui/Field'
 
 type Hit = { externalId: string; title: string; subtitle: string; hasThumb: boolean }
 
+/** `label` replaces the button's "Find in …" text. */
+type Source = { system: 'homebox' | 'paperless'; name: string; locations?: boolean; label?: string }
+
 export function LinkPicker({
   systems,
   link,
+  initialQuery = '',
 }: {
-  systems: { system: 'homebox' | 'paperless'; name: string }[]
+  systems: Source[]
   link: (system: string, externalId: string) => Promise<{ error?: string }>
+  /** Pre-filled search, e.g. the place's own name when looking for its Homebox location. */
+  initialQuery?: string
 }) {
-  const [system, setSystem] = useState<(typeof systems)[number]['system'] | null>(null)
-  const [q, setQ] = useState('')
+  const [source, setSource] = useState<Source | null>(null)
+  const system = source?.system ?? null
+  const locations = source?.locations ?? false
+  const [q, setQ] = useState(initialQuery)
   const [hits, setHits] = useState<Hit[]>([])
   const [error, setError] = useState<string | null>(null)
   const [pending, start] = useTransition()
@@ -30,7 +38,8 @@ export function LinkPicker({
     const controller = new AbortController()
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/ext/search?system=${system}&q=${encodeURIComponent(q)}`, { signal: controller.signal })
+        const kind = locations ? '&kind=location' : ''
+        const res = await fetch(`/api/ext/search?system=${system}${kind}&q=${encodeURIComponent(q)}`, { signal: controller.signal })
         const body = (await res.json()) as { hits?: Hit[]; error?: string }
         setError(body.error ?? null)
         setHits(body.hits ?? [])
@@ -42,14 +51,14 @@ export function LinkPicker({
       clearTimeout(timer)
       controller.abort()
     }
-  }, [system, q])
+  }, [system, locations, q])
 
   if (!system) {
     return (
       <div className="flex flex-wrap gap-2">
         {systems.map((s) => (
-          <button key={s.system} type="button" className={buttonClass('secondary')} onClick={() => setSystem(s.system)}>
-            Find in {s.name}
+          <button key={`${s.system}${s.locations ? ':loc' : ''}`} type="button" className={buttonClass('secondary')} onClick={() => setSource(s)}>
+            {s.label ?? `Find in ${s.name}`}
           </button>
         ))}
       </div>
@@ -63,10 +72,10 @@ export function LinkPicker({
           autoFocus
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder={system === 'homebox' ? 'Search Homebox items' : 'Search paperless documents'}
+          placeholder={locations ? 'Search Homebox locations' : system === 'homebox' ? 'Search Homebox items' : 'Search paperless documents'}
           aria-label="Search"
         />
-        <button type="button" className={buttonClass('ghost', 'shrink-0')} onClick={() => setSystem(null)}>
+        <button type="button" className={buttonClass('ghost', 'shrink-0')} onClick={() => setSource(null)}>
           Close
         </button>
       </div>
@@ -80,11 +89,11 @@ export function LinkPicker({
               className="flex w-full min-h-12 flex-col items-start px-1 py-2 text-left hover:bg-sunk"
               onClick={() =>
                 start(async () => {
-                  const r = await link(system, h.externalId)
+                  const r = await link(source!.system, h.externalId)
                   if (r.error) setError(r.error)
                   else {
-                    setSystem(null)
-                    setQ('')
+                    setSource(null)
+                    setQ(initialQuery)
                     setHits([])
                   }
                 })
