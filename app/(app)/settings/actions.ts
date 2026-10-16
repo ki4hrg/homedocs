@@ -10,7 +10,7 @@ import { db } from '@/lib/db'
 import { users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { revokeGrant } from '@/lib/oauth/grants'
-import { removeIntegration, saveIntegration } from '@/lib/integrations/integrations'
+import { removeIntegration, requirePaperlessTag, saveIntegration, unrequirePaperlessTag } from '@/lib/integrations/integrations'
 
 export async function nameAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
   return act(async ({ user, actor }) => {
@@ -72,5 +72,18 @@ export async function rebuildSearchAction(): Promise<ActionResult> {
     assertAdmin(actor)
     await rebuildAll(db)
     return { message: 'Search rebuilt.' }
+  })
+}
+
+export async function requirePaperlessTagAction(system: string, externalId: string): Promise<ActionResult> {
+  return act(async ({ scope, actor }) => {
+    if (system !== 'paperless') throw new Error('bad system')
+    await requirePaperlessTag(db, scope, actor, externalId)
+  })
+}
+
+export async function unrequirePaperlessTagAction(tagId: number): Promise<ActionResult> {
+  return act(async ({ scope, actor }) => {
+    await unrequirePaperlessTag(db, scope, actor, tagId)
   })
 }

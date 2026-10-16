@@ -6,7 +6,18 @@ import { db } from '@/lib/db'
 import { users } from '@/lib/db/schema'
 import { clientIp } from '@/lib/web/client-ip'
 import { viewer } from '@/lib/web/context'
-import { homeAction, nameAction, passwordAction, rebuildSearchAction, removeIntegrationAction, revokeConnectorAction, saveIntegrationAction } from './actions'
+import {
+  homeAction,
+  nameAction,
+  passwordAction,
+  rebuildSearchAction,
+  removeIntegrationAction,
+  requirePaperlessTagAction,
+  revokeConnectorAction,
+  saveIntegrationAction,
+  unrequirePaperlessTagAction,
+} from './actions'
+import { LinkPicker } from '@/components/LinkPicker'
 import { listIntegrations } from '@/lib/integrations/integrations'
 import { DeleteButton } from '@/components/DeleteButton'
 import { List } from '@/components/ui/Card'
@@ -85,6 +96,26 @@ export default async function SettingsPage() {
                     ) : null}
                   </div>
                   <IntegrationForm action={saveIntegrationAction.bind(null, system)} system={system} initial={row ? { baseUrl: row.baseUrl, lastStatus: row.lastStatus } : undefined} />
+                  {system === 'paperless' && row ? (
+                    <div className="flex flex-col gap-2 border-t border-line pt-3">
+                      <p className="text-sm font-medium text-ink-2">Only documents tagged</p>
+                      <p className="-mt-1 text-xs text-ink-3">E.g. this house’s tag, if paperless also holds another home’s papers.</p>
+                      {row.requiredTags.length ? (
+                        <ul className="flex flex-wrap gap-2">
+                          {row.requiredTags.map((t) => (
+                            <li key={t.id} className="inline-flex min-h-11 items-center rounded-full border border-accent bg-accent-soft pl-3 text-sm text-accent">
+                              {t.name}
+                              <DeleteButton compact recoverable={false} what={`the ${t.name} filter`} label="Remove" action={unrequirePaperlessTagAction.bind(null, t.id)} />
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                      <LinkPicker
+                        systems={[{ system: 'paperless', name: 'paperless', kind: 'tag', label: row.requiredTags.length ? 'Add another tag' : 'Pick a tag' }]}
+                        link={requirePaperlessTagAction}
+                      />
+                    </div>
+                  ) : null}
                 </Card>
               )
             })}

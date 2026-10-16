@@ -718,6 +718,12 @@ export const integrations = pgTable(
     /** What the last "test connection" found: a version, a document count, or the error. */
     lastStatus: text('last_status').notNull().default(''),
     lastCheckedAt: timestamp('last_checked_at', { withTimezone: true }),
+    /**
+     * paperless only: tags every document homedocs lists must also have — the
+     * house's own tag, so "Plumbing" shows this house's plumbing and not the
+     * last one's.
+     */
+    requiredTags: jsonb('required_tags').$type<{ id: number; name: string }[]>().notNull().default([]),
     ...timestamps,
     updatedBy: uuid('updated_by').references(() => users.id),
   },

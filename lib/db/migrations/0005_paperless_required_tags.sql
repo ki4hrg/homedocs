@@ -1,0 +1,1 @@
+ALTER TABLE "integrations" ADD COLUMN "required_tags" jsonb DEFAULT '[]'::jsonb NOT NULL;

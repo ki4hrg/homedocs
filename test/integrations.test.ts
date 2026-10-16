@@ -22,6 +22,8 @@ import {
   linkPicked,
   listIntegrations,
   paperlessDocsFor,
+  requirePaperlessTag,
+  unrequirePaperlessTag,
   refreshStale,
   saveIntegration,
   searchSystem,
@@ -103,6 +105,10 @@ beforeAll(async () => {
       }
       if (p === '/tags/7/') return send(200, { id: 7, name: 'Garage', document_count: 2 })
       if (p === '/tags/8/') return send(200, { id: 8, name: 'Panel upgrade', document_count: 0 })
+      if (p === '/tags/4/') return send(200, { id: 4, name: '4846 Elm', document_count: 40 })
+      if (p === '/documents/' && url.searchParams.get('tags__id__all') === '7,4') {
+        return send(200, { count: 1, results: [{ id: 43, title: 'Garage door opener manual', created_date: '2025-03-02' }] })
+      }
       if (p === '/correspondents/3/') return send(200, { id: 3, name: 'Ace Plumbing', document_count: 1 })
       if (p === '/documents/' && url.searchParams.get('correspondent__id') === '3') {
         return send(200, { count: 1, results: [{ id: 45, title: 'Ace invoice', created_date: '2025-06-01' }] })
@@ -113,7 +119,7 @@ beforeAll(async () => {
       if (p === '/documents/' && url.searchParams.get('tags__id__all') === '7') {
         return send(200, { count: 2, results: [{ id: 43, title: 'Garage door opener manual', created_date: '2025-03-02' }, { id: 42, title: 'Water heater manual', created_date: '2024-05-01' }] })
       }
-      if (p === '/documents/43/') return send(200, { id: 43, title: 'Garage door opener manual', tags: [7] })
+      if (p === '/documents/43/') return send(200, { id: 43, title: 'Garage door opener manual', tags: [7, 4] })
       if (p === '/documents/43/thumb/') return send(200, png, 'image/png')
       if (p === '/documents/44/') return send(200, { id: 44, title: 'Tax return', tags: [9] })
       if (p === '/documents/44/thumb/') return send(200, png, 'image/png')
@@ -228,6 +234,29 @@ describe('linking and thumbnails', () => {
     expect(await paperlessDocsFor(db, scope, owner, 'tag')).toMatchObject({ state: 'ok', total: 0, filter: { title: 'Panel upgrade' } })
     const live = await db.select().from(externalRefs).where(eq(externalRefs.spaceId, garage.id))
     expect(live.filter((r) => !r.deletedAt).map((r) => r.externalId)).toEqual(['tag:8'])
+  })
+
+  it('narrows every Documents list to the house’s own tag', async () => {
+    const { scope, admin, member } = await household()
+    await saveIntegration(db, scope, admin, 'paperless', { baseUrl: `${base}/pl`, token: 'pl_good' })
+    const garage = await createSpace(db, scope, member, { name: 'Garage' })
+    const owner = { kind: 'space' as const, id: garage.id }
+    await linkPicked(db, scope, member, owner, 'paperless', 'tag:7')
+
+    await expect(requirePaperlessTag(db, scope, member, 'tag:4')).rejects.toThrow()
+    await expect(requirePaperlessTag(db, scope, admin, 'correspondent:3')).rejects.toThrow(/tag/)
+    await requirePaperlessTag(db, scope, admin, 'tag:4')
+    expect((await listIntegrations(db, scope)).find((i) => i.system === 'paperless')?.requiredTags).toEqual([{ id: 4, name: '4846 Elm' }])
+
+    // The old house's water heater manual (42) drops out, here and in paperless's own list.
+    const docs = await paperlessDocsFor(db, scope, owner, 'tag')
+    expect(docs).toMatchObject({ state: 'ok', total: 1, filter: { url: `${base}/pl/documents?tags__id__all=7,4` } })
+    expect(docs.state === 'ok' && docs.documents.map((d) => d.title)).toEqual(['Garage door opener manual'])
+    await searchSystem(db, scope, 'paperless', 'manual')
+    expect(seen.at(-1)!.url).toContain('tags__id__all=4')
+
+    await unrequirePaperlessTag(db, scope, admin, 4)
+    expect(await paperlessDocsFor(db, scope, owner, 'tag')).toMatchObject({ state: 'ok', total: 2 })
   })
 
   it('lists a contact’s documents by paperless correspondent, and a system’s or project’s by tag', async () => {

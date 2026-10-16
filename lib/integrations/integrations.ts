@@ -22,6 +22,7 @@ import {
   IntegrationError,
   documentFiling,
   documentsFiled,
+  filteredDocumentsUrl,
   isHomeboxLocation,
   itemsInLocation,
   paperlessFilter,
@@ -56,7 +57,55 @@ export async function connectionFor(exec: Executor, scope: PropertyScope, system
   if (!row) return null
   const opened = tryUnseal(row.sealedToken)
   if (!('value' in opened)) return null
-  return { system, baseUrl: row.baseUrl, token: opened.value }
+  return { system, baseUrl: row.baseUrl, token: opened.value, requiredTags: row.requiredTags.map((t) => t.id) }
+}
+
+/**
+ * Require a paperless tag on every document homedocs lists or searches — the
+ * house's own tag, when paperless also holds another home's papers. Its name
+ * is fetched from paperless, not taken from the browser.
+ */
+export async function requirePaperlessTag(exec: Executor, scope: PropertyScope, actor: ActorContext, externalId: string) {
+  assertAdmin(actor)
+  const f = paperlessFilter(externalId)
+  if (f?.kind !== 'tag') throw new ValidationError('Pick a paperless tag.')
+  const conn = await connectionFor(exec, scope, 'paperless')
+  if (!conn) throw new ValidationError('paperless isn’t connected.')
+  let hit: Hit
+  try {
+    hit = await fetchRemote(conn, externalId)
+  } catch (err) {
+    if (err instanceof IntegrationError) throw new ValidationError(err.message)
+    throw err
+  }
+  await setRequiredTags(exec, scope, actor, (tags) => [...tags.filter((t) => t.id !== f.id), { id: f.id, name: hit.title.slice(0, 200) }])
+}
+
+export async function unrequirePaperlessTag(exec: Executor, scope: PropertyScope, actor: ActorContext, tagId: number) {
+  assertAdmin(actor)
+  await setRequiredTags(exec, scope, actor, (tags) => tags.filter((t) => t.id !== tagId))
+}
+
+async function setRequiredTags(
+  exec: Executor,
+  scope: PropertyScope,
+  actor: ActorContext,
+  change: (tags: { id: number; name: string }[]) => { id: number; name: string }[],
+) {
+  await inTransaction(exec, async (tx) => {
+    const where = and(eq(integrations.propertyId, scope.propertyId), eq(integrations.system, 'paperless'))
+    const [row] = await tx.select({ id: integrations.id, requiredTags: integrations.requiredTags }).from(integrations).where(where).for('update')
+    if (!row) throw new ValidationError('paperless isn’t connected.')
+    const requiredTags = change(row.requiredTags)
+    await tx.update(integrations).set({ requiredTags, updatedAt: new Date(), updatedBy: actor.userId }).where(where)
+    await recordAudit(tx, actor, {
+      action: 'update',
+      entityType: 'integration',
+      entityId: row.id,
+      before: { requiredTags: row.requiredTags },
+      after: { requiredTags },
+    })
+  })
 }
 
 /** Save (and test) a connection. A blank token keeps the stored one. */
@@ -299,8 +348,8 @@ export async function paperlessDocsFor(
 ): Promise<PaperlessDocs> {
   const ref = await filterRefOf(exec, scope, owner, kind)
   if (!ref) return { state: 'none' }
-  const filter = { id: ref.id, title: ref.title, url: ref.url }
   const conn = await connectionFor(exec, scope, 'paperless')
+  const filter = { id: ref.id, title: ref.title, url: (conn && filteredDocumentsUrl(conn, ref.externalId)) || ref.url }
   if (!conn) return { state: 'error', filter, message: 'paperless isn’t connected. An admin can connect it in Settings.' }
   let found: { hits: Hit[]; total: number }
   try {
@@ -427,6 +476,8 @@ async function underLinkedFilter(exec: Executor, scope: PropertyScope, docId: st
   if (!conn) return false
   try {
     const filed = await documentFiling(conn, docId)
+    // Only what a Documents list could have shown: the house's required tags too.
+    if (!(conn.requiredTags ?? []).every((t) => filed.tags.includes(t))) return false
     return filters.some((f) => (f.kind === 'tag' ? filed.tags.includes(f.id) : filed.correspondent === f.id))
   } catch {
     return false
