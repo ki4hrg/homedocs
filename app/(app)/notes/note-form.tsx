@@ -1,0 +1,114 @@
+'use client'
+
+import { useState } from 'react'
+import { ActionForm, type FormAction } from '@/components/ActionForm'
+import { PlaceSelect } from '@/components/PlaceSelect'
+import { buttonClass } from '@/components/ui/Button'
+import { Field, Select, SubmitButton, TextArea, TextInput } from '@/components/ui/Field'
+import { localDay } from '@/lib/web/format'
+
+type Opt = { id: string; label: string }
+
+export type NoteFormOptions = { places: Opt[]; things: Opt[]; parts: Opt[]; people: Opt[]; projects: Opt[] }
+
+export function NoteForm({
+  action,
+  options,
+  initial,
+  submit,
+}: {
+  action: FormAction
+  options: NoteFormOptions
+  initial?: Partial<Record<
+    | 'title'
+    | 'happenedOn'
+    | 'body'
+    | 'spaceId'
+    | 'fixtureId'
+    | 'supplyId'
+    | 'contactId'
+    | 'projectId'
+    | 'quantity'
+    | 'unit'
+    | 'cost'
+    | 'nextTime'
+    | 'remindAfter'
+    | 'updatedAt',
+    string | null
+  >>
+  submit: string
+}) {
+  const v = (k: keyof NonNullable<typeof initial>) => initial?.[k] ?? ''
+  const [more, setMore] = useState(Boolean(initial?.cost || initial?.contactId || initial?.projectId || initial?.body))
+  const today = localDay()
+
+  const pick = (name: string, label: string, opts: Opt[], value: string) =>
+    opts.length ? (
+      <Field label={label}>
+        <Select name={name} defaultValue={value}>
+          <option value="">—</option>
+          {opts.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </Select>
+      </Field>
+    ) : (
+      <input type="hidden" name={name} value={value} />
+    )
+
+  return (
+    <ActionForm action={action}>
+      {initial?.updatedAt ? <input type="hidden" name="updatedAt" value={initial.updatedAt} /> : null}
+      <Field label="What happened?">
+        <TextInput name="title" defaultValue={v('title')} placeholder="Put down mulch, Replaced furnace filter" required autoFocus={!initial?.title} />
+      </Field>
+      <Field label="When">
+        <TextInput name="happenedOn" type="date" defaultValue={v('happenedOn') || today} />
+      </Field>
+      <Field label="Where">
+        <PlaceSelect name="spaceId" defaultValue={v('spaceId')} options={options.places} emptyLabel="—" />
+      </Field>
+      {pick('fixtureId', 'Which thing', options.things, v('fixtureId'))}
+      {pick('supplyId', 'Which part', options.parts, v('supplyId'))}
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="How many">
+          <TextInput name="quantity" inputMode="decimal" defaultValue={v('quantity')} placeholder="12" />
+        </Field>
+        <Field label="Unit">
+          <TextInput name="unit" defaultValue={v('unit')} placeholder="bags" />
+        </Field>
+      </div>
+      <Field label="Next time…" hint="The lesson for future you: “needed 3 more bags”, “buy the 4-pack”.">
+        <TextArea name="nextTime" rows={2} defaultValue={v('nextTime')} />
+      </Field>
+      <Field label="Remind me around" hint="Optional. It shows on Home a few weeks either side of this date.">
+        <TextInput name="remindAfter" type="date" defaultValue={v('remindAfter')} />
+      </Field>
+      {more ? (
+        <>
+          <Field label="Cost">
+            <TextInput name="cost" inputMode="decimal" defaultValue={v('cost')} placeholder="$" />
+          </Field>
+          {pick('contactId', 'Who did it', options.people, v('contactId'))}
+          {pick('projectId', 'Part of project', options.projects, v('projectId'))}
+          <Field label="Details">
+            <TextArea name="body" rows={4} defaultValue={v('body')} />
+          </Field>
+        </>
+      ) : (
+        <>
+          <input type="hidden" name="cost" value={v('cost')} />
+          <input type="hidden" name="contactId" value={v('contactId')} />
+          <input type="hidden" name="projectId" value={v('projectId')} />
+          <input type="hidden" name="body" value={v('body')} />
+          <button type="button" className={buttonClass('ghost', 'self-start')} onClick={() => setMore(true)}>
+            + Cost, who did it, details
+          </button>
+        </>
+      )}
+      <SubmitButton>{submit}</SubmitButton>
+    </ActionForm>
+  )
+}

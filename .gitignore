@@ -1,0 +1,17 @@
+node_modules/
+.next/
+.next-*/
+dist/
+out/
+.env
+.env.local
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+.claude/*
+!.claude/settings.json
+e2e/.auth/
+test-results/
+playwright-report/
+/data/
+.next-e2e/

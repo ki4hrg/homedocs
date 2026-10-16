@@ -1,0 +1,246 @@
+/*
+ * Stored connections, linking from the picker, the thumbnail cache, and the
+ * lazy "is this still there?" check.
+ */
+
+import { and, eq, isNull, lt, or } from 'drizzle-orm'
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import sharp from 'sharp'
+import { recordAudit } from '../core/audit'
+import { inTransaction, liveIn } from '../core/internal'
+import { cleanUrl } from '../core/records'
+import { assertAdmin, assertCanEdit, ValidationError, type ActorContext, type Executor, type PropertyScope } from '../core/types'
+import { seal, tryUnseal } from '../crypto/sealed'
+import { externalRefs, integrations } from '../db/schema'
+import { OWNER_TABLES, type Owner } from '../files/attachments'
+import { dataDir } from '../files/store'
+import { fetchRemote, fetchThumb, IntegrationError, probe, searchRemote, validExternalId, type Connection, type Hit, type System } from './clients'
+
+export const SYSTEMS: System[] = ['homebox', 'paperless']
+export const SYSTEM_NAME: Record<System, string> = { homebox: 'Homebox', paperless: 'paperless' }
+
+export async function listIntegrations(exec: Executor, scope: PropertyScope) {
+  const rows = await exec.select().from(integrations).where(eq(integrations.propertyId, scope.propertyId))
+  // The sealed token stays in this module.
+  return rows.map((row) => {
+    const { sealedToken, ...rest } = row
+    void sealedToken
+    return rest
+  })
+}
+
+export async function connectionFor(exec: Executor, scope: PropertyScope, system: System): Promise<Connection | null> {
+  const [row] = await exec
+    .select()
+    .from(integrations)
+    .where(and(eq(integrations.propertyId, scope.propertyId), eq(integrations.system, system)))
+  if (!row) return null
+  const opened = tryUnseal(row.sealedToken)
+  if (!('value' in opened)) return null
+  return { system, baseUrl: row.baseUrl, token: opened.value }
+}
+
+/** Save (and test) a connection. A blank token keeps the stored one. */
+export async function saveIntegration(
+  exec: Executor,
+  scope: PropertyScope,
+  actor: ActorContext,
+  system: System,
+  input: { baseUrl: string; token?: string },
+): Promise<{ summary: string; warning?: string }> {
+  assertAdmin(actor)
+  const baseUrl = cleanUrl(input.baseUrl).replace(/\/+$/, '')
+  if (!baseUrl) throw new ValidationError('Enter the address you open it at, like https://homebox.example.com.')
+  const existing = await connectionFor(exec, scope, system)
+  const token = input.token?.trim() || existing?.token
+  if (!token) throw new ValidationError('Paste an API token.')
+  if (system === 'homebox' && !token.startsWith('hb_')) {
+    throw new ValidationError('Use a Homebox API key (it starts with hb_) — make one under your Homebox profile.')
+  }
+
+  let result: { summary: string; warning?: string }
+  try {
+    result = await probe({ system, baseUrl, token })
+  } catch (err) {
+    if (err instanceof IntegrationError) throw new ValidationError(`Not saved: ${err.message}`)
+    throw err
+  }
+
+  await inTransaction(exec, async (tx) => {
+    const values = {
+      baseUrl,
+      sealedToken: seal(token),
+      lastStatus: result.summary,
+      lastCheckedAt: new Date(),
+      updatedAt: new Date(),
+      updatedBy: actor.userId,
+    }
+    await tx
+      .insert(integrations)
+      .values({ ...values, propertyId: scope.propertyId, system })
+      .onConflictDoUpdate({ target: [integrations.propertyId, integrations.system], set: values })
+    // The token is never written to the audit log.
+    await recordAudit(tx, actor, { action: 'update', entityType: 'integration', entityId: scope.propertyId, after: { system, baseUrl } })
+  })
+  return result
+}
+
+export async function removeIntegration(exec: Executor, scope: PropertyScope, actor: ActorContext, system: System) {
+  assertAdmin(actor)
+  await exec.delete(integrations).where(and(eq(integrations.propertyId, scope.propertyId), eq(integrations.system, system)))
+}
+
+export async function searchSystem(exec: Executor, scope: PropertyScope, system: System, query: string): Promise<Hit[]> {
+  const conn = await connectionFor(exec, scope, system)
+  if (!conn) throw new ValidationError(`${SYSTEM_NAME[system]} isn’t connected. An admin can connect it in Settings.`)
+  if (!query.trim()) return []
+  try {
+    return await searchRemote(conn, query)
+  } catch (err) {
+    if (err instanceof IntegrationError) throw new ValidationError(err.message)
+    throw err
+  }
+}
+
+/**
+ * Link a record picked in the search sheet. The title is fetched again here
+ * rather than taken from the browser: what gets stored is what the other app
+ * says, not what a request claimed.
+ */
+export async function linkPicked(
+  exec: Executor,
+  scope: PropertyScope,
+  actor: ActorContext,
+  owner: Owner,
+  system: System,
+  externalId: string,
+) {
+  assertCanEdit(actor)
+  if (!validExternalId(system, externalId)) throw new ValidationError('That isn’t a record I can link.')
+  const conn = await connectionFor(exec, scope, system)
+  if (!conn) throw new ValidationError(`${SYSTEM_NAME[system]} isn’t connected.`)
+  let hit: Hit
+  try {
+    hit = await fetchRemote(conn, externalId)
+  } catch (err) {
+    if (err instanceof IntegrationError) throw new ValidationError(err.message)
+    throw err
+  }
+  const { table, column } = OWNER_TABLES[owner.kind]
+  return inTransaction(exec, async (tx) => {
+    const found = await tx.select({ id: table.id }).from(table as never).where(liveIn(table, scope.propertyId, owner.id))
+    if (found.length === 0) throw new ValidationError('That record no longer exists.')
+    const [row] = await tx
+      .insert(externalRefs)
+      .values({
+        propertyId: scope.propertyId,
+        system,
+        externalId: hit.externalId,
+        url: hit.url,
+        title: hit.title.slice(0, 200),
+        subtitle: hit.subtitle.slice(0, 200),
+        status: 'ok',
+        lastCheckedAt: new Date(),
+        [column]: owner.id,
+        createdBy: actor.userId,
+        updatedBy: actor.userId,
+      })
+      .returning()
+    await recordAudit(tx, actor, {
+      action: 'link',
+      entityType: 'external_ref',
+      entityId: row!.id,
+      after: { system, externalId: hit.externalId, owner: `${owner.kind}:${owner.id}` },
+    })
+    return row!
+  })
+}
+
+// ─── keeping links honest ────────────────────────────────────────────────────
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/**
+ * Re-check links not looked at in a day: a deleted item shows "No longer
+ * there" (keeping its last known title), a refused token shows "Reconnect".
+ * Bounded in time so a slow server never holds a page up for long.
+ */
+export async function refreshStale(exec: Executor, scope: PropertyScope, refIds: string[], budgetMs = 1500) {
+  if (refIds.length === 0) return
+  const stale = await exec
+    .select()
+    .from(externalRefs)
+    .where(
+      and(
+        eq(externalRefs.propertyId, scope.propertyId),
+        isNull(externalRefs.deletedAt),
+        or(isNull(externalRefs.lastCheckedAt), lt(externalRefs.lastCheckedAt, new Date(Date.now() - DAY_MS))),
+      ),
+    )
+  const work = stale
+    .filter((r) => refIds.includes(r.id) && r.system !== 'homeassistant')
+    .map(async (ref) => {
+      const conn = await connectionFor(exec, scope, ref.system as System)
+      if (!conn) return
+      let patch: Partial<typeof externalRefs.$inferSelect> = { lastCheckedAt: new Date() }
+      try {
+        const hit = await fetchRemote(conn, ref.externalId)
+        patch = { ...patch, status: 'ok', title: hit.title.slice(0, 200), subtitle: hit.subtitle.slice(0, 200) }
+      } catch (err) {
+        if (!(err instanceof IntegrationError)) throw err
+        if (err.kind === 'missing') patch.status = 'missing'
+        else if (err.kind === 'auth') patch.status = 'auth_error'
+        else return // unreachable: try again next time, change nothing
+      }
+      await exec.update(externalRefs).set(patch).where(eq(externalRefs.id, ref.id))
+    })
+  await Promise.race([Promise.allSettled(work), new Promise((r) => setTimeout(r, budgetMs))])
+}
+
+// ─── thumbnails ──────────────────────────────────────────────────────────────
+
+const THUMB_TTL_MS = DAY_MS
+
+/**
+ * A linked record's thumbnail, through our server and cached on disk. Only ids
+ * that a live link in this property points at are ever fetched, so this cannot
+ * be used to browse the other app.
+ */
+export async function linkedThumb(exec: Executor, scope: PropertyScope, system: System, externalId: string): Promise<Buffer | null> {
+  if (!validExternalId(system, externalId)) return null
+  const [ref] = await exec
+    .select({ id: externalRefs.id })
+    .from(externalRefs)
+    .where(
+      and(
+        eq(externalRefs.propertyId, scope.propertyId),
+        eq(externalRefs.system, system),
+        eq(externalRefs.externalId, externalId),
+        isNull(externalRefs.deletedAt),
+      ),
+    )
+    .limit(1)
+  if (!ref) return null
+
+  const path = join(dataDir(), 'ext-cache', `${system}-${externalId}.jpg`)
+  try {
+    const info = await stat(path)
+    if (Date.now() - info.mtimeMs < THUMB_TTL_MS) return await readFile(path)
+  } catch {
+    // not cached yet
+  }
+  const conn = await connectionFor(exec, scope, system)
+  if (!conn) return null
+  try {
+    const raw = await fetchThumb(conn, externalId)
+    if (!raw) return null
+    // Re-encoded: whatever came back is proven to be an image, and small.
+    const jpeg = await sharp(raw).resize({ width: 480, height: 480, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 78 }).toBuffer()
+    await mkdir(join(dataDir(), 'ext-cache'), { recursive: true })
+    await writeFile(path, jpeg)
+    return jpeg
+  } catch {
+    return null
+  }
+}

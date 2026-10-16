@@ -1,0 +1,14 @@
+node_modules
+.next
+.next-*
+dist
+.git
+.github
+.env
+.env.local
+docs
+*.md
+.DS_Store
+test-results
+playwright-report
+e2e/.auth

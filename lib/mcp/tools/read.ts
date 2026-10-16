@@ -1,0 +1,373 @@
+/*
+ * Read tools (homedocs:read). Every one returns plain data shaped for a model to
+ * answer a person's question from — names and paths, not just ids. Codes and
+ * passwords are not reachable from any tool.
+ */
+
+import { z } from 'zod'
+import { getNote, listNotes, comingUp, lessons } from '../../notes/notes'
+import { getPart, listUses } from '../../parts/parts'
+import { summarize, TEMPLATES } from '../../parts/templates'
+import { getPerson, listPeople, preferredByTrade } from '../../people/people'
+import { buildTree, flattenTree, getSpace, listSpaces } from '../../places/places'
+import { getProject, listProjects, OPEN_STATUSES, STATUS_LABEL, STATUSES } from '../../projects/projects'
+import { listProperties } from '../../property/property'
+import { search } from '../../search/search'
+import { getThing, listThings } from '../../things/things'
+import { listLinks } from '../../links/links'
+import { resolveRef } from './resolve'
+import { defineTool, ToolRefusal, type ToolContext } from './types'
+
+/** The home a call is about. One today; the argument exists so a second home needs no new tools. */
+export async function scopeOf(ctx: ToolContext) {
+  const [first] = await listProperties(ctx.exec)
+  if (!first) throw new ToolRefusal('homedocs has not been set up yet.')
+  return { propertyId: first.id }
+}
+
+const ref = (what: string) => z.string().min(1).describe(`The ${what}'s id, or its name`)
+
+function partView(part: { id: string; name: string; category: keyof typeof TEMPLATES; fields: Record<string, string>; unit: string }) {
+  const template = TEMPLATES[part.category]
+  return {
+    id: part.id,
+    name: part.name,
+    kind: template.label,
+    details: Object.fromEntries(template.fields.filter((f) => part.fields[f.key]).map((f) => [f.label, part.fields[f.key]])),
+    unit: part.unit,
+  }
+}
+
+function noteView(r: Awaited<ReturnType<typeof listNotes>>[number]) {
+  return {
+    id: r.note.id,
+    date: r.note.happenedOn,
+    title: r.note.title,
+    quantity: r.note.quantity ? `${Number(r.note.quantity)} ${r.note.unit}`.trim() : undefined,
+    cost: r.note.cost ?? undefined,
+    next_time: r.note.nextTime || undefined,
+    remind_after: r.note.remindAfter ?? undefined,
+    about: [r.spaceName, r.fixtureName, r.supplyName, r.contactName, r.projectTitle].filter(Boolean),
+    details: r.note.body || undefined,
+  }
+}
+
+export const readTools = [
+  defineTool({
+    name: 'search',
+    title: 'Search',
+    description:
+      'Search everything — places, things, parts, notes, people, projects — by words: a room, a ' +
+      'colour, a brand, a trade. Returns the best matches with their kind and id.',
+    scope: 'homedocs:read',
+    annotations: { readOnlyHint: true },
+    input: z.object({ query: z.string().min(1).max(200) }),
+    handler: async ({ query }, ctx) => {
+      const hits = await search(ctx.exec, await scopeOf(ctx), query, 20)
+      return { hits: hits.map((h) => ({ kind: h.kind, id: h.id, title: h.title, detail: h.detail })) }
+    },
+  }),
+
+  defineTool({
+    name: 'find_part_for',
+    title: 'What does it take?',
+    description:
+      'What a thing or place takes or used: the bulb a light needs, the filter size for the furnace, ' +
+      'the paint colour in a room, the mulch in a bed — with quantities, finishes and any ' +
+      '"next time" lessons. Give a thing or a place by name or id.',
+    scope: 'homedocs:read',
+    annotations: { readOnlyHint: true },
+    input: z.object({
+      thing: ref('thing').optional(),
+      place: ref('place').optional(),
+    }),
+    handler: async ({ thing, place }, ctx) => {
+      const scope = await scopeOf(ctx)
+      if (!thing && !place) throw new ToolRefusal('Say which thing or place.')
+      if (thing) {
+        const t = await getThing(ctx.exec, scope, await resolveRef(ctx.exec, scope, 'thing', thing))
+        const uses = await listUses(ctx.exec, scope, { fixtureId: t.id })
+        return {
+          thing: { id: t.id, name: t.name, where: t.path.map((p) => p.name).join(' › ') || 'whole house' },
+          parts: uses.map((u) => ({
+            ...partView(u.part),
+            quantity: u.quantity ? Number(u.quantity) : undefined,
+            really_needs: u.quantityNeeded ? Number(u.quantityNeeded) : undefined,
+            note: u.notes || undefined,
+          })),
+          next_time: (await lessons(ctx.exec, scope, { fixtureId: t.id })).map((l) => l.note.nextTime),
+        }
+      }
+      const s = await getSpace(ctx.exec, scope, await resolveRef(ctx.exec, scope, 'place', place!))
+      const [uses, things] = await Promise.all([listUses(ctx.exec, scope, { spaceId: s.id }), listThings(ctx.exec, scope, { spaceId: s.id })])
+      const thingParts = []
+      for (const t of things) {
+        const tu = await listUses(ctx.exec, scope, { fixtureId: t.id })
+        if (tu.length) thingParts.push({ thing: t.name, parts: tu.map((u) => ({ ...partView(u.part), quantity: u.quantity ? Number(u.quantity) : undefined })) })
+      }
+      return {
+        place: { id: s.id, name: s.name, path: s.path.map((p) => p.name) },
+        used_here: uses.map((u) => ({
+          ...partView(u.part),
+          surface: u.surface || undefined,
+          finish: u.finish || undefined,
+          quantity: u.quantity ? Number(u.quantity) : undefined,
+          really_needs: u.quantityNeeded ? Number(u.quantityNeeded) : undefined,
+        })),
+        things_here: thingParts,
+        next_time: (await lessons(ctx.exec, scope, { spaceId: s.id })).map((l) => l.note.nextTime),
+      }
+    },
+  }),
+
+  defineTool({
+    name: 'who_to_call',
+    title: 'Who to call',
+    description: 'The people for a trade (plumber, electrician, hvac…), with the preferred one first and their phone numbers.',
+    scope: 'homedocs:read',
+    annotations: { readOnlyHint: true },
+    input: z.object({ trade: z.string().min(1).max(60).optional().describe('Leave out for every preferred person') }),
+    handler: async ({ trade }, ctx) => {
+      const scope = await scopeOf(ctx)
+      if (!trade) {
+        const preferred = await preferredByTrade(ctx.exec, scope)
+        return { preferred: preferred.map((p) => ({ trade: p.trade, id: p.contact.id, name: p.contact.name, company: p.contact.company, phones: p.contact.phones })) }
+      }
+      const want = trade.trim().toLowerCase()
+      const people = (await listPeople(ctx.exec, scope)).filter((p) => p.trades.some((t) => t.trade.includes(want)))
+      people.sort((a, b) => Number(b.trades.some((t) => t.preferred && t.trade.includes(want))) - Number(a.trades.some((t) => t.preferred && t.trade.includes(want))))
+      return {
+        trade: want,
+        people: people.map((p) => ({
+          id: p.id,
+          name: p.name,
+          company: p.company,
+          preferred: p.trades.some((t) => t.preferred && t.trade.includes(want)),
+          phones: p.phones,
+          emails: p.emails,
+          notes: p.notes || undefined,
+        })),
+      }
+    },
+  }),
+
+  defineTool({
+    name: 'list_places',
+    title: 'List places',
+    description: 'Every place (room, floor, outdoor area) as paths like "Main floor › Living room", with ids.',
+    scope: 'homedocs:read',
+    annotations: { readOnlyHint: true },
+    input: z.object({}),
+    handler: async (_input, ctx) => ({
+      places: flattenTree(buildTree(await listSpaces(ctx.exec, await scopeOf(ctx)))).map((p) => ({ id: p.id, path: p.label })),
+    }),
+  }),
+
+  defineTool({
+    name: 'get_place',
+    title: 'Get a place',
+    description: 'A place with what is in it: places inside, things, parts used, recent notes, and photos/links counts.',
+    scope: 'homedocs:read',
+    annotations: { readOnlyHint: true },
+    input: z.object({ place: ref('place') }),
+    handler: async ({ place }, ctx) => {
+      const scope = await scopeOf(ctx)
+      const s = await getSpace(ctx.exec, scope, await resolveRef(ctx.exec, scope, 'place', place))
+      const [things, uses, notes] = await Promise.all([
+        listThings(ctx.exec, scope, { spaceId: s.id }),
+        listUses(ctx.exec, scope, { spaceId: s.id }),
+        listNotes(ctx.exec, scope, { spaceId: s.id, limit: 10 }),
+      ])
+      return {
+        id: s.id,
+        name: s.name,
+        path: s.path.map((p) => p.name),
+        kind: s.kind,
+        notes: s.notes || undefined,
+        places_inside: s.children.map((c) => ({ id: c.id, name: c.name })),
+        things: things.map((t) => ({ id: t.id, name: t.name, category: t.category || undefined })),
+        parts_used: uses.map((u) => ({ ...partView(u.part), surface: u.surface || undefined, finish: u.finish || undefined, quantity: u.quantity ? Number(u.quantity) : undefined })),
+        recent_notes: notes.map(noteView),
+      }
+    },
+  }),
+
+  defineTool({
+    name: 'get_thing',
+    title: 'Get a thing',
+    description: 'A thing (installed fixture) with where it is, the parts it takes, notes, and links to Homebox or paperless.',
+    scope: 'homedocs:read',
+    annotations: { readOnlyHint: true },
+    input: z.object({ thing: ref('thing') }),
+    handler: async ({ thing }, ctx) => {
+      const scope = await scopeOf(ctx)
+      const t = await getThing(ctx.exec, scope, await resolveRef(ctx.exec, scope, 'thing', thing))
+      const [uses, notes, links] = await Promise.all([
+        listUses(ctx.exec, scope, { fixtureId: t.id }),
+        listNotes(ctx.exec, scope, { fixtureId: t.id, limit: 10 }),
+        listLinks(ctx.exec, scope, { kind: 'fixture', id: t.id }),
+      ])
+      return {
+        id: t.id,
+        name: t.name,
+        where: t.path.map((p) => p.name).join(' › ') || 'whole house',
+        category: t.category || undefined,
+        notes: t.notes || undefined,
+        on_house_guide: t.inGuide,
+        housesitter_note: t.guideNote || undefined,
+        parts: uses.map((u) => ({ ...partView(u.part), quantity: u.quantity ? Number(u.quantity) : undefined })),
+        recent_notes: notes.map(noteView),
+        links: links.map((l) => ({ system: l.system, title: l.title, url: l.url })),
+      }
+    },
+  }),
+
+  defineTool({
+    name: 'get_part',
+    title: 'Get a part',
+    description: 'A part (bulb, paint colour, filter…) with its details, everywhere it is used, and its purchase/notes history.',
+    scope: 'homedocs:read',
+    annotations: { readOnlyHint: true },
+    input: z.object({ part: ref('part') }),
+    handler: async ({ part }, ctx) => {
+      const scope = await scopeOf(ctx)
+      const p = await getPart(ctx.exec, scope, await resolveRef(ctx.exec, scope, 'part', part))
+      const [uses, notes] = await Promise.all([listUses(ctx.exec, scope, { supplyId: p.id }), listNotes(ctx.exec, scope, { supplyId: p.id, limit: 10 })])
+      return {
+        ...partView(p),
+        summary: summarize(p.category, p.fields) || undefined,
+        buy_url: p.buyUrl || undefined,
+        notes: p.notes || undefined,
+        used_in: uses.map((u) => ({
+          kind: u.owner.kind,
+          id: u.owner.id,
+          name: u.owner.name,
+          where: u.owner.path || undefined,
+          surface: u.surface || undefined,
+          finish: u.finish || undefined,
+          quantity: u.quantity ? Number(u.quantity) : undefined,
+          really_needs: u.quantityNeeded ? Number(u.quantityNeeded) : undefined,
+        })),
+        history: notes.map(noteView),
+      }
+    },
+  }),
+
+  defineTool({
+    name: 'get_person',
+    title: 'Get a person',
+    description: 'A contact with phones, emails, trades (and which they are our preferred one for), notes, and the work they have done.',
+    scope: 'homedocs:read',
+    annotations: { readOnlyHint: true },
+    input: z.object({ person: ref('person') }),
+    handler: async ({ person }, ctx) => {
+      const scope = await scopeOf(ctx)
+      const p = await getPerson(ctx.exec, scope, await resolveRef(ctx.exec, scope, 'person', person))
+      const notes = await listNotes(ctx.exec, scope, { contactId: p.id, limit: 10 })
+      return {
+        id: p.id,
+        name: p.name,
+        company: p.company || undefined,
+        phones: p.phones,
+        emails: p.emails,
+        website: p.website || undefined,
+        trades: p.trades.map((t) => ({ trade: t.trade, preferred: t.preferred })),
+        notes: p.notes || undefined,
+        work_done: notes.map(noteView),
+      }
+    },
+  }),
+
+  defineTool({
+    name: 'list_projects',
+    title: 'List projects',
+    description: `Projects with status, to-do counts and quote counts. Statuses: ${STATUSES.join(', ')}.`,
+    scope: 'homedocs:read',
+    annotations: { readOnlyHint: true },
+    input: z.object({ include_finished: z.boolean().optional().describe('Include done and dropped projects') }),
+    handler: async ({ include_finished }, ctx) => {
+      const rows = await listProjects(ctx.exec, await scopeOf(ctx), include_finished ? {} : { statuses: OPEN_STATUSES })
+      return {
+        projects: rows.map((p) => ({
+          id: p.id,
+          title: p.title,
+          status: p.status,
+          status_label: STATUS_LABEL[p.status],
+          priority: p.priority,
+          target_date: p.targetDate ?? undefined,
+          open_items: p.openItems,
+          quotes: p.quoteCount,
+        })),
+      }
+    },
+  }),
+
+  defineTool({
+    name: 'get_project',
+    title: 'Get a project',
+    description: 'A project with its checklist, quotes (who, how much, status), the places it touches, and notes.',
+    scope: 'homedocs:read',
+    annotations: { readOnlyHint: true },
+    input: z.object({ project: ref('project') }),
+    handler: async ({ project }, ctx) => {
+      const scope = await scopeOf(ctx)
+      const p = await getProject(ctx.exec, scope, await resolveRef(ctx.exec, scope, 'project', project))
+      const notes = await listNotes(ctx.exec, scope, { projectId: p.id, limit: 10 })
+      return {
+        id: p.id,
+        title: p.title,
+        status: p.status,
+        priority: p.priority,
+        target_date: p.targetDate ?? undefined,
+        summary: p.summary || undefined,
+        places: p.places.map((s) => s.name),
+        checklist: p.items.map(({ item, spaceName }) => ({ id: item.id, text: item.text, done: item.done, where: spaceName ?? undefined })),
+        quotes: p.quotes.map(({ quote, contactName }) => ({
+          id: quote.id,
+          from: contactName ?? undefined,
+          amount: quote.amount ?? undefined,
+          received: quote.receivedOn ?? undefined,
+          status: quote.status,
+          notes: quote.notes || undefined,
+        })),
+        notes: notes.map(noteView),
+      }
+    },
+  }),
+
+  defineTool({
+    name: 'coming_up',
+    title: 'Coming up',
+    description: 'Notes whose "next time" reminder falls within about a month of today — what to remember soon.',
+    scope: 'homedocs:read',
+    annotations: { readOnlyHint: true },
+    input: z.object({}),
+    handler: async (_input, ctx) => {
+      const rows = await comingUp(ctx.exec, await scopeOf(ctx))
+      return {
+        reminders: rows.map((r) => ({
+          note_id: r.note.id,
+          remind_after: r.note.remindAfter,
+          next_time: r.note.nextTime,
+          from: r.note.title,
+          about: [r.spaceName, r.fixtureName, r.supplyName].filter(Boolean),
+        })),
+      }
+    },
+  }),
+
+  defineTool({
+    name: 'get_note',
+    title: 'Get a note',
+    description: 'One note in full.',
+    scope: 'homedocs:read',
+    annotations: { readOnlyHint: true },
+    input: z.object({ id: z.string().uuid() }),
+    handler: async ({ id }, ctx) => {
+      const scope = await scopeOf(ctx)
+      await getNote(ctx.exec, scope, id)
+      const [row] = await listNotes(ctx.exec, scope, { id })
+      return noteView(row!)
+    },
+  }),
+]

@@ -1,0 +1,106 @@
+'use client'
+
+import { useState } from 'react'
+import { ActionForm, type FormAction } from '@/components/ActionForm'
+import { Checkbox, Field, Select, SubmitButton, TextArea, TextInput } from '@/components/ui/Field'
+
+export function SectionForm({
+  action,
+  initial,
+}: {
+  action: FormAction
+  initial?: { title: string; body: string; sensitive: boolean; updatedAt: string }
+}) {
+  return (
+    <ActionForm action={action}>
+      {initial ? <input type="hidden" name="updatedAt" value={initial.updatedAt} /> : null}
+      <Field label="Title">
+        <TextInput name="title" defaultValue={initial?.title} placeholder="Trash day, The dog, Thermostat" required autoFocus={!initial} />
+      </Field>
+      <Field label="What they need to know">
+        <TextArea name="body" rows={6} defaultValue={initial?.body} />
+      </Field>
+      <Checkbox
+        name="sensitive"
+        label="Private"
+        hint="Only shown at the house, or with the link’s PIN (e.g. where the spare key is)."
+        defaultChecked={initial?.sensitive}
+      />
+      <SubmitButton>Save</SubmitButton>
+    </ActionForm>
+  )
+}
+
+const KINDS = [
+  ['wifi', 'Wi-Fi'],
+  ['alarm', 'Alarm code'],
+  ['lockbox', 'Lockbox / key safe'],
+  ['gate', 'Gate or garage code'],
+  ['other', 'Other'],
+] as const
+
+export function SecretForm({
+  action,
+  initial,
+}: {
+  action: FormAction
+  initial?: { kind: string; label: string; ssid?: string; security?: string; gate: string; inGuide: boolean; notes: string }
+}) {
+  const [kind, setKind] = useState(initial?.kind ?? 'wifi')
+  const editing = Boolean(initial)
+  return (
+    <ActionForm action={action}>
+      <Field label="What is it?">
+        <Select name="kind" value={kind} onChange={(e) => setKind(e.target.value)}>
+          {KINDS.map(([v, l]) => (
+            <option key={v} value={v}>
+              {l}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      {kind === 'wifi' ? (
+        <>
+          <Field label="Network name">
+            <TextInput name="ssid" defaultValue={initial?.ssid} required />
+          </Field>
+          <Field label="Security">
+            <Select name="security" defaultValue={initial?.security ?? 'WPA'}>
+              <option value="WPA">WPA / WPA2 / WPA3</option>
+              <option value="WEP">WEP</option>
+              <option value="nopass">None</option>
+            </Select>
+          </Field>
+        </>
+      ) : null}
+      <Field label="Label" hint={kind === 'wifi' ? 'Optional, e.g. “Guest Wi-Fi”.' : 'e.g. “Front door alarm”.'}>
+        <TextInput name="label" defaultValue={initial?.label} />
+      </Field>
+      <Field
+        label={kind === 'wifi' ? 'Password' : 'Code'}
+        hint={editing ? 'Leave blank to keep the current one.' : 'Stored encrypted.'}
+      >
+        <TextInput name="value" type="text" autoComplete="off" spellCheck={false} />
+      </Field>
+      <Field label="Who can see it on a shared guide link?">
+        {/* Keyed by kind: an uncontrolled select keeps its first default, so
+            switching Wi-Fi → Alarm would otherwise leave the code visible to
+            anyone with the link. */}
+        <Select key={kind} name="gate" defaultValue={initial?.kind === kind ? initial.gate : kind === 'wifi' ? 'always' : 'home_or_pin'}>
+          <option value="home_or_pin">Only at the house, or with the link’s PIN</option>
+          <option value="always">Anyone with the link</option>
+        </Select>
+      </Field>
+      {kind === 'wifi' ? (
+        <p className="-mt-2 text-xs text-ink-3">
+          A housesitter needs the Wi-Fi password before they’re on the Wi-Fi, so “anyone with the link” is usually right for it.
+        </p>
+      ) : null}
+      <Checkbox name="inGuide" label="Show on the house guide" defaultChecked={initial?.inGuide ?? true} />
+      <Field label="Notes" hint="e.g. “Keypad is inside the garage door, on the left.”">
+        <TextArea name="notes" rows={2} defaultValue={initial?.notes} />
+      </Field>
+      <SubmitButton>Save</SubmitButton>
+    </ActionForm>
+  )
+}

@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+/*
+ * Colour tokens. Light and dark follow the device (prefers-color-scheme), so
+ * there is no toggle to find. Components use these names, never raw palette
+ * values, so the two themes cannot drift apart.
+ */
+@theme {
+  --color-page: #f6f5f2;
+  --color-card: #ffffff;
+  --color-sunk: #efede8;
+  --color-line: #e2dfd8;
+  --color-ink: #1c1b19;
+  --color-ink-2: #4a4741;
+  --color-ink-3: #6b675f;
+  --color-accent: #0f6b5c;
+  --color-accent-ink: #ffffff;
+  --color-accent-soft: #e1f0ec;
+  --color-warn: #8a4b00;
+  --color-warn-soft: #fdf1df;
+  --color-danger: #b42318;
+  --color-danger-soft: #fdecea;
+
+  --radius-card: 0.875rem;
+  --radius-control: 0.625rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-page: #141412;
+    --color-card: #1e1d1b;
+    --color-sunk: #262522;
+    --color-line: #35332f;
+    --color-ink: #f2f0ea;
+    --color-ink-2: #cfcbc2;
+    --color-ink-3: #a29d93;
+    --color-accent: #5cc4ae;
+    --color-accent-ink: #0b1c18;
+    --color-accent-soft: #17332d;
+    --color-warn: #f0b45c;
+    --color-warn-soft: #33260f;
+    --color-danger: #f28b82;
+    --color-danger-soft: #3a1714;
+  }
+}
+
+body {
+  background: var(--color-page);
+  color: var(--color-ink);
+}
+
+/* iOS Safari zooms whenever a focused field renders below 16px and never zooms
+   back out. Enforce the floor on touch devices instead of chasing every input. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Room for the bottom tab bar and the iPhone home indicator. */
+.pb-tabs {
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+}

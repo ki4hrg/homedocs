@@ -1,0 +1,36 @@
+'use client'
+
+import { useActionState } from 'react'
+import { Field, FormError, SubmitButton, TextInput } from '@/components/ui/Field'
+import { MIN_PASSWORD_LENGTH } from '@/lib/auth/password-policy'
+import { joinAction, type FormState } from '../../actions'
+
+export function JoinForm({ token, kind }: { token: string; kind: 'invite' | 'reset' }) {
+  const [state, action] = useActionState<FormState, FormData>(joinAction.bind(null, token), {})
+  return (
+    <form action={action} className="flex flex-col gap-4">
+      {kind === 'invite' ? (
+        <>
+          <Field label="Your name">
+            <TextInput name="displayName" autoComplete="name" required autoFocus />
+          </Field>
+          <Field label="Email" hint="You'll use this to sign in.">
+            <TextInput name="email" type="email" autoComplete="username" required />
+          </Field>
+        </>
+      ) : null}
+      <Field label={kind === 'invite' ? 'Choose a password' : 'New password'} hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
+        <TextInput
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          minLength={MIN_PASSWORD_LENGTH}
+          required
+          autoFocus={kind === 'reset'}
+        />
+      </Field>
+      <FormError>{state.error}</FormError>
+      <SubmitButton pendingText="One moment…">{kind === 'invite' ? 'Join' : 'Set password'}</SubmitButton>
+    </form>
+  )
+}

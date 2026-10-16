@@ -1,0 +1,65 @@
+import { db } from '@/lib/db'
+import type { Owner } from '@/lib/files/attachments'
+import { listLinks, SYSTEM_LABEL } from '@/lib/links/links'
+import { addLinkAction, linkPickedAction, removeLinkAction } from '@/lib/web/link-actions'
+import { listIntegrations, refreshStale, SYSTEM_NAME } from '@/lib/integrations/integrations'
+import { LinkPicker } from './LinkPicker'
+import { viewer } from '@/lib/web/context'
+import { DeleteButton } from './DeleteButton'
+import { LinkForm } from './LinkForm'
+import { List, Pill, Section } from './ui/Card'
+import { Icon } from './ui/icons'
+
+/* Links from a record to Homebox, paperless and Home Assistant. */
+export async function LinksSection({ owner, canEdit }: { owner: Owner; canEdit: boolean }) {
+  const { scope } = await viewer()
+  let links = await listLinks(db, scope, owner)
+  const connected = await listIntegrations(db, scope)
+  if (links.length && connected.length) {
+    // Re-check links not looked at in a day, within a short time budget.
+    await refreshStale(db, scope, links.map((l) => l.id))
+    links = await listLinks(db, scope, owner)
+  }
+  if (links.length === 0 && !canEdit) return null
+  const thumbable = new Set(connected.map((c) => c.system))
+  return (
+    <Section title="Linked">
+      <div className="flex flex-col gap-3">
+        {links.length ? (
+          <List>
+            {links.map((l) => (
+              <li key={l.id} className="flex min-h-14 items-center gap-3 px-4 py-2">
+                <a href={l.url} target="_blank" rel="noreferrer" className="flex min-w-0 flex-1 items-center gap-3">
+                  {thumbable.has(l.system) && l.status === 'ok' ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- proxied through our own guarded route
+                    <img src={`/api/ext/${l.system}/${l.externalId}/thumb`} alt="" className="h-10 w-10 shrink-0 rounded-md bg-sunk object-cover" loading="lazy" />
+                  ) : (
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sunk text-ink-2">
+                      <Icon name="external" className="h-[18px] w-[18px]" />
+                    </span>
+                  )}
+                  <span className="min-w-0">
+                    <span className="block truncate text-[15px] font-medium text-ink">{l.title}</span>
+                    <span className="flex items-center gap-2 text-sm text-ink-3">
+                      {[SYSTEM_LABEL[l.system], l.subtitle].filter(Boolean).join(' · ')}
+                      {l.status === 'missing' ? <Pill tone="warn">No longer there</Pill> : null}
+                      {l.status === 'auth_error' ? <Pill tone="warn">Reconnect</Pill> : null}
+                    </span>
+                  </span>
+                </a>
+                {canEdit ? <DeleteButton compact what="this link" recoverable={false} label="Remove" action={removeLinkAction.bind(null, l.id)} /> : null}
+              </li>
+            ))}
+          </List>
+        ) : null}
+        {canEdit && connected.length ? (
+          <LinkPicker
+            systems={connected.map((c) => ({ system: c.system as 'homebox' | 'paperless', name: SYSTEM_NAME[c.system as 'homebox' | 'paperless'] }))}
+            link={linkPickedAction.bind(null, `${owner.kind}:${owner.id}`)}
+          />
+        ) : null}
+        {canEdit ? <LinkForm action={addLinkAction.bind(null, `${owner.kind}:${owner.id}`)} /> : null}
+      </div>
+    </Section>
+  )
+}
