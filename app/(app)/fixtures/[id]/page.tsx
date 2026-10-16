@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Lessons } from '@/components/Lessons'
+import { DocumentsSection } from '@/components/DocumentsSection'
 import { LinksSection } from '@/components/LinksSection'
 import { NoteList } from '@/components/NoteList'
 import { PhotoUpload } from '@/components/PhotoUpload'
@@ -99,6 +100,7 @@ export default async function FixturePage({ params }: { params: Promise<{ id: st
         {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">None yet.</p>}
       </Section>
 
+      <DocumentsSection owner={{ kind: 'fixture', id }} canEdit={canEdit} />
       <LinksSection owner={{ kind: 'fixture', id }} canEdit={canEdit} />
 
       <p className="mt-8 px-1 text-xs text-ink-3">{edited}</p>

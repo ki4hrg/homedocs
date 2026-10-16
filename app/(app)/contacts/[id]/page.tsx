@@ -14,7 +14,7 @@ import { listNotes } from '@/lib/notes/notes'
 import { getContact, telHref } from '@/lib/contacts/contacts'
 import { tradeLabeler } from '@/lib/contacts/trade-labels'
 import { getTradeGroups } from '@/lib/contacts/trades'
-import { PaperlessDocs } from '@/components/PaperlessDocs'
+import { DocumentsSection } from '@/components/DocumentsSection'
 import { editedBy } from '@/lib/web/attribution'
 import { viewer } from '@/lib/web/context'
 import { removeAttachmentAction } from '@/lib/web/shared-actions'
@@ -116,7 +116,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
         {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">None yet.</p>}
       </Section>
 
-      <PaperlessDocs owner={{ kind: 'contact', id }} kind="correspondent" canEdit={canEdit} />
+      <DocumentsSection owner={{ kind: 'contact', id }} kind="correspondent" canEdit={canEdit} />
 
       <Section title="Photos and files">
         <div className="flex flex-col gap-3">

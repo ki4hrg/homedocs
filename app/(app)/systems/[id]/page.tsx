@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { NoteList } from '@/components/NoteList'
-import { PaperlessDocs } from '@/components/PaperlessDocs'
+import { DocumentsSection } from '@/components/DocumentsSection'
 import { LinkButton } from '@/components/ui/Button'
 import { Card, List, Row, Section } from '@/components/ui/Card'
 import { Icon } from '@/components/ui/icons'
@@ -149,7 +149,7 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
         </Section>
       ) : null}
 
-      <PaperlessDocs owner={{ kind: 'system', id }} kind="tag" canEdit={canEdit} />
+      <DocumentsSection owner={{ kind: 'system', id }} kind="tag" canEdit={canEdit} />
     </>
   )
 }

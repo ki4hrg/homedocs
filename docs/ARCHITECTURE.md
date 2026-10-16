@@ -180,12 +180,17 @@ anyway, so that gains nothing.
     `tag:<id>` or `correspondent:<id>`, so they never collide with a document number; picking another
     replaces the first. The record's page lists the newest 50 documents filed under it
     (`GET /api/documents/?tags__id__all=` or `?correspondent__id=`); filing in paperless is the only
-    upkeep. These rows show as the Documents section, not under Linked. Their documents' thumbnails
+    upkeep. Their documents' thumbnails
     go through the proxy, which asks paperless how the document is filed first. The picker lists every
     tag (or correspondent) before anything is typed.
+  - **One Documents section:** every record page lists its paperless documents together
+    (`documentsFor`, `components/DocumentsSection.tsx`): the ones linked one by one first, then the
+    rest of what its tag or correspondent holds, each document once (a linked one keeps its Remove).
+    Fixtures, parts and notes follow no tag and list only linked documents. No paperless row shows
+    under Linked, which is left to Homebox, Home Assistant and pasted addresses.
   - **The house's tag:** `integrations.required_tags` (Settings → paperless, admin) lists tags every
     document must also have — for a paperless that also holds another home's papers. They are added
-    to every Documents list (`tags__id__all=<filter>,<required>`), to "Find in paperless" searches,
+    to every Documents list (`tags__id__all=<filter>,<required>`), to "Add a document" searches,
     to the Open link into paperless, and to the thumbnail proxy's check.
   - **Homebox type names:** built-in entity types come back as translation keys
     (`global.location`) and are left out of subtitles.
