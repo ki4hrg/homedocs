@@ -128,6 +128,10 @@ export function LinkPicker({
           </li>
         ))}
       </ul>
+      {browsable && searched !== null && !error ? (
+        // paperless filters by owner and sharing, so a short list is usually permissions, not a bug.
+        <p className="px-1 text-xs text-ink-3">Missing one? paperless only shows homedocs the {kind}s its paperless user can see.</p>
+      ) : null}
     </div>
   )
 }

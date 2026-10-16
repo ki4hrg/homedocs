@@ -28,7 +28,19 @@ export class IntegrationError extends Error {
   }
 }
 
-export type Connection = { system: System; baseUrl: string; token: string }
+export type Connection = {
+  system: System
+  baseUrl: string
+  token: string
+  /** paperless: tag ids every listed or searched document must also have (the house's tag). */
+  requiredTags?: number[]
+}
+
+/** "&tags__id__all=4,9" for the house's required tags, plus any `also`; "" when there are none. */
+function requiredTagsParam(conn: Connection, also: number[] = []): string {
+  const ids = [...new Set([...also, ...(conn.requiredTags ?? [])])].filter((t) => Number.isInteger(t))
+  return ids.length ? `&tags__id__all=${ids.join(',')}` : ''
+}
 
 export type Hit = { externalId: string; title: string; subtitle: string; url: string; hasThumb: boolean }
 
@@ -218,8 +230,20 @@ export async function searchRemote(conn: Connection, query: string, kind?: Searc
     const page = await json<{ results?: PlNamed[] }>(conn, `${FILTER[kind].path}?${named}page_size=100&ordering=name`)
     return (page.results ?? []).filter((t) => Number.isInteger(t.id)).map((t) => plFilterHit(conn, kind, t))
   }
-  const page = await json<{ results?: PlDoc[] }>(conn, `/api/documents/?query=${q}&page_size=20`)
+  const page = await json<{ results?: PlDoc[] }>(conn, `/api/documents/?query=${q}&page_size=20${requiredTagsParam(conn)}`)
   return (page.results ?? []).filter((d) => Number.isInteger(d.id)).map((d) => plHit(conn, d))
+}
+
+/** The query for a filter's documents, with the house's required tags folded in. */
+function filterQuery(conn: Connection, f: { kind: PaperlessFilterKind; id: number }, side: 'api' | 'ui'): string {
+  if (f.kind === 'tag') return requiredTagsParam(conn, [f.id]).slice(1)
+  return `${FILTER.correspondent[side]}=${f.id}${requiredTagsParam(conn)}`
+}
+
+/** paperless's own document list for a tag or correspondent, narrowed the same way homedocs narrows it. */
+export function filteredDocumentsUrl(conn: Connection, filterRef: string): string | null {
+  const f = paperlessFilter(filterRef)
+  return f ? `${base(conn)}/documents?${filterQuery(conn, f, 'ui')}` : null
 }
 
 /** What a paperless document is filed under: its tag ids and its correspondent. */
@@ -238,7 +262,7 @@ export async function documentsFiled(conn: Connection, filterRef: string, limit 
   if (conn.system !== 'paperless' || !f) throw new IntegrationError('Not found.', 'missing')
   const page = await json<{ results?: PlDoc[]; count?: number }>(
     conn,
-    `/api/documents/?${FILTER[f.kind].api}=${f.id}&page_size=${limit}&ordering=-created`,
+    `/api/documents/?${filterQuery(conn, f, 'api')}&page_size=${limit}&ordering=-created`,
   )
   const hits = (page.results ?? []).filter((d) => Number.isInteger(d.id)).map((d) => plHit(conn, d))
   return { hits, total: typeof page.count === 'number' ? page.count : hits.length }

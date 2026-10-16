@@ -56,6 +56,24 @@ links to it, keeping the role you picked. After that, the link is by Pocket ID i
 email change there doesn't matter. Linking needs Pocket ID to mark the address verified, or
 `OIDC_TRUST_EMAIL=true`. Invite links still work for anyone who'd rather set their own password.
 
+## Connecting paperless
+
+homedocs sees exactly what the token's paperless user sees. paperless shows a user only the
+documents, tags and correspondents that user owns, that have no owner, or that are shared with them,
+and that holds for a tag list too. With a dedicated, limited user (recommended, so the family can't
+search the tax returns), share with it:
+- the **tags and correspondents** you want to link places, projects, systems and contacts to
+  (paperless → Tags or Correspondents → select them → Permissions → add the user as a viewer);
+- the **documents** under them, the same way from the Documents list. A workflow that adds the
+  view permission when the tag is assigned keeps new documents shared.
+
+If the picker lists only a few tags, or a tag shows fewer documents than paperless does for you,
+this is why.
+
+If paperless also holds another home's papers, pick this house's tag under Settings → paperless →
+**Only documents tagged**. Every Documents list, and "Find in paperless", then needs that tag too,
+so a system's "Plumbing" tag shows this house's plumbing only.
+
 ## Reverse proxy
 
 **Requirements:**

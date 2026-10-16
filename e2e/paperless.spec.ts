@@ -87,3 +87,15 @@ test('a contact lists its paperless correspondent’s documents', async ({ page 
   await page.getByRole('button', { name: /Unlink/ }).click()
   await expect(page.getByRole('button', { name: 'Show a paperless correspondent’s documents' })).toBeVisible()
 })
+
+test('Settings narrows paperless to the house’s tag', async ({ page }) => {
+  await page.goto('/settings')
+  await page.getByRole('button', { name: 'Pick a tag' }).click()
+  await page.getByRole('button', { name: /Pantry.*Tag/ }).click()
+  await expect(page.getByText('Only documents tagged')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Remove the Pantry filter' })).toBeVisible()
+
+  page.once('dialog', (d) => d.accept())
+  await page.getByRole('button', { name: 'Remove the Pantry filter' }).click()
+  await expect(page.getByRole('button', { name: 'Pick a tag' })).toBeVisible()
+})

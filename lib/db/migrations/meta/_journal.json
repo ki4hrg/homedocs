@@ -36,6 +36,13 @@
       "when": 1792180750428,
       "tag": "0004_links_everywhere",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792183246402,
+      "tag": "0005_paperless_required_tags",
+      "breakpoints": true
     }
   ]
 }

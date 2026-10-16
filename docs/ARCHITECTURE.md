@@ -183,6 +183,10 @@ anyway, so that gains nothing.
     upkeep. These rows show as the Documents section, not under Linked. Their documents' thumbnails
     go through the proxy, which asks paperless how the document is filed first. The picker lists every
     tag (or correspondent) before anything is typed.
+  - **The house's tag:** `integrations.required_tags` (Settings → paperless, admin) lists tags every
+    document must also have — for a paperless that also holds another home's papers. They are added
+    to every Documents list (`tags__id__all=<filter>,<required>`), to "Find in paperless" searches,
+    to the Open link into paperless, and to the thumbnail proxy's check.
   - **Homebox type names:** built-in entity types come back as translation keys
     (`global.location`) and are left out of subtitles.
 - These response shapes come from the projects' published APIs and are tested against a fake server.
