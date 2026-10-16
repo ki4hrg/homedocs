@@ -1,6 +1,7 @@
 import QRCode from 'qrcode'
 import type { ReactNode } from 'react'
-import type { Guide } from '@/lib/guide/guide'
+import type { Guide, GuideFixture } from '@/lib/guide/guide'
+import { systemIcon } from '@/lib/systems/seeds'
 import { wifiQrText } from '@/lib/guide/guide'
 import { telHref } from '@/lib/contacts/contacts'
 import { Card, Pill, Section } from '../ui/Card'
@@ -8,6 +9,38 @@ import { Icon } from '../ui/icons'
 import { PrintButton } from './PrintButton'
 
 const KIND_ICON = { wifi: 'link', alarm: 'alert', lockbox: 'key', gate: 'key', other: 'key' } as const
+
+function FixtureCard({ t, fileBase }: { t: GuideFixture; fileBase: string }) {
+  return (
+    <Card className="overflow-hidden">
+      {t.photos[0] ? (
+        <a href={`${fileBase}/${t.photos[0].sha256}`} target="_blank" rel="noreferrer">
+          {/* eslint-disable-next-line @next/next/no-img-element -- served by our own guarded routes */}
+          <img
+            src={`${fileBase}/${t.photos[0].sha256}?thumb=1`}
+            alt={t.photos[0].caption || t.name}
+            className="max-h-56 w-full object-cover print:max-h-40"
+          />
+        </a>
+      ) : null}
+      <div className="px-4 py-3">
+        <p className="text-[17px] font-semibold text-ink">{t.name}</p>
+        <p className="text-sm text-ink-3">{t.where}</p>
+        {t.note ? <p className="mt-2 whitespace-pre-wrap text-[15px] text-ink-2">{t.note}</p> : null}
+        {t.photos.length > 1 ? (
+          <div className="mt-2 flex gap-2 overflow-x-auto">
+            {t.photos.slice(1).map((p) => (
+              <a key={p.sha256} href={`${fileBase}/${p.sha256}`} target="_blank" rel="noreferrer" className="shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element -- served by our own guarded routes */}
+                <img src={`${fileBase}/${p.sha256}?thumb=1`} alt={p.caption || t.name} className="h-20 w-28 rounded object-cover" />
+              </a>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </Card>
+  )
+}
 
 async function wifiQr(ssid: string, password: string, security?: string): Promise<string> {
   return QRCode.toString(wifiQrText(ssid, password, security), { type: 'svg', margin: 1, width: 160 })
@@ -56,37 +89,38 @@ export async function GuideView({
         <Card className="px-4 py-6 text-center text-[15px] text-ink-3">Nothing is on the house guide yet.</Card>
       ) : null}
 
-      {guide.fixtures.length ? (
+      {guide.groups.length ? (
         <Section title="In an emergency">
-          <div className="flex flex-col gap-3">
-            {guide.fixtures.map((t) => (
-              <Card key={t.id} className="overflow-hidden">
-                {t.photos[0] ? (
-                  <a href={`${fileBase}/${t.photos[0].sha256}`} target="_blank" rel="noreferrer">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- served by our own guarded routes */}
-                    <img
-                      src={`${fileBase}/${t.photos[0].sha256}?thumb=1`}
-                      alt={t.photos[0].caption || t.name}
-                      className="max-h-56 w-full object-cover print:max-h-40"
-                    />
-                  </a>
+          <div className="flex flex-col gap-5">
+            {guide.groups.map((g) => (
+              <div key={g.id ?? 'other'} className="flex flex-col gap-3">
+                {/* One group with no system needs no heading. */}
+                {guide.groups.length > 1 || g.id ? (
+                  <h3 className="flex items-center gap-2 px-1 text-[15px] font-semibold text-ink">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-soft text-accent">
+                      <Icon name={systemIcon(g.icon)} className="h-4 w-4" />
+                    </span>
+                    {g.name}
+                  </h3>
                 ) : null}
-                <div className="px-4 py-3">
-                  <p className="text-[17px] font-semibold text-ink">{t.name}</p>
-                  <p className="text-sm text-ink-3">{t.where}</p>
-                  {t.note ? <p className="mt-2 whitespace-pre-wrap text-[15px] text-ink-2">{t.note}</p> : null}
-                  {t.photos.length > 1 ? (
-                    <div className="mt-2 flex gap-2 overflow-x-auto">
-                      {t.photos.slice(1).map((p) => (
-                        <a key={p.sha256} href={`${fileBase}/${p.sha256}`} target="_blank" rel="noreferrer" className="shrink-0">
-                          {/* eslint-disable-next-line @next/next/no-img-element -- served by our own guarded routes */}
-                          <img src={`${fileBase}/${p.sha256}?thumb=1`} alt={p.caption || t.name} className="h-20 w-28 rounded object-cover" />
-                        </a>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </Card>
+                {g.fixtures.map((t) => (
+                  <FixtureCard key={t.id} t={t} fileBase={fileBase} />
+                ))}
+                {g.calls.length ? (
+                  <div className="flex flex-wrap gap-2">
+                    {g.calls.map((c) => (
+                      <a
+                        key={c.id}
+                        href={telHref(c.phone)}
+                        className="inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-4 text-[15px] font-medium text-accent-ink"
+                      >
+                        <Icon name="phone" className="h-4 w-4" />
+                        Call {c.name}
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             ))}
           </div>
         </Section>

@@ -4,15 +4,16 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { listOpenInvites } from '@/lib/auth/invites'
 import { requireRole } from '@/lib/auth/guards'
 import { listUsers } from '@/lib/auth/users'
+import { signInOptions, ssoLinkNeedsVerifiedEmail } from '@/lib/auth/oidc'
 import { formatDay, localDay } from '@/lib/web/format'
-import { inviteAction, removeUserAction, resetAction, revokeInviteAction, setRoleAction } from './actions'
-import { InviteForm, ResetLink, RevokeButton, RoleSelect, ROLE_HELP } from './parts'
+import { addMemberAction, inviteAction, removeUserAction, resetAction, revokeInviteAction, setRoleAction } from './actions'
+import { AddMemberForm, InviteForm, ResetLink, RevokeButton, RoleSelect, ROLE_HELP } from './parts'
 
 export const metadata = { title: 'Family' }
 
 export default async function FamilyPage() {
   const me = await requireRole('admin')
-  const [people, invites] = await Promise.all([listUsers(), listOpenInvites()])
+  const [people, invites, signIn] = await Promise.all([listUsers(), listOpenInvites(), signInOptions()])
   return (
     <>
       <PageHeader title="Family" subtitle="Who can sign in, and what they can do" back={{ href: '/more', label: 'More' }} />
@@ -26,14 +27,20 @@ export default async function FamilyPage() {
                 </span>
                 <span className="block truncate text-sm text-ink-3">
                   {p.email}
-                  {p.sso ? ' · single sign-on' : ''}
+                  {p.sso ? ' · single sign-on' : p.hasPassword ? '' : ' · not signed in yet'}
                 </span>
               </span>
               <RoleSelect role={p.role} setRole={setRoleAction.bind(null, p.id)} disabled={p.id === me.id} />
             </div>
             {p.id !== me.id ? (
               <div className="flex items-center justify-between gap-2">
-                {p.hasPassword ? <ResetLink action={resetAction.bind(null, p.id)} /> : <span />}
+                {p.hasPassword ? (
+                  <ResetLink action={resetAction.bind(null, p.id)} />
+                ) : signIn.password ? (
+                  <ResetLink action={resetAction.bind(null, p.id)} label="Make a link to set a password" />
+                ) : (
+                  <span />
+                )}
                 <DeleteButton compact what={p.displayName} recoverable={false} label="Remove" action={removeUserAction.bind(null, p.id)} />
               </div>
             ) : null}
@@ -41,7 +48,18 @@ export default async function FamilyPage() {
         ))}
       </List>
 
-      <Section title="Invite someone">
+      <Section title="Add someone">
+        <Card className="p-4">
+          <AddMemberForm
+            action={addMemberAction}
+            sso={signIn.sso?.name ?? null}
+            password={signIn.password}
+            needsVerifiedEmail={ssoLinkNeedsVerifiedEmail()}
+          />
+        </Card>
+      </Section>
+
+      <Section title="Or send an invite link">
         <Card className="p-4">
           <InviteForm action={inviteAction} />
         </Card>

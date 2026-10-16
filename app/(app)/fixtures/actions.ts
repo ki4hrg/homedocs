@@ -9,6 +9,7 @@ function input(fd: FormData) {
   return {
     name: field(fd, 'name'),
     spaceId: field(fd, 'spaceId') || null,
+    systemId: fd.has('systemId') ? field(fd, 'systemId') || null : undefined,
     category: field(fd, 'category'),
     notes: field(fd, 'notes'),
     inGuide: checkbox(fd, 'inGuide'),

@@ -1,6 +1,6 @@
 /*
  * What "+" can add, shared by the header menu and the /add page (the app
- * shortcut). Opened on a place or a fixture, the choices fill in where.
+ * shortcut). Opened on a place, fixture or system, the choices fill in where.
  */
 
 import type { IconName } from '@/components/ui/icons'
@@ -15,11 +15,12 @@ export function addItems(pathname = '/'): AddItem[] {
   const fixture = at('fixtures')
   const project = at('projects')
   const contact = at('contacts')
+  const system = at('systems')
   const noteFor = space ? `?space=${space}` : fixture ? `?fixture=${fixture}` : project ? `?project=${project}` : contact ? `?contact=${contact}` : ''
 
   return [
     { href: `/notes/new${noteFor}`, icon: 'note', title: 'Note', detail: 'Something that happened: mulch put down, filter changed, repair' },
-    { href: `/fixtures/new${space ? `?space=${space}` : ''}`, icon: 'fixture', title: 'Fixture', detail: 'Something installed: a light, a shutoff valve, the water heater' },
+    { href: `/fixtures/new${space ? `?space=${space}` : system ? `?system=${system}` : ''}`, icon: 'fixture', title: 'Fixture', detail: 'Something installed: a light, a shutoff valve, the water heater' },
     space || fixture
       ? { href: `/use?${space ? `space=${space}` : `fixture=${fixture}`}`, icon: 'part', title: 'Part', detail: 'What it takes or what we used: a bulb, paint, mulch' }
       : { href: '/parts/new', icon: 'part', title: 'Part', detail: 'What something takes: a bulb, a paint colour, a filter' },

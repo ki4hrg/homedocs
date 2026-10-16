@@ -164,6 +164,15 @@ export async function signInOptions(): Promise<SignInOptions> {
 }
 
 /**
+ * For the Family page: whether a pre-made account links on first sign-on only
+ * when the provider says the address is verified (see `oidc-accounts.ts`).
+ */
+export function ssoLinkNeedsVerifiedEmail(): boolean {
+  const config = configOrOff()
+  return config.enabled && !config.trustEmail
+}
+
+/**
  * A driver for the configured issuer, or null when single sign-on is off or the
  * issuer could not be discovered.
  */

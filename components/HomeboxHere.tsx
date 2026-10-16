@@ -29,7 +29,7 @@ export async function HomeboxHere({ spaceId, placeName, canEdit }: { spaceId: st
             Link this place to its Homebox location to see what’s kept here, and add any of it in one tap.
           </p>
           <LinkPicker
-            systems={[{ system: 'homebox', name: 'Homebox', locations: true, label: 'Pick the Homebox location' }]}
+            systems={[{ system: 'homebox', name: 'Homebox', kind: 'location', label: 'Pick the Homebox location' }]}
             initialQuery={placeName}
             link={linkPickedAction.bind(null, `space:${spaceId}`)}
           />

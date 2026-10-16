@@ -12,8 +12,9 @@ test.describe.configure({ mode: 'serial' })
 
 const GARAGE = '3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f'
 const MOWER = '5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b'
-const LOCATION = { id: 'lt', name: 'Room', isLocation: true }
-const ITEM = { id: 'it', name: 'Item', isLocation: false }
+// Homebox names its built-in types by translation key; they should never reach the screen.
+const LOCATION = { id: 'lt', name: 'global.location', isLocation: true }
+const ITEM = { id: 'it', name: 'global.item', isLocation: false }
 let server: Server
 let base = ''
 
@@ -60,10 +61,12 @@ test('link a place to its Homebox location and add what is kept there', async ({
   // The search starts from the place's own name.
   await page.getByRole('button', { name: 'Pick the Homebox location' }).click()
   await expect(page.getByRole('textbox', { name: 'Search' })).toHaveValue('Garage')
-  await page.getByRole('button', { name: /Garage.*Room · 1 item/ }).click()
+  await expect(page.getByRole('button', { name: /Garage.*1 item/ })).not.toContainText('global.')
+  await page.getByRole('button', { name: /Garage.*1 item/ }).click()
 
   await expect(page.getByRole('heading', { name: 'In Homebox · Garage' })).toBeVisible()
   await expect(page.getByText('Not in homedocs yet')).toBeVisible()
+  await expect(page.getByText(/global\./)).toHaveCount(0)
   await page.getByRole('button', { name: 'Add Lawn mower as a fixture here' }).click()
   await expect(page.getByRole('link', { name: 'Fixture: Lawn mower' })).toBeVisible()
 

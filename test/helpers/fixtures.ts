@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { ActorContext, PropertyScope, Role } from '../../lib/core/types'
 import { properties, users } from '../../lib/db/schema'
+import { seedSystems } from '../../lib/systems/systems'
 import { db } from './db'
 
 export async function makeUser(role: Role = 'admin', email = `${randomUUID()}@example.test`) {
@@ -13,6 +14,7 @@ export async function makeUser(role: Role = 'admin', email = `${randomUUID()}@ex
 
 export async function makeProperty(name = 'Test house'): Promise<PropertyScope & { id: string }> {
   const [row] = await db.insert(properties).values({ name }).returning()
+  await seedSystems(db, row!.id, null)
   return { id: row!.id, propertyId: row!.id }
 }
 

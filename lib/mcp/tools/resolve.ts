@@ -11,7 +11,7 @@
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import type { PgColumn, PgTable } from 'drizzle-orm/pg-core'
 import type { Executor, PropertyScope } from '../../core/types'
-import { contacts, fixtures, projects, spaces, supplies } from '../../db/schema'
+import { contacts, fixtures, projects, spaces, supplies, systems } from '../../db/schema'
 import { ToolRefusal } from './types'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -20,6 +20,7 @@ type Named = PgTable & { id: PgColumn; propertyId: PgColumn; deletedAt: PgColumn
 
 const KINDS = {
   place: { table: spaces, name: spaces.name, label: 'place', list: 'list_places' },
+  system: { table: systems, name: systems.name, label: 'system', list: 'list_systems' },
   fixture: { table: fixtures, name: fixtures.name, label: 'fixture', list: 'search' },
   part: { table: supplies, name: supplies.name, label: 'part', list: 'search' },
   contact: { table: contacts, name: contacts.name, label: 'contact', list: 'search' },

@@ -222,6 +222,8 @@ export const fixtures = pgTable(
     propertyId: propertyId(),
     /** Null means the whole house ("Main water shutoff" may not belong to a room). */
     spaceId: uuid('space_id').references(() => spaces.id),
+    /** Its one system: the water heater is Water even though it burns gas. */
+    systemId: uuid('system_id').references((): AnyPgColumn => systems.id),
     name: text('name').notNull(),
     category: text('category').notNull().default(''),
     notes: text('notes').notNull().default(''),
@@ -234,8 +236,38 @@ export const fixtures = pgTable(
   },
   (t) => [
     index('fixtures_space').on(t.propertyId, t.spaceId),
+    index('fixtures_system').on(t.propertyId, t.systemId),
     index('fixtures_search').using('gin', t.searchDoc),
     index('fixtures_name_trgm').using('gin', sql`${t.name} gin_trgm_ops`),
+  ],
+)
+
+/**
+ * "System": one part of how the house works — water, electrical, heating.
+ * The second way in beside places, and how the guide hands the house over
+ * ("Water: main shutoff, water heater, call Ace Plumbing"). Seeded per property
+ * (lib/systems/systems.ts); the family can rename, add or delete them.
+ */
+export const systems = pgTable(
+  'systems',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    propertyId: propertyId(),
+    /** The seed it came from ("water"), so the seed list is not re-added; null for the family's own. */
+    seedKey: text('seed_key'),
+    name: text('name').notNull(),
+    icon: text('icon').notNull().default('system'),
+    /** Contact trades whose preferred contact is "who to call" for it: plumber, water & sewer. */
+    trades: text('trades').array().notNull().default(sql`'{}'::text[]`),
+    notes: text('notes').notNull().default(''),
+    sort: integer('sort').notNull().default(0),
+    searchDoc: tsvector('search_doc'),
+    ...authored,
+  },
+  (t) => [
+    index('systems_property').on(t.propertyId, t.sort),
+    uniqueIndex('systems_seed').on(t.propertyId, t.seedKey),
+    index('systems_search').using('gin', t.searchDoc),
   ],
 )
 

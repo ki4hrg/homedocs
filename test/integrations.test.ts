@@ -21,6 +21,7 @@ import {
   linkedThumb,
   linkPicked,
   listIntegrations,
+  paperlessDocsHere,
   refreshStale,
   saveIntegration,
   searchSystem,
@@ -39,7 +40,9 @@ const ITEM = '0b8e1f5c-1d2a-4c6e-9a51-3e0f2b7c9d11'
 const THUMB = '7d1e2f3a-4b5c-4d6e-8f90-a1b2c3d4e5f6'
 const BASEMENT = '3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f'
 const DEHUMIDIFIER = '5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b'
-const LOCATION_TYPE = { id: 'lt', name: 'Room', isLocation: true }
+/** A thumbnail Homebox lists but will not serve. */
+const GONE_THUMB = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d'
+const LOCATION_TYPE = { id: 'lt', name: 'global.location', isLocation: true }
 const ITEM_TYPE = { id: 'it', name: 'Item', isLocation: false }
 let png: Buffer
 const seen: { url: string; auth: string | undefined; accept: string | undefined }[] = []
@@ -73,7 +76,10 @@ beforeAll(async () => {
         return send(200, { items, page: 1, pageSize: 100, total: 2 })
       }
       if (p === `/entities/${BASEMENT}`) return send(200, { id: BASEMENT, name: 'Basement', entityType: LOCATION_TYPE })
-      if (p === `/entities/${DEHUMIDIFIER}`) return send(200, { id: DEHUMIDIFIER, name: 'Dehumidifier', parent: { name: 'Basement' }, entityType: ITEM_TYPE })
+      if (p === `/entities/${DEHUMIDIFIER}`) {
+        return send(200, { id: DEHUMIDIFIER, name: 'Dehumidifier', parent: { name: 'Basement' }, entityType: ITEM_TYPE, thumbnailId: GONE_THUMB, imageId: THUMB })
+      }
+      if (p === `/entities/${DEHUMIDIFIER}/attachments/${THUMB}`) return send(200, png, 'image/png')
       if (p === '/entities') {
         const q = url.searchParams.get('q') ?? ''
         const items = url.searchParams.has('parentIds') ? [] : q.includes('heater') || !q ? [{ id: ITEM, name: 'Water heater', parent: { name: 'Basement' }, thumbnailId: THUMB }] : []
@@ -86,6 +92,18 @@ beforeAll(async () => {
     if (url.pathname.startsWith('/pl/api')) {
       if (!plAuth) return send(401, { detail: 'Invalid token.' })
       const p = url.pathname.slice('/pl/api'.length)
+      if (p === '/tags/') {
+        const q = url.searchParams.get('name__icontains') ?? ''
+        return send(200, { count: 1, results: 'garage'.includes(q.toLowerCase()) ? [{ id: 7, name: 'Garage', document_count: 2 }] : [] })
+      }
+      if (p === '/tags/7/') return send(200, { id: 7, name: 'Garage', document_count: 2 })
+      if (p === '/documents/' && url.searchParams.get('tags__id__all') === '7') {
+        return send(200, { count: 2, results: [{ id: 43, title: 'Garage door opener manual', created_date: '2025-03-02' }, { id: 42, title: 'Water heater manual', created_date: '2024-05-01' }] })
+      }
+      if (p === '/documents/43/') return send(200, { id: 43, title: 'Garage door opener manual', tags: [7] })
+      if (p === '/documents/43/thumb/') return send(200, png, 'image/png')
+      if (p === '/documents/44/') return send(200, { id: 44, title: 'Tax return', tags: [9] })
+      if (p === '/documents/44/thumb/') return send(200, png, 'image/png')
       if (p === '/documents/') {
         if (url.searchParams.get('page_size') === '1' && !url.searchParams.get('query')) return send(200, { count: 1234, results: [] })
         return send(200, { count: 1, results: [{ id: 42, title: 'Water heater manual', created_date: '2024-05-01' }] })
@@ -156,6 +174,40 @@ describe('linking and thumbnails', () => {
     expect(doc!.url).toBe(`${base}/pl/documents/42/details`)
   })
 
+  it('has no picture for a location without one, and falls back to the full image when the thumbnail is gone', async () => {
+    const { scope, admin, member } = await household()
+    await saveIntegration(db, scope, admin, 'homebox', { baseUrl: `${base}/hb`, token: 'hb_good' })
+    const room = await createSpace(db, scope, member, { name: 'Basement' })
+    await linkPicked(db, scope, member, { kind: 'space', id: room.id }, 'homebox', BASEMENT)
+    expect(await linkedThumb(db, scope, 'homebox', BASEMENT)).toBeNull()
+
+    const dehumidifier = await createFixture(db, scope, member, { name: 'Dehumidifier' })
+    await linkPicked(db, scope, member, { kind: 'fixture', id: dehumidifier.id }, 'homebox', DEHUMIDIFIER)
+    const thumb = await linkedThumb(db, scope, 'homebox', DEHUMIDIFIER)
+    expect((await sharp(thumb!).metadata()).format).toBe('jpeg')
+  })
+
+  it('lists the documents under a place’s paperless tag, with their thumbnails and no others', async () => {
+    const { scope, admin, member } = await household()
+    await saveIntegration(db, scope, admin, 'paperless', { baseUrl: `${base}/pl`, token: 'pl_good' })
+    const garage = await createSpace(db, scope, member, { name: 'Garage' })
+    expect(await paperlessDocsHere(db, scope, garage.id)).toEqual({ state: 'none' })
+
+    const [tag] = await searchSystem(db, scope, 'paperless', 'gar', { tags: true })
+    expect(tag).toMatchObject({ externalId: 'tag:7', title: 'Garage', subtitle: 'Tag · 2 documents', url: `${base}/pl/documents?tags__id__all=7` })
+    await linkPicked(db, scope, member, { kind: 'space', id: garage.id }, 'paperless', tag!.externalId)
+
+    const here = await paperlessDocsHere(db, scope, garage.id)
+    expect(here).toMatchObject({ state: 'ok', total: 2, tag: { title: 'Garage' } })
+    if (here.state !== 'ok') throw new Error('unreachable')
+    expect(here.documents.map((d) => d.title)).toEqual(['Garage door opener manual', 'Water heater manual'])
+
+    // A document under the linked tag gets a thumbnail; one that isn't, and the tag itself, don't.
+    expect(await linkedThumb(db, scope, 'paperless', '43')).not.toBeNull()
+    expect(await linkedThumb(db, scope, 'paperless', '44')).toBeNull()
+    expect(await linkedThumb(db, scope, 'paperless', 'tag:7')).toBeNull()
+  })
+
   it('marks a deleted item as missing, keeping its title', async () => {
     const { scope, admin, member } = await household()
     await saveIntegration(db, scope, admin, 'homebox', { baseUrl: `${base}/hb`, token: 'hb_good' })
@@ -182,7 +234,7 @@ describe('a place linked to a Homebox location', () => {
 
     const [loc] = await searchSystem(db, scope, 'homebox', 'basement', { locations: true })
     expect(seen.at(-1)!.url).toContain('isLocation=true')
-    expect(loc).toMatchObject({ externalId: BASEMENT, url: `${base}/hb/location/${BASEMENT}`, subtitle: 'Room · 2 items' })
+    expect(loc).toMatchObject({ externalId: BASEMENT, url: `${base}/hb/location/${BASEMENT}`, subtitle: '2 items' })
     await linkPicked(db, scope, member, { kind: 'space', id: basement.id }, 'homebox', BASEMENT)
 
     // The water heater is already a fixture somewhere and linked; the dehumidifier isn't.

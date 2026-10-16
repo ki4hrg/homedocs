@@ -17,13 +17,16 @@
  *   part use added / removed       the part, and the fixture or place it is used by
  *   contact renamed / trades        it, its notes
  *   project renamed                it, its notes
+ *   system renamed / deleted /     it, and every fixture in it
+ *     restored
+ *   fixture's system changed       the fixture (its own rebuild)
  *
  * Weights: A = the record's own name, B = where it is and what it is, C = notes.
  */
 
 import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm'
 import type { Executor } from '../core/types'
-import { contacts, contactTrades, fixtures, logs, projects, spaces, supplies, supplyUses } from '../db/schema'
+import { contacts, contactTrades, fixtures, logs, projects, spaces, supplies, supplyUses, systems } from '../db/schema'
 import { TEMPLATES, isCategory } from '../parts/templates'
 
 type Doc = { a?: string[]; b?: string[]; c?: string[] }
@@ -100,12 +103,20 @@ export async function rebuildFixture(exec: Executor, id: string) {
     .from(supplyUses)
     .innerJoin(supplies, eq(supplies.id, supplyUses.supplyId))
     .where(and(eq(supplyUses.fixtureId, id), isNull(supplyUses.deletedAt), isNull(supplies.deletedAt)))
+  const [system] = row.systemId
+    ? await exec.select({ name: systems.name }).from(systems).where(and(eq(systems.id, row.systemId), isNull(systems.deletedAt)))
+    : []
   await exec
     .update(fixtures)
     .set({
       searchDoc: vector({
         a: [row.name],
-        b: [row.category, ...path.map((p) => p.name), ...used.flatMap((u) => [u.name, ...fieldText(u.category, u.fields)])],
+        b: [
+          row.category,
+          system?.name ?? '',
+          ...path.map((p) => p.name),
+          ...used.flatMap((u) => [u.name, ...fieldText(u.category, u.fields)]),
+        ],
         c: [row.notes, row.guideNote],
       }),
     } as never)
@@ -183,6 +194,15 @@ export async function rebuildProject(exec: Executor, id: string) {
     .where(eq(projects.id, id))
 }
 
+export async function rebuildSystem(exec: Executor, id: string) {
+  const [row] = await exec.select().from(systems).where(eq(systems.id, id))
+  if (!row) return
+  await exec
+    .update(systems)
+    .set({ searchDoc: vector({ a: [row.name], b: row.trades, c: [row.notes] }) } as never)
+    .where(eq(systems.id, id))
+}
+
 // ─── cascades ────────────────────────────────────────────────────────────────
 
 async function each(ids: string[], fn: (id: string) => Promise<void>) {
@@ -251,9 +271,17 @@ export async function cascadeProject(exec: Executor, projectId: string) {
   await each(notes.map((n) => n.id), (id) => rebuildLog(exec, id))
 }
 
+/** A system was renamed, deleted or restored: its fixtures carry its name. */
+export async function cascadeSystem(exec: Executor, systemId: string) {
+  await rebuildSystem(exec, systemId)
+  const rows = await exec.select({ id: fixtures.id }).from(fixtures).where(eq(fixtures.systemId, systemId))
+  await each(rows.map((r) => r.id), (id) => rebuildFixture(exec, id))
+}
+
 /** Every document, from scratch. After a restore, or if a cascade was ever missed. */
 export async function rebuildAll(exec: Executor) {
   for (const r of await exec.select({ id: spaces.id }).from(spaces)) await rebuildSpace(exec, r.id)
+  for (const r of await exec.select({ id: systems.id }).from(systems)) await rebuildSystem(exec, r.id)
   for (const r of await exec.select({ id: fixtures.id }).from(fixtures)) await rebuildFixture(exec, r.id)
   for (const r of await exec.select({ id: supplies.id }).from(supplies)) await rebuildSupply(exec, r.id)
   for (const r of await exec.select({ id: contacts.id }).from(contacts)) await rebuildContact(exec, r.id)

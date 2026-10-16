@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { SearchBox } from '@/components/SearchBox'
+import { SystemTiles } from '@/components/SystemTiles'
 import { EmptyState, List, Row, Section } from '@/components/ui/Card'
 import { LinkButton } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/icons'
@@ -8,6 +9,7 @@ import { comingUp } from '@/lib/notes/notes'
 import { partsToRebuy } from '@/lib/parts/parts'
 import { buildTree, listSpaces, placeCounts, type SpaceNode } from '@/lib/places/places'
 import { preferredByTrade, telHref } from '@/lib/contacts/contacts'
+import { listSystems } from '@/lib/systems/systems'
 import { listProjects, OPEN_STATUSES, STATUS_LABEL } from '@/lib/projects/projects'
 import { roleAtLeast } from '@/lib/core/types'
 import { formatDay } from '@/lib/web/format'
@@ -15,9 +17,8 @@ import { viewer } from '@/lib/web/context'
 
 /*
  * Home is organised the way questions come: by place ("the living-room
- * light"), and by the parts a house keeps needing ("what size filter?").
- * Contacts, reminders and projects follow. Systems (plumbing, HVAC) will sit
- * beside places when they exist.
+ * light"), by system ("where's the water shutoff?"), and by the parts a house
+ * keeps needing ("what size filter?"). Contacts, reminders and projects follow.
  */
 
 type Tile = { id: string; name: string; counts?: { fixtures: number; parts: number } }
@@ -65,14 +66,16 @@ function placeGroups(roots: SpaceNode[]) {
 
 export default async function HomePage() {
   const { scope, user } = await viewer()
-  const [upcoming, preferred, projects, spaces, counts, rebuy] = await Promise.all([
+  const [upcoming, preferred, projects, spaces, counts, rebuy, systems] = await Promise.all([
     comingUp(db, scope),
     preferredByTrade(db, scope),
     listProjects(db, scope, { statuses: OPEN_STATUSES }),
     listSpaces(db, scope),
     placeCounts(db, scope),
     partsToRebuy(db, scope),
+    listSystems(db, scope),
   ])
+  const usedSystems = systems.filter((s) => s.fixtures > 0)
   const canEdit = roleAtLeast(user.role, 'member')
   const { loose, groups } = placeGroups(buildTree(spaces))
   const tile = (n: SpaceNode): Tile => ({ id: n.id, name: n.name, counts: counts.get(n.id) })
@@ -110,6 +113,12 @@ export default async function HomePage() {
           ))}
         </>
       )}
+
+      {usedSystems.length > 0 ? (
+        <Section title="Systems" action={<Link href="/systems" className="text-sm text-accent">All</Link>}>
+          <SystemTiles systems={usedSystems} />
+        </Section>
+      ) : null}
 
       {rebuy.length > 0 ? (
         <Section title="What the house takes" action={<Link href="/parts" className="text-sm text-accent">All parts</Link>}>

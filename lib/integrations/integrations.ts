@@ -20,7 +20,10 @@ import {
   fetchRemote,
   fetchThumb,
   IntegrationError,
+  documentsTagged,
+  documentTags,
   isHomeboxLocation,
+  isPaperlessTag,
   itemsInLocation,
   probe,
   searchRemote,
@@ -109,7 +112,7 @@ export async function searchSystem(
   scope: PropertyScope,
   system: System,
   query: string,
-  opts: { locations?: boolean } = {},
+  opts: { locations?: boolean; tags?: boolean } = {},
 ): Promise<Hit[]> {
   const conn = await connectionFor(exec, scope, system)
   if (!conn) throw new ValidationError(`${SYSTEM_NAME[system]} isn’t connected. An admin can connect it in Settings.`)
@@ -242,6 +245,50 @@ export async function homeboxItemsHere(exec: Executor, scope: PropertyScope, spa
   return { state: 'ok', location, total: found.total, items: found.hits.map((h) => ({ ...h, fixture: byId.get(h.externalId) ?? null })) }
 }
 
+// ─── a place's paperless tag ─────────────────────────────────────────────────
+
+export type PaperlessHere =
+  | { state: 'none' }
+  | { state: 'error'; tag: { title: string; url: string }; message: string }
+  | {
+      state: 'ok'
+      tag: { title: string; url: string }
+      total: number
+      documents: Hit[]
+    }
+
+/**
+ * The documents filed under the paperless tag this place is linked to, so the
+ * place page lists the manuals, receipts and warranties for it without anyone
+ * linking them one by one. Tagging in paperless is the only upkeep.
+ */
+export async function paperlessDocsHere(exec: Executor, scope: PropertyScope, spaceId: string): Promise<PaperlessHere> {
+  const refs = await exec
+    .select()
+    .from(externalRefs)
+    .where(
+      and(
+        eq(externalRefs.propertyId, scope.propertyId),
+        eq(externalRefs.spaceId, spaceId),
+        eq(externalRefs.system, 'paperless'),
+        isNull(externalRefs.deletedAt),
+      ),
+    )
+  const ref = refs.find((r) => isPaperlessTag(r.externalId))
+  if (!ref) return { state: 'none' }
+  const tag = { title: ref.title, url: ref.url }
+  const conn = await connectionFor(exec, scope, 'paperless')
+  if (!conn) return { state: 'error', tag, message: 'paperless isn’t connected. An admin can connect it in Settings.' }
+  let found: { hits: Hit[]; total: number }
+  try {
+    found = await documentsTagged(conn, ref.externalId)
+  } catch (err) {
+    if (!(err instanceof IntegrationError)) throw err
+    return { state: 'error', tag, message: err.kind === 'missing' ? 'That tag is no longer in paperless.' : err.message }
+  }
+  return { state: 'ok', tag, total: found.total, documents: found.hits }
+}
+
 /**
  * Add a Homebox item to a place as a fixture, linked back to the item. The
  * name comes from Homebox (fetched here, not taken from the browser), and the
@@ -340,9 +387,31 @@ export async function refreshStale(exec: Executor, scope: PropertyScope, refIds:
 const THUMB_TTL_MS = DAY_MS
 
 /**
+ * Whether a paperless document is filed under a tag some place links to — what
+ * makes it reachable from a place's Documents list. Asked of paperless, not the
+ * browser.
+ */
+async function underLinkedTag(exec: Executor, scope: PropertyScope, docId: string): Promise<boolean> {
+  if (isPaperlessTag(docId)) return false
+  const tags = await exec
+    .select({ externalId: externalRefs.externalId })
+    .from(externalRefs)
+    .where(and(eq(externalRefs.propertyId, scope.propertyId), eq(externalRefs.system, 'paperless'), isNull(externalRefs.deletedAt)))
+  const linked = new Set(tags.map((t) => t.externalId).filter(isPaperlessTag).map((t) => Number(t.slice(4))))
+  if (linked.size === 0) return false
+  const conn = await connectionFor(exec, scope, 'paperless')
+  if (!conn) return false
+  try {
+    return (await documentTags(conn, docId)).some((t) => linked.has(t))
+  } catch {
+    return false
+  }
+}
+
+/**
  * A linked record's thumbnail, through our server and cached on disk. Only ids
- * that a live link in this property points at are ever fetched, so this cannot
- * be used to browse the other app.
+ * that a live link in this property points at (or, for paperless, documents
+ * under a linked tag) are ever fetched, so this cannot be used to browse the other app.
  */
 export async function linkedThumb(exec: Executor, scope: PropertyScope, system: System, externalId: string): Promise<Buffer | null> {
   if (!validExternalId(system, externalId)) return null
@@ -358,7 +427,7 @@ export async function linkedThumb(exec: Executor, scope: PropertyScope, system: 
       ),
     )
     .limit(1)
-  if (!ref) return null
+  if (!ref && !(system === 'paperless' && (await underLinkedTag(exec, scope, externalId)))) return null
 
   const path = join(dataDir(), 'ext-cache', `${system}-${externalId}.jpg`)
   try {

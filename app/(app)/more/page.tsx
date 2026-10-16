@@ -13,6 +13,7 @@ export default async function MorePage() {
     <>
       <PageHeader title="More" subtitle={`Signed in as ${user.displayName}`} />
       <List>
+        <Row href="/systems" icon="system" title="Systems" detail="Water, electrical, heating: shutoffs and who to call" />
         <Row href="/parts" icon="part" title="Parts" detail="Bulbs, paint colours, filters, batteries" />
         <Row href="/fixtures" icon="fixture" title="Fixtures" detail="Everything installed, by place" />
         <Row href="/notes" icon="note" title="Notes" detail="What happened, newest first" />
@@ -21,7 +22,7 @@ export default async function MorePage() {
       <Section title="Settings">
         <List>
           {admin ? <Row href="/share" icon="link" title="Share links" detail="Send the house guide to a housesitter" /> : null}
-          {admin ? <Row href="/family" icon="contact" title="Family" detail="Who can sign in, and invite links" /> : null}
+          {admin ? <Row href="/family" icon="contact" title="Family" detail="Who can sign in, and what they can do" /> : null}
           <Row href="/deleted" icon="trash" title="Recently deleted" detail="Bring back something deleted by mistake" />
           <Row href="/settings" icon="edit" title="Settings" detail={admin ? 'Your account, and the home' : 'Your name and password'} />
         </List>

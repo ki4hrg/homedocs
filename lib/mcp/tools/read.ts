@@ -15,6 +15,7 @@ import { listProperties } from '../../property/property'
 import { search } from '../../search/search'
 import { getFixture, listFixtures } from '../../fixtures/fixtures'
 import { listLinks } from '../../links/links'
+import { listSystems, systemOverview } from '../../systems/systems'
 import { resolveRef } from './resolve'
 import { defineTool, ToolRefusal, type ToolContext } from './types'
 
@@ -164,6 +165,57 @@ export const readTools = [
   }),
 
   defineTool({
+    name: 'list_systems',
+    title: 'List systems',
+    description:
+      'The house\'s systems (water & plumbing, electrical, heating & cooling, gas…) with how many fixtures each has. ' +
+      'Use get_system for "where is the water shutoff" or "who do we call about the furnace".',
+    scope: 'homedocs:read',
+    annotations: { readOnlyHint: true },
+    input: z.object({}),
+    handler: async (_input, ctx) => ({
+      systems: (await listSystems(ctx.exec, await scopeOf(ctx))).map((s) => ({
+        id: s.id,
+        name: s.name,
+        fixtures: s.fixtures,
+        trades: s.trades,
+      })),
+    }),
+  }),
+
+  defineTool({
+    name: 'get_system',
+    title: 'Get a system',
+    description:
+      'One system: its fixtures (house-guide ones such as shutoffs first, with where they are and what to do), ' +
+      'the parts they take, who to call (the preferred contact for each of its trades), and recent notes.',
+    scope: 'homedocs:read',
+    annotations: { readOnlyHint: true },
+    input: z.object({ system: ref('system') }),
+    handler: async ({ system }, ctx) => {
+      const scope = await scopeOf(ctx)
+      const id = await resolveRef(ctx.exec, scope, 'system', system)
+      const [o, notes] = await Promise.all([systemOverview(ctx.exec, scope, id), listNotes(ctx.exec, scope, { systemId: id, limit: 10 })])
+      return {
+        id: o.system.id,
+        name: o.system.name,
+        notes: o.system.notes || undefined,
+        fixtures: o.fixtures.map((f) => ({
+          id: f.id,
+          name: f.name,
+          where: f.where,
+          kind: f.category || undefined,
+          on_house_guide: f.inGuide,
+          housesitter_note: f.guideNote || undefined,
+        })),
+        parts: o.parts.map((p) => ({ id: p.id, name: p.name, used_by: p.usedBy })),
+        who_to_call: o.contacts.map((c) => ({ id: c.id, name: c.name, company: c.company || undefined, for: c.trade, preferred: c.preferred, phone: c.phone ?? undefined })),
+        recent_notes: notes.map(noteView),
+      }
+    },
+  }),
+
+  defineTool({
     name: 'get_place',
     title: 'Get a place',
     description: 'A place with what is in it: places inside, fixtures, parts used, recent notes, and photos/links counts.',
@@ -211,6 +263,7 @@ export const readTools = [
         id: t.id,
         name: t.name,
         where: t.path.map((p) => p.name).join(' › ') || 'whole house',
+        system: t.system?.name,
         category: t.category || undefined,
         notes: t.notes || undefined,
         on_house_guide: t.inGuide,
