@@ -9,7 +9,7 @@ import { createShareLink, listShareLinks, recordView } from '../lib/guide/share-
 import { addUse, createPart, listParts } from '../lib/parts/parts'
 import { createSpace } from '../lib/places/places'
 import { addItem, addQuote, createProject, listProjects, updateItem } from '../lib/projects/projects'
-import { createThing } from '../lib/things/things'
+import { createFixture } from '../lib/fixtures/fixtures'
 import { db, resetBetweenTests } from './helpers/db'
 import { household } from './helpers/fixtures'
 
@@ -18,8 +18,8 @@ resetBetweenTests()
 describe('list counts', () => {
   it('counts the uses of each part', async () => {
     const { scope, member } = await household()
-    const a = await createThing(db, scope, member, { name: 'A' })
-    const b = await createThing(db, scope, member, { name: 'B' })
+    const a = await createFixture(db, scope, member, { name: 'A' })
+    const b = await createFixture(db, scope, member, { name: 'B' })
     const bulb = await createPart(db, scope, member, { category: 'bulb', name: 'Bulb' })
     await createPart(db, scope, member, { category: 'filter', name: 'Unused' })
     await addUse(db, scope, member, { supplyId: bulb.id, fixtureId: a.id })
@@ -52,10 +52,10 @@ describe('list counts', () => {
     expect(Object.fromEntries(rows.map((r) => [r.link.label, r.views]))).toEqual({ Sarah: 1, Unused: 0 })
   })
 
-  it('filters a place’s notes including notes about things in it', async () => {
+  it('filters a place’s notes including notes about fixtures in it', async () => {
     const { scope, member } = await household()
     const room = await createSpace(db, scope, member, { name: 'Kitchen' })
-    const t = await createThing(db, scope, member, { name: 'Dishwasher', spaceId: room.id })
+    const t = await createFixture(db, scope, member, { name: 'Dishwasher', spaceId: room.id })
     const { createNote, listNotes } = await import('../lib/notes/notes')
     await createNote(db, scope, member, { title: 'Fixed hose', fixtureId: t.id })
     await createNote(db, scope, member, { title: 'Painted', spaceId: room.id })

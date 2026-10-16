@@ -14,7 +14,7 @@ export function ActionFormClient({
   action: FormAction
   unit: string
   finishes?: string[]
-  ownerKind: 'thing' | 'place'
+  ownerKind: 'fixture' | 'place'
   initial: { surface: string; finish: string; quantity: string | null; unit: string; quantityNeeded: string | null; notes: string }
 }) {
   return (

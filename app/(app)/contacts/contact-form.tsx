@@ -21,14 +21,14 @@ function Methods({ prefix, label, type, initial, placeholder }: { prefix: string
   )
 }
 
-export function PersonForm({
+export function ContactForm({
   action,
-  trades: common,
+  groups,
   initial,
   submit,
 }: {
   action: FormAction
-  trades: string[]
+  groups: { label: string; trades: string[] }[]
   initial?: {
     name?: string
     company?: string
@@ -45,16 +45,19 @@ export function PersonForm({
 }) {
   const initialTrades = initial?.trades ?? []
   const [chosen, setChosen] = useState<string[]>(initialTrades.map((t) => t.trade))
-  const known = [...new Set([...common, ...initialTrades.map((t) => t.trade)])]
+  const common = new Set(groups.flatMap((g) => g.trades))
+  // Trades typed in by hand earlier show as their own group, so they can be unticked.
+  const own = initialTrades.map((t) => t.trade).filter((t) => !common.has(t))
+  const shown = own.length ? [...groups, { label: 'Yours', trades: own }] : groups
   const preferred = new Set(initialTrades.filter((t) => t.preferred).map((t) => t.trade))
 
   return (
     <ActionForm action={action}>
       {initial?.updatedAt ? <input type="hidden" name="updatedAt" value={initial.updatedAt} /> : null}
-      <Field label="Name">
-        <TextInput name="name" defaultValue={initial?.name} placeholder="Mike Rivera, or Ace Plumbing" required autoFocus={!initial?.name} />
+      <Field label="Name" hint="A company or a person.">
+        <TextInput name="name" defaultValue={initial?.name} placeholder="Ace Plumbing, Duke Energy, or Mike Rivera" required autoFocus={!initial?.name} />
       </Field>
-      <Field label="Company">
+      <Field label="Contact person or company" hint="Optional. For a company, who to ask for; for a person, who they work for.">
         <TextInput name="company" defaultValue={initial?.company} />
       </Field>
       <Methods prefix="phone" label="Phone" type="tel" initial={initial?.phones ?? []} placeholder="(555) 123-4567" />
@@ -65,30 +68,37 @@ export function PersonForm({
 
       <fieldset>
         <legend className="mb-1.5 text-sm font-medium text-ink-2">What do they do?</legend>
-        <div className="flex flex-wrap gap-2">
-          {known.map((t) => {
-            const on = chosen.includes(t)
-            return (
-              <label
-                key={t}
-                className={`inline-flex min-h-10 cursor-pointer items-center rounded-full border px-3 text-sm capitalize ${
-                  on ? 'border-accent bg-accent-soft text-accent' : 'border-line bg-card text-ink-2'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  name="trades"
-                  value={t}
-                  checked={on}
-                  onChange={(e) => setChosen((c) => (e.target.checked ? [...c, t] : c.filter((x) => x !== t)))}
-                  className="sr-only"
-                />
-                {t}
-              </label>
-            )
-          })}
+        <div className="flex flex-col gap-3">
+          {shown.map((g) => (
+            <div key={g.label}>
+              <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-ink-3">{g.label}</p>
+              <div className="flex flex-wrap gap-2">
+                {g.trades.map((t) => {
+                  const on = chosen.includes(t)
+                  return (
+                    <label
+                      key={t}
+                      className={`inline-flex min-h-10 cursor-pointer items-center rounded-full border px-3 text-sm capitalize ${
+                        on ? 'border-accent bg-accent-soft text-accent' : 'border-line bg-card text-ink-2'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        name="trades"
+                        value={t}
+                        checked={on}
+                        onChange={(e) => setChosen((c) => (e.target.checked ? [...c, t] : c.filter((x) => x !== t)))}
+                        className="sr-only"
+                      />
+                      {t}
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </div>
-        <TextInput name="customTrades" className="mt-2" placeholder="Something else? e.g. chimney sweep" aria-label="Other trades" />
+        <TextInput name="customTrades" className="mt-2" placeholder="Something else? e.g. chimney sweep, solar" aria-label="Other trades" />
       </fieldset>
 
       {chosen.length ? (
@@ -104,7 +114,7 @@ export function PersonForm({
       <Checkbox
         name="inGuide"
         label="Show on the house guide"
-        hint="For people a housesitter might need to call."
+        hint="For anyone a housesitter might need to call."
         defaultChecked={initial?.inGuide}
       />
       <Field label="Account number" hint="For utilities and services. Never shown on the house guide.">

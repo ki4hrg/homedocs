@@ -21,7 +21,8 @@ export async function GET(request: Request) {
   const [property] = await listProperties()
   if (!property) return Response.json({ hits: [] })
   try {
-    const hits = await searchSystem(db, { propertyId: property.id }, system, url.searchParams.get('q') ?? '')
+    const locations = system === 'homebox' && url.searchParams.get('kind') === 'location'
+    const hits = await searchSystem(db, { propertyId: property.id }, system, url.searchParams.get('q') ?? '', { locations })
     return Response.json({ hits }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (err) {
     if (err instanceof AppError) return Response.json({ error: err.message }, { status: 400 })

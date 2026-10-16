@@ -21,7 +21,7 @@ test('build the house: places, a light and its bulb', async ({ page }) => {
 
   await page.getByRole('link', { name: /What’s here/ }).click()
   await page.locator('[name=name]').fill('Overhead light')
-  await page.getByRole('button', { name: 'Add thing' }).click()
+  await page.getByRole('button', { name: 'Add fixture' }).click()
   await expect(page.getByRole('heading', { name: 'Overhead light' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Add part' }).click()
@@ -32,6 +32,32 @@ test('build the house: places, a light and its bulb', async ({ page }) => {
   await page.locator('[name=quantity]').fill('3')
   await page.getByRole('button', { name: /Add to Overhead light/ }).click()
   await expect(page.getByText('A19 E26 2700K bulb · 3 bulbs')).toBeVisible()
+})
+
+test('home leads with places and the parts the house takes', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('link', { name: /Living room.*1 fixture/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /A19 E26 2700K bulb.*Overhead light/ })).toBeVisible()
+})
+
+test('the + menu adds right where you are', async ({ page }) => {
+  await page.goto('/places')
+  await page.getByRole('link', { name: 'Living room' }).click()
+  await expect(page.getByRole('heading', { name: 'Living room' })).toBeVisible()
+  await page.getByRole('button', { name: 'Add something' }).click()
+  const fixture = page.getByRole('menuitem', { name: /^Fixture/ })
+  await expect(fixture).toHaveAttribute('href', /\/fixtures\/new\?space=[0-9a-f-]{36}$/)
+  await page.keyboard.press('Escape')
+  await expect(fixture).toHaveCount(0)
+})
+
+test('a new fixture asks for a photo, and password managers stay out of the form', async ({ page }) => {
+  await page.goto('/fixtures/new')
+  await expect(page.locator('[name=name]')).toHaveAttribute('data-1p-ignore', '')
+  await expect(page.locator('[name=name]')).toHaveAttribute('autocomplete', 'off')
+  await page.locator('[name=name]').fill('Kitchen sink shutoff')
+  await page.getByRole('button', { name: 'Add fixture' }).click()
+  await expect(page.getByRole('button', { name: /Add a photo/ })).toBeVisible()
 })
 
 test('question 1: what bulb does the living room light take?', async ({ page }) => {
@@ -87,12 +113,12 @@ test('question 3: which paint is in the bedroom?', async ({ page }) => {
 })
 
 test('question 4: who is our plumber?', async ({ page }) => {
-  await page.goto('/people/new')
+  await page.goto('/contacts/new')
   await page.locator('[name=name]').fill('Ace Plumbing')
   await page.locator('[name=phoneValue]').first().fill('(555) 123-4567')
   await page.getByText('plumber', { exact: true }).click()
   await page.getByLabel('Our plumber').check()
-  await page.getByRole('button', { name: 'Add person' }).click()
+  await page.getByRole('button', { name: 'Add contact' }).click()
   await expect(page.getByRole('heading', { name: 'Ace Plumbing' })).toBeVisible()
 
   await page.goto('/')
@@ -115,7 +141,7 @@ test('a project with a quote and a to-do list', async ({ page }) => {
 })
 
 test('main pages have no serious accessibility problems', async ({ page }) => {
-  for (const path of ['/', '/places', '/projects', '/people', '/more', '/parts', '/search?q=bulb', '/guide', '/settings']) {
+  for (const path of ['/', '/places', '/projects', '/contacts', '/more', '/parts', '/search?q=bulb', '/guide', '/settings']) {
     await page.goto(path)
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
     const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')

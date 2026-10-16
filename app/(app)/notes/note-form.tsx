@@ -9,7 +9,7 @@ import { localDay } from '@/lib/web/format'
 
 type Opt = { id: string; label: string }
 
-export type NoteFormOptions = { places: Opt[]; things: Opt[]; parts: Opt[]; people: Opt[]; projects: Opt[] }
+export type NoteFormOptions = { places: Opt[]; fixtures: Opt[]; parts: Opt[]; contacts: Opt[]; projects: Opt[] }
 
 export function NoteForm({
   action,
@@ -70,7 +70,7 @@ export function NoteForm({
       <Field label="Where">
         <PlaceSelect name="spaceId" defaultValue={v('spaceId')} options={options.places} emptyLabel="—" />
       </Field>
-      {pick('fixtureId', 'Which thing', options.things, v('fixtureId'))}
+      {pick('fixtureId', 'Which fixture', options.fixtures, v('fixtureId'))}
       {pick('supplyId', 'Which part', options.parts, v('supplyId'))}
       <div className="grid grid-cols-2 gap-3">
         <Field label="How many">
@@ -91,7 +91,7 @@ export function NoteForm({
           <Field label="Cost">
             <TextInput name="cost" inputMode="decimal" defaultValue={v('cost')} placeholder="$" />
           </Field>
-          {pick('contactId', 'Who did it', options.people, v('contactId'))}
+          {pick('contactId', 'Who did it', options.contacts, v('contactId'))}
           {pick('projectId', 'Part of project', options.projects, v('projectId'))}
           <Field label="Details">
             <TextArea name="body" rows={4} defaultValue={v('body')} />

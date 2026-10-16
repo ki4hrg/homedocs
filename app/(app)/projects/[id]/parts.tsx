@@ -136,7 +136,7 @@ export function Checklist({
   )
 }
 
-export function QuoteForm({ add, people }: { add: FormAction; people: { id: string; label: string }[] }) {
+export function QuoteForm({ add, contacts }: { add: FormAction; contacts: { id: string; label: string }[] }) {
   const [open, setOpen] = useState(false)
   if (!open) {
     return (
@@ -147,10 +147,10 @@ export function QuoteForm({ add, people }: { add: FormAction; people: { id: stri
   }
   return (
     <ActionForm action={add} resetOnSuccess onSuccess={() => setOpen(false)}>
-      <Field label="From" hint={people.length ? undefined : 'Add the contractor under People first to pick them here.'}>
+      <Field label="From" hint={contacts.length ? undefined : 'Add the contractor under Contacts first to pick them here.'}>
         <Select name="contactId" defaultValue="">
           <option value="">—</option>
-          {people.map((p) => (
+          {contacts.map((p) => (
             <option key={p.id} value={p.id}>
               {p.label}
             </option>

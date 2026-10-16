@@ -275,7 +275,7 @@ export async function addQuote(
     const project = await getProject(tx, scope, projectId)
     if (input.contactId) {
       const [c] = await tx.select({ id: contacts.id }).from(contacts).where(liveIn(contacts, scope.propertyId, input.contactId))
-      if (!c) throw new ValidationError('That person no longer exists.')
+      if (!c) throw new ValidationError('That contact no longer exists.')
     }
     const [row] = await tx
       .insert(quotes)

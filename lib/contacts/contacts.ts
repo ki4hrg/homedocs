@@ -1,8 +1,9 @@
 /*
- * People: the plumber, the electrician, the HOA, the utilities.
+ * Contacts: the companies and people the house relies on — the plumber, the
+ * electric company, the HOA, the neighbor with a key.
  *
- * Trades are rows, not a column, so one person can be "plumber" and "gas" and a
- * trade can have one *preferred* person — which is what "who's our plumber?"
+ * Trades are rows, not a column, so one contact can be "plumber" and "gas" and a
+ * trade can have one *preferred* contact — which is what "who's our plumber?"
  * means, and what the house guide's emergency card shows.
  */
 
@@ -16,25 +17,39 @@ import { cascadeContact, rebuildContact } from '../search/rebuild'
 
 export type Contact = typeof contacts.$inferSelect
 
-export const COMMON_TRADES = [
-  'plumber',
-  'electrician',
-  'hvac',
-  'handyman',
-  'roofer',
-  'landscaper',
-  'pest control',
-  'appliance repair',
-  'locksmith',
-  'painter',
-  'pool',
-  'utility',
-  'hoa',
-  'neighbor',
-  'vet',
+/*
+ * What a contact does, grouped the way the form shows it. A utility is a
+ * company as often as not — "Our electric" is Duke Energy, with an account
+ * number — so utilities get their own group rather than one "utility" chip.
+ */
+export const TRADE_GROUPS: { label: string; trades: string[] }[] = [
+  {
+    label: 'Repairs and services',
+    trades: [
+      'plumber',
+      'electrician',
+      'hvac',
+      'handyman',
+      'roofer',
+      'landscaper',
+      'pest control',
+      'appliance repair',
+      'locksmith',
+      'painter',
+      'pool',
+      'cleaning',
+    ],
+  },
+  {
+    label: 'Utilities',
+    trades: ['electric', 'gas', 'water & sewer', 'trash & recycling', 'internet', 'phone & tv', 'propane', 'septic'],
+  },
+  { label: 'Other', trades: ['hoa', 'insurance', 'neighbor', 'vet'] },
 ]
 
-export type PersonInput = {
+export const COMMON_TRADES = TRADE_GROUPS.flatMap((g) => g.trades)
+
+export type ContactInput = {
   name: string
   company?: string
   phones?: ContactMethod[]
@@ -43,7 +58,7 @@ export type PersonInput = {
   notes?: string
   accountNumber?: string
   inGuide?: boolean
-  /** Lower-cased trade names; `preferred` is the subset this person is "our" one for. */
+  /** Lower-cased trade names; `preferred` is the subset this contact is "our" one for. */
   trades?: string[]
   preferred?: string[]
 }
@@ -63,7 +78,7 @@ async function writeTrades(tx: Executor, scope: PropertyScope, contactId: string
   await tx.delete(contactTrades).where(eq(contactTrades.contactId, contactId))
   if (trades.length === 0) return
   const pref = new Set(preferred.filter((p) => trades.includes(p)))
-  // Only one preferred person per trade in this home: claiming it clears the others.
+  // Only one preferred contact per trade in this home: claiming it clears the others.
   if (pref.size > 0) {
     await tx
       .update(contactTrades)
@@ -78,7 +93,7 @@ async function writeTrades(tx: Executor, scope: PropertyScope, contactId: string
   await tx.insert(contactTrades).values(trades.map((trade) => ({ contactId, trade, preferred: pref.has(trade) })))
 }
 
-export async function listPeople(exec: Executor, scope: PropertyScope) {
+export async function listContacts(exec: Executor, scope: PropertyScope) {
   const rows = await exec
     .select()
     .from(contacts)
@@ -90,16 +105,16 @@ export async function listPeople(exec: Executor, scope: PropertyScope) {
   return rows.map((r) => ({ ...r, trades: trades.filter((t) => t.contactId === r.id) }))
 }
 
-export type Person = Awaited<ReturnType<typeof listPeople>>[number]
+export type ContactWithTrades = Awaited<ReturnType<typeof listContacts>>[number]
 
-export async function getPerson(exec: Executor, scope: PropertyScope, id: string) {
+export async function getContact(exec: Executor, scope: PropertyScope, id: string) {
   const [row] = await exec.select().from(contacts).where(liveIn(contacts, scope.propertyId, id))
-  if (!row) throw new NotFoundError('person')
+  if (!row) throw new NotFoundError('contact')
   const trades = await exec.select().from(contactTrades).where(eq(contactTrades.contactId, id)).orderBy(asc(contactTrades.trade))
   return { ...row, trades }
 }
 
-/** The preferred person for each trade — "our plumber". */
+/** The preferred contact for each trade — "our plumber". */
 export async function preferredByTrade(exec: Executor, scope: PropertyScope) {
   return exec
     .select({ trade: contactTrades.trade, contact: contacts })
@@ -111,14 +126,14 @@ export async function preferredByTrade(exec: Executor, scope: PropertyScope) {
     .orderBy(asc(contactTrades.trade))
 }
 
-export async function createPerson(exec: Executor, scope: PropertyScope, actor: ActorContext, input: PersonInput) {
+export async function createContact(exec: Executor, scope: PropertyScope, actor: ActorContext, input: ContactInput) {
   assertCanEdit(actor)
   return inTransaction(exec, async (tx) => {
     const [row] = await tx
       .insert(contacts)
       .values({
         propertyId: scope.propertyId,
-        name: requireText(input.name, 'Give the person or company a name.'),
+        name: requireText(input.name, 'Give it a name: a company or a person.'),
         company: cleanText(input.company, 200),
         phones: cleanMethods(input.phones),
         emails: cleanMethods(input.emails),
@@ -137,20 +152,20 @@ export async function createPerson(exec: Executor, scope: PropertyScope, actor: 
   })
 }
 
-export async function updatePerson(
+export async function updateContact(
   exec: Executor,
   scope: PropertyScope,
   actor: ActorContext,
   id: string,
-  input: Partial<PersonInput>,
+  input: Partial<ContactInput>,
   expectedUpdatedAt?: Date,
 ) {
   assertCanEdit(actor)
   return inTransaction(exec, async (tx) => {
     const [current] = await tx.select().from(contacts).where(liveIn(contacts, scope.propertyId, id)).for('update')
-    assertFresh('person', current, expectedUpdatedAt)
+    assertFresh('contact', current, expectedUpdatedAt)
     const patch: Partial<Contact> = {}
-    if (input.name !== undefined) patch.name = requireText(input.name, 'Give the person or company a name.')
+    if (input.name !== undefined) patch.name = requireText(input.name, 'Give it a name: a company or a person.')
     if (input.company !== undefined) patch.company = cleanText(input.company, 200)
     if (input.phones !== undefined) patch.phones = cleanMethods(input.phones)
     if (input.emails !== undefined) patch.emails = cleanMethods(input.emails)
@@ -175,7 +190,7 @@ export async function updatePerson(
   })
 }
 
-export async function deletePerson(exec: Executor, scope: PropertyScope, actor: ActorContext, id: string) {
+export async function deleteContact(exec: Executor, scope: PropertyScope, actor: ActorContext, id: string) {
   return inTransaction(exec, (tx) => softDelete(tx, contacts, 'contact', scope, id, actor))
 }
 

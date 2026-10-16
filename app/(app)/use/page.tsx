@@ -14,7 +14,7 @@ import { UseForm } from './use-form'
 export const metadata = { title: 'Add a part' }
 
 /* "What did we use?" — link a part we already know about, or describe a new one. */
-export default async function UsePage({ searchParams }: { searchParams: Promise<{ thing?: string; space?: string }> }) {
+export default async function UsePage({ searchParams }: { searchParams: Promise<{ fixture?: string; space?: string }> }) {
   await requireRole('member')
   const { scope } = await viewer()
   const params = await searchParams
@@ -26,12 +26,12 @@ export default async function UsePage({ searchParams }: { searchParams: Promise<
     category: part.category,
     summary: summarize(part.category, part.fields),
   }))
-  const q = owner.kind === 'thing' ? `thing=${owner.id}` : `space=${owner.id}`
+  const q = owner.kind === 'fixture' ? `fixture=${owner.id}` : `space=${owner.id}`
 
   return (
     <>
       <PageHeader
-        title={owner.kind === 'thing' ? `What does ${owner.name} take?` : `What did we use in ${owner.name}?`}
+        title={owner.kind === 'fixture' ? `What does ${owner.name} take?` : `What did we use in ${owner.name}?`}
         back={{ href: owner.href, label: owner.name }}
       />
       <p className="mb-2 px-1 text-sm font-semibold uppercase tracking-wide text-ink-3">Something new</p>

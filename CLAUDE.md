@@ -31,7 +31,8 @@ Postgres 18; pnpm.
 - **UI.**
   - Phone first: tap targets of 44px or more.
   - Use the colour tokens in `app/globals.css`, never raw palette colours.
-  - Plain words: Place, Thing, Part, Note, Person, Project.
+  - Plain words: Place, Fixture, Part, Note, Contact, Project. (Fixtures were "Things" and contacts
+    were "People" until October 2026; the old routes redirect.)
 - **Compose.** No `build:` block, and `pull_policy: always`; CI builds the image.
 
 ## Git

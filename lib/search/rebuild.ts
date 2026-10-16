@@ -1,7 +1,7 @@
 /*
  * Search documents, rebuilt in app code inside the same transaction as the write.
  *
- * Why not a generated column: a thing's document includes the *path of the place
+ * Why not a generated column: a fixture's document includes the *path of the place
  * it is in* and the *names of the parts it uses*, which live in other rows. That
  * is what lets "living room bulb" find the overhead light. The price is the
  * cascade table below — every write that changes text another row's document
@@ -10,12 +10,12 @@
  *
  *   write                          rebuilds
  *   ─────────────────────────────  ─────────────────────────────────────────────
- *   place renamed / moved          it, every place under it, and every thing,
+ *   place renamed / moved          it, every place under it, and every fixture,
  *                                  note and part-use place in that subtree
- *   thing renamed / moved          it, its parts, its notes
- *   part renamed / fields changed  it, the things and places that use it, its notes
- *   part use added / removed       the part, and the thing or place it is used by
- *   person renamed / trades        it, its notes
+ *   fixture renamed / moved          it, its parts, its notes
+ *   part renamed / fields changed  it, the fixtures and places that use it, its notes
+ *   part use added / removed       the part, and the fixture or place it is used by
+ *   contact renamed / trades        it, its notes
  *   project renamed                it, its notes
  *
  * Weights: A = the record's own name, B = where it is and what it is, C = notes.
@@ -194,24 +194,23 @@ export async function cascadeSpace(exec: Executor, spaceId: string) {
   const ids = await subtreeIds(exec, spaceId)
   await each(ids, (id) => rebuildSpace(exec, id))
   if (ids.length === 0) return
-  const things = await exec.select({ id: fixtures.id }).from(fixtures).where(inArray(fixtures.spaceId, ids))
-  await each(things.map((t) => t.id), (id) => rebuildFixture(exec, id))
-  const thingIds = things.map((t) => t.id)
+  const fixtureIds = (await exec.select({ id: fixtures.id }).from(fixtures).where(inArray(fixtures.spaceId, ids))).map((t) => t.id)
+  await each(fixtureIds, (id) => rebuildFixture(exec, id))
   const notes = await exec
     .select({ id: logs.id })
     .from(logs)
-    .where(thingIds.length ? or(inArray(logs.spaceId, ids), inArray(logs.fixtureId, thingIds)) : inArray(logs.spaceId, ids))
+    .where(fixtureIds.length ? or(inArray(logs.spaceId, ids), inArray(logs.fixtureId, fixtureIds)) : inArray(logs.spaceId, ids))
   await each(notes.map((n) => n.id), (id) => rebuildLog(exec, id))
   const parts = await exec
     .select({ id: supplyUses.supplyId })
     .from(supplyUses)
     .where(
-      thingIds.length ? or(inArray(supplyUses.spaceId, ids), inArray(supplyUses.fixtureId, thingIds)) : inArray(supplyUses.spaceId, ids),
+      fixtureIds.length ? or(inArray(supplyUses.spaceId, ids), inArray(supplyUses.fixtureId, fixtureIds)) : inArray(supplyUses.spaceId, ids),
     )
   await each(parts.map((p) => p.id), (id) => rebuildSupply(exec, id))
 }
 
-/** A thing was renamed or moved. */
+/** A fixture was renamed or moved. */
 export async function cascadeFixture(exec: Executor, fixtureId: string) {
   await rebuildFixture(exec, fixtureId)
   const parts = await exec.select({ id: supplyUses.supplyId }).from(supplyUses).where(eq(supplyUses.fixtureId, fixtureId))

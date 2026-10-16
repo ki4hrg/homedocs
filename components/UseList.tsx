@@ -5,7 +5,7 @@ import { summarize, TEMPLATES } from '@/lib/parts/templates'
 import { formatQty } from '@/lib/web/format'
 
 /*
- * Part uses, from either side. On a thing or place page each row is the part
+ * Part uses, from either side. On a fixture or place page each row is the part
  * ("A19 LED 2700K ×3"); on a part page each row is where it is used.
  */
 export function UseList({ uses, show }: { uses: UseView[]; show: 'part' | 'owner' }) {
@@ -28,11 +28,11 @@ export function UseList({ uses, show }: { uses: UseView[]; show: 'part' | 'owner
             />
           )
         }
-        const icon: IconName = u.owner.kind === 'thing' ? 'thing' : 'place'
+        const icon: IconName = u.owner.kind === 'fixture' ? 'fixture' : 'place'
         return (
           <Row
             key={u.id}
-            href={u.owner.kind === 'thing' ? `/things/${u.owner.id}` : `/places/${u.owner.id}`}
+            href={u.owner.kind === 'fixture' ? `/fixtures/${u.owner.id}` : `/places/${u.owner.id}`}
             icon={icon}
             title={u.owner.name}
             detail={[u.owner.path, where, qty, needed].filter(Boolean).join(' · ')}

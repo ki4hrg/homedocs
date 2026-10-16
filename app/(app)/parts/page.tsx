@@ -17,12 +17,12 @@ export default async function PartsPage() {
     <>
       <PageHeader
         title="Parts"
-        subtitle="What things take, and what we used"
+        subtitle="What fixtures take, and what we used"
         back={{ href: '/more', label: 'More' }}
         actions={canEdit ? <LinkButton href="/parts/new" variant="primary">Add</LinkButton> : null}
       />
       {rows.length === 0 ? (
-        <EmptyState>No parts yet. Open a thing (like a light) and tap “Add part”.</EmptyState>
+        <EmptyState>No parts yet. Open a fixture (like a light) and tap “Add part”.</EmptyState>
       ) : (
         CATEGORIES.filter((c) => rows.some((r) => r.part.category === c)).map((c) => (
           <Section key={c} title={TEMPLATES[c].label}>

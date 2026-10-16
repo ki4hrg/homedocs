@@ -22,8 +22,8 @@ export function PartForm({
     notes?: string
     updatedAt?: string
   }
-  /** Set when adding from a thing or place page: the part is linked there too. */
-  owner?: { kind: 'thing' | 'place'; id: string; name: string }
+  /** Set when adding from a fixture or place page: the part is linked there too. */
+  owner?: { kind: 'fixture' | 'place'; id: string; name: string }
   submit: string
 }) {
   const [category, setCategory] = useState<Category>(initial?.category ?? 'bulb')
@@ -31,7 +31,7 @@ export function PartForm({
   return (
     <ActionForm action={action}>
       {initial?.updatedAt ? <input type="hidden" name="updatedAt" value={initial.updatedAt} /> : null}
-      {owner ? <input type="hidden" name={owner.kind === 'thing' ? 'fixtureId' : 'spaceId'} value={owner.id} /> : null}
+      {owner ? <input type="hidden" name={owner.kind === 'fixture' ? 'fixtureId' : 'spaceId'} value={owner.id} /> : null}
       <Field label="What kind of part?">
         <Select name="category" value={category} onChange={(e) => setCategory(e.target.value as Category)}>
           {CATEGORIES.map((c) => (

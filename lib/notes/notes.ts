@@ -4,7 +4,7 @@
  * optional date to be reminded of it.
  *
  * The "next time" note is what Homebox and paperless have nowhere to put. It is
- * shown on the place, thing and part it is about, and on Home when its
+ * shown on the place, fixture and part it is about, and on Home when its
  * reminder date comes round.
  */
 
@@ -45,9 +45,9 @@ export type NoteInput = {
 async function assertLinks(exec: Executor, scope: PropertyScope, input: Partial<NoteInput>) {
   const checks: [string | null | undefined, Parameters<typeof liveIn>[0], string][] = [
     [input.spaceId, spaces, 'place'],
-    [input.fixtureId, fixtures, 'thing'],
+    [input.fixtureId, fixtures, 'fixture'],
     [input.supplyId, supplies, 'part'],
-    [input.contactId, contacts, 'person'],
+    [input.contactId, contacts, 'contact'],
     [input.projectId, projects, 'project'],
   ]
   for (const [id, table, label] of checks) {
@@ -150,7 +150,7 @@ export type NoteFilter = {
   limit?: number
 }
 
-/** Newest first. A place's notes include the notes about things in it. */
+/** Newest first. A place's notes include the notes about fixtures in it. */
 export async function listNotes(exec: Executor, scope: PropertyScope, filter: NoteFilter = {}) {
   return exec
     .select({

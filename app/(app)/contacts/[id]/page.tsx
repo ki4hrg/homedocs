@@ -11,45 +11,45 @@ import { roleAtLeast } from '@/lib/core/types'
 import { db } from '@/lib/db'
 import { listAttachments } from '@/lib/files/attachments'
 import { listNotes } from '@/lib/notes/notes'
-import { getPerson, telHref } from '@/lib/people/people'
+import { getContact, telHref } from '@/lib/contacts/contacts'
 import { editedBy } from '@/lib/web/attribution'
 import { viewer } from '@/lib/web/context'
 import { removeAttachmentAction } from '@/lib/web/shared-actions'
 
-export default async function PersonPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ContactPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const { scope, user } = await viewer()
-  const person = await getPerson(db, scope, id)
+  const contact = await getContact(db, scope, id)
   const [notes, photos, edited] = await Promise.all([
     listNotes(db, scope, { contactId: id, limit: 20 }),
     listAttachments(db, scope, { kind: 'contact', id }),
-    editedBy(person),
+    editedBy(contact),
   ])
   const canEdit = roleAtLeast(user.role, 'member')
 
   return (
     <>
       <PageHeader
-        title={person.name}
-        subtitle={person.company || undefined}
-        back={{ href: '/people', label: 'People' }}
-        actions={canEdit ? <LinkButton href={`/people/${id}/edit`}>Edit</LinkButton> : null}
+        title={contact.name}
+        subtitle={contact.company || undefined}
+        back={{ href: '/contacts', label: 'Contacts' }}
+        actions={canEdit ? <LinkButton href={`/contacts/${id}/edit`}>Edit</LinkButton> : null}
       />
 
-      {person.trades.length ? (
+      {contact.trades.length ? (
         <div className="mb-4 flex flex-wrap gap-2">
-          {person.trades.map((t) => (
+          {contact.trades.map((t) => (
             <Pill key={t.trade} tone={t.preferred ? 'accent' : 'neutral'}>
               {t.preferred ? `Our ${t.trade}` : t.trade}
             </Pill>
           ))}
-          {person.inGuide ? <Pill tone="neutral">On the house guide</Pill> : null}
+          {contact.inGuide ? <Pill tone="neutral">On the house guide</Pill> : null}
         </div>
       ) : null}
 
-      {person.phones.length || person.emails.length || person.website ? (
+      {contact.phones.length || contact.emails.length || contact.website ? (
         <List>
-          {person.phones.map((p, i) => (
+          {contact.phones.map((p, i) => (
             <li key={`p${i}`}>
               <a href={telHref(p.value)} className="flex min-h-14 items-center gap-3 px-4 py-2 hover:bg-sunk">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-ink">
@@ -62,7 +62,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
               </a>
             </li>
           ))}
-          {person.emails.map((e, i) => (
+          {contact.emails.map((e, i) => (
             <li key={`e${i}`}>
               <a href={`mailto:${e.value}`} className="flex min-h-14 items-center gap-3 px-4 py-2 hover:bg-sunk">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-soft text-accent">
@@ -75,13 +75,13 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
               </a>
             </li>
           ))}
-          {person.website ? (
+          {contact.website ? (
             <li>
-              <a href={person.website} target="_blank" rel="noreferrer" className="flex min-h-14 items-center gap-3 px-4 py-2 hover:bg-sunk">
+              <a href={contact.website} target="_blank" rel="noreferrer" className="flex min-h-14 items-center gap-3 px-4 py-2 hover:bg-sunk">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-soft text-accent">
                   <Icon name="external" />
                 </span>
-                <span className="truncate text-[15px] text-ink">{person.website.replace(/^https?:\/\//, '')}</span>
+                <span className="truncate text-[15px] text-ink">{contact.website.replace(/^https?:\/\//, '')}</span>
               </a>
             </li>
           ) : null}
@@ -89,20 +89,20 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
       ) : null}
 
       <div className="mt-4">
-        <Facts items={[{ label: 'Account number', value: person.accountNumber }]} />
+        <Facts items={[{ label: 'Account number', value: contact.accountNumber }]} />
       </div>
 
-      {person.notes ? (
+      {contact.notes ? (
         <Section title="Notes">
           <Card className="px-4 py-3">
-            <p className="whitespace-pre-wrap text-[15px] text-ink-2">{person.notes}</p>
+            <p className="whitespace-pre-wrap text-[15px] text-ink-2">{contact.notes}</p>
           </Card>
         </Section>
       ) : null}
 
       <Section
         title="Work they’ve done"
-        action={canEdit ? <Link href={`/notes/new?person=${id}`} className="text-sm text-accent">Add note</Link> : null}
+        action={canEdit ? <Link href={`/notes/new?contact=${id}`} className="text-sm text-accent">Add note</Link> : null}
       >
         {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">Nothing logged yet.</p>}
       </Section>

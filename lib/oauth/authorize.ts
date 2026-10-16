@@ -226,10 +226,10 @@ function resourceMatches(resource: string): boolean {
 export const SCOPE_DESCRIPTIONS: Record<Scope, { label: string; detail: string }> = {
   'homedocs:read': {
     label: 'Look things up',
-    detail: 'Search and read places, things, parts, notes, people and projects. Never codes or passwords.',
+    detail: 'Search and read places, fixtures, parts, notes, people and projects. Never codes or passwords.',
   },
   'homedocs:write': {
     label: 'Add and change things',
-    detail: 'Add notes, things, parts and people, link parts, and update projects. Nothing is deleted.',
+    detail: 'Add notes, fixtures, parts and people, link parts, and update projects. Nothing is deleted.',
   },
 }

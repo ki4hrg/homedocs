@@ -25,7 +25,7 @@ export default async function EditUsePage({ params }: { params: Promise<{ id: st
   if (!row) notFound()
   const use = (await listUses(db, scope, { supplyId: row.supplyId })).find((u) => u.id === id)
   if (!use) notFound()
-  const ownerHref = use.owner.kind === 'thing' ? `/things/${use.owner.id}` : `/places/${use.owner.id}`
+  const ownerHref = use.owner.kind === 'fixture' ? `/fixtures/${use.owner.id}` : `/places/${use.owner.id}`
   const back = `/parts/${use.part.id}`
   const template = TEMPLATES[use.part.category]
 

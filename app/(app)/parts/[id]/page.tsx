@@ -59,8 +59,8 @@ export default async function PartPage({ params }: { params: Promise<{ id: strin
             {uses.map((u) => (
               <Row
                 key={u.id}
-                href={canEdit ? `/use/${u.id}` : u.owner.kind === 'thing' ? `/things/${u.owner.id}` : `/places/${u.owner.id}`}
-                icon={u.owner.kind === 'thing' ? 'thing' : 'place'}
+                href={canEdit ? `/use/${u.id}` : u.owner.kind === 'fixture' ? `/fixtures/${u.owner.id}` : `/places/${u.owner.id}`}
+                icon={u.owner.kind === 'fixture' ? 'fixture' : 'place'}
                 title={u.owner.name}
                 detail={[
                   u.owner.path,

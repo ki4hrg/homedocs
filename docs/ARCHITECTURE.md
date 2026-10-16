@@ -28,11 +28,11 @@ housesitter.
 | UI name | Table | What it is |
 |---|---|---|
 | Place | `spaces` | A tree of rooms, floors and outdoor areas, shaped like Home Assistant's floor › area. |
-| Thing | `fixtures` | Installed things: a light, a shutoff, the water heater. Serial numbers and warranties belong in Homebox; link to it. |
+| Fixture | `fixtures` | Something installed: a light, a shutoff, the water heater. Serial numbers and warranties belong in Homebox; link to it. |
 | Part | `supplies` | A reusable spec, defined once: a bulb type, a paint colour, a filter. `fields` jsonb is validated by the category template in `lib/parts/templates.ts`. |
-| (use) | `supply_uses` | A part used by exactly one thing **or** one place. Holds the quantity, `quantity_needed` (the "really takes 15 bags" figure), surface and finish. Paint sheen lives here. |
+| (use) | `supply_uses` | A part used by exactly one fixture **or** one place. Holds the quantity, `quantity_needed` (the "really takes 15 bags" figure), surface and finish. Paint sheen lives here. |
 | Note | `logs` | A dated record of what happened, with a "next time" lesson and a `remind_after` date. |
-| Person | `contacts` + `contact_trades` | One preferred person per trade, which is what "our plumber" means. |
+| Contact | `contacts` + `contact_trades` | One preferred contact per trade, which is what "our plumber" means. |
 | Project | `projects`, `project_items`, `quotes` | Status, a checklist, and quotes. Accepting a quote schedules the project. |
 | House guide | `guide_sections`, `secrets`, `share_links` | See below. |
 | — | `attachments`, `external_refs` | One nullable FK column per owner type, with a `num_nonnulls(...) = 1` check. Never `owner_type/owner_id`. |
@@ -40,7 +40,7 @@ housesitter.
 **Rules on every table:**
 - `property_id` on every table, and every domain call takes a `PropertyScope`. There is one property
   today, and the UI hides the property switcher until there are two.
-- Soft delete (`deleted_at`). "Recently deleted" restores places, things, parts, notes, people and
+- Soft delete (`deleted_at`). "Recently deleted" restores places, fixtures, parts, notes, contacts and
   projects. There is no hard delete in the UI.
 - `created_by`/`updated_by` drive "Edited by Mom, 2 days ago". Edit forms send `updatedAt` for
   optimistic concurrency (`StaleWriteError`).
@@ -51,8 +51,8 @@ housesitter.
 
 - **Callers:** server actions (`app/**/actions.ts`, all wrapped in `act()` from `lib/web/action.ts`),
   route handlers and MCP tools.
-- **Domain modules:** every caller goes through the modules under `lib/`: `places`, `things`, `parts`,
-  `notes`, `people`, `projects`, `guide`, `links`, `integrations`, `files`.
+- **Domain modules:** every caller goes through the modules under `lib/`: `places`, `fixtures`, `parts`,
+  `notes`, `contacts`, `projects`, `guide`, `links`, `integrations`, `files`.
 - **Shared rules:** the modules check the role (`assertCanEdit`/`assertAdmin`), validate input, write
   the audit row, and rebuild the search documents.
 - **Errors:** `AppError` subclasses are refusals meant for a person. Forms show them, and MCP returns
@@ -81,7 +81,7 @@ A page under `app/(app)/` is authenticated by its layout. Everything else authen
 | `GET /api/health` | none (returns status and git revision only) |
 | `POST /api/files` | `requireApiRole('member')`; the property comes from the owning record |
 | `GET /api/files/[sha]` | `requireApiUser()`, and the sha must belong to a live attachment |
-| `GET /api/ext/search` | `requireApiRole('member')` |
+| `GET /api/ext/search` | `requireApiRole('member')`; `kind=location` searches Homebox locations |
 | `GET /api/ext/[system]/[id]/thumb` | `requireApiUser()`, plus a strict id format and a live `external_refs` row (cannot browse paperless) |
 | `GET /g/[token]` | share-link token; rate limited per IP; preview bots get a stub |
 | `POST` unlock (server action) | link token + PIN; per-IP limit; 10 failures lock the link in the DB |
@@ -95,10 +95,10 @@ A page under `app/(app)/` is authenticated by its layout. Everything else authen
 
 - **Where it lives:** each searchable table has a `search_doc` tsvector, rebuilt in app code inside the
   same transaction as the write (`lib/search/rebuild.ts`).
-- **What a thing's document holds:** the path of its place and the names and fields of the parts it
+- **What a fixture's document holds:** the path of its place and the names and fields of the parts it
   uses, which is how "living room bulb" finds the overhead light.
 - **Cascades:** the cascade table at the top of `rebuild.ts` is the contract. A rename of a place, part
-  or person rebuilds every document that includes its text.
+  or contact rebuilds every document that includes its text.
 - **Rebuilding everything:** `rebuildAll()` rebuilds every document. Run it after a restore.
 - **Query:** `lib/search/search.ts` does a prefix-matched full-text search across all kinds, then falls
   back to `pg_trgm` similarity on names to handle typos.
@@ -109,8 +109,8 @@ A page under `app/(app)/` is authenticated by its layout. Everything else authen
 
 ## The house guide
 
-- **Emergency card:** generated, not typed. It shows things marked "Show on the house guide" with
-  their photos and housesitter notes, plus the preferred person for each trade and anyone marked for
+- **Emergency card:** generated, not typed. It shows fixtures marked "Show on the house guide" with
+  their photos and housesitter notes, plus the preferred contact for each trade and anyone marked for
   the guide.
 - **Guide sections:** free text only.
 - **Gated content:** secrets with gate `home_or_pin`, sections marked private, and the street address.
@@ -167,6 +167,11 @@ anyway, so that gains nothing.
   - **Staleness check:** a lazy check, once a day per link, marks a link `missing` (keeping its title)
     or `auth_error`.
   - **Test connection:** warns when the paperless token can see more than 500 documents.
+  - **Places ↔ Homebox locations:** a place can link to a Homebox location (an `external_refs` row
+    whose URL is `/location/<uuid>`; the URL tells a location from an item, so there's no extra
+    column). The place page then lists what Homebox keeps there (`GET /v1/entities?parentIds=`),
+    marks the items already linked to a fixture, and adds the others as a linked fixture in one tap
+    (`addFixtureFromHomebox`, which fetches the item's name again server-side).
 - These response shapes come from the projects' published APIs and are tested against a fake server.
   They have **not** yet been verified against live instances.
 

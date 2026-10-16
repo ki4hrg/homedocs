@@ -9,7 +9,7 @@
 import { sql } from 'drizzle-orm'
 import type { Executor, PropertyScope } from '../core/types'
 
-export type SearchKind = 'place' | 'thing' | 'part' | 'note' | 'person' | 'project'
+export type SearchKind = 'place' | 'fixture' | 'part' | 'note' | 'contact' | 'project'
 
 export type SearchHit = { kind: SearchKind; id: string; title: string; detail: string; rank: number }
 
@@ -35,7 +35,7 @@ export async function search(exec: Executor, scope: PropertyScope, q: string, li
       select 'place' as kind, s.id, s.name as title, s.kind::text as detail, ts_rank(s.search_doc, q.query) as rank
         from spaces s, q where s.property_id = ${p} and s.deleted_at is null and s.search_doc @@ q.query
       union all
-      select 'thing', f.id, f.name, coalesce(sp.name, ''), ts_rank(f.search_doc, q.query)
+      select 'fixture', f.id, f.name, coalesce(sp.name, ''), ts_rank(f.search_doc, q.query)
         from fixtures f left join spaces sp on sp.id = f.space_id, q
         where f.property_id = ${p} and f.deleted_at is null and f.search_doc @@ q.query
       union all
@@ -45,7 +45,7 @@ export async function search(exec: Executor, scope: PropertyScope, q: string, li
       select 'note', l.id, l.title, to_char(l.happened_on, 'Mon D, YYYY'), ts_rank(l.search_doc, q.query) * 0.8
         from logs l, q where l.property_id = ${p} and l.deleted_at is null and l.search_doc @@ q.query
       union all
-      select 'person', c.id, c.name, c.company, ts_rank(c.search_doc, q.query)
+      select 'contact', c.id, c.name, c.company, ts_rank(c.search_doc, q.query)
         from contacts c, q where c.property_id = ${p} and c.deleted_at is null and c.search_doc @@ q.query
       union all
       select 'project', pr.id, pr.title, replace(pr.status::text, '_', ' '), ts_rank(pr.search_doc, q.query)
@@ -63,13 +63,13 @@ export async function search(exec: Executor, scope: PropertyScope, q: string, li
       select 'place' as kind, id, name as title, kind::text as detail, similarity(name, ${typed}) as rank
         from spaces where property_id = ${p} and deleted_at is null and name % ${typed}
       union all
-      select 'thing', id, name, category, similarity(name, ${typed}) from fixtures
+      select 'fixture', id, name, category, similarity(name, ${typed}) from fixtures
         where property_id = ${p} and deleted_at is null and name % ${typed}
       union all
       select 'part', id, name, category::text, similarity(name, ${typed}) from supplies
         where property_id = ${p} and deleted_at is null and name % ${typed}
       union all
-      select 'person', id, name, company, similarity(name, ${typed}) from contacts
+      select 'contact', id, name, company, similarity(name, ${typed}) from contacts
         where property_id = ${p} and deleted_at is null and name % ${typed}
     ) hits
     order by rank desc
@@ -79,9 +79,9 @@ export async function search(exec: Executor, scope: PropertyScope, q: string, li
 
 export const KIND_PATH: Record<SearchKind, string> = {
   place: '/places',
-  thing: '/things',
+  fixture: '/fixtures',
   part: '/parts',
   note: '/notes',
-  person: '/people',
+  contact: '/contacts',
   project: '/projects',
 }

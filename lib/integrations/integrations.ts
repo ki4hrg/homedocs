@@ -3,7 +3,7 @@
  * lazy "is this still there?" check.
  */
 
-import { and, eq, isNull, lt, or } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, isNull, lt, or } from 'drizzle-orm'
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import sharp from 'sharp'
@@ -12,10 +12,23 @@ import { inTransaction, liveIn } from '../core/internal'
 import { cleanUrl } from '../core/records'
 import { assertAdmin, assertCanEdit, ValidationError, type ActorContext, type Executor, type PropertyScope } from '../core/types'
 import { seal, tryUnseal } from '../crypto/sealed'
-import { externalRefs, integrations } from '../db/schema'
+import { externalRefs, fixtures, integrations } from '../db/schema'
 import { OWNER_TABLES, type Owner } from '../files/attachments'
 import { dataDir } from '../files/store'
-import { fetchRemote, fetchThumb, IntegrationError, probe, searchRemote, validExternalId, type Connection, type Hit, type System } from './clients'
+import { createFixture } from '../fixtures/fixtures'
+import {
+  fetchRemote,
+  fetchThumb,
+  IntegrationError,
+  isHomeboxLocation,
+  itemsInLocation,
+  probe,
+  searchRemote,
+  validExternalId,
+  type Connection,
+  type Hit,
+  type System,
+} from './clients'
 
 export const SYSTEMS: System[] = ['homebox', 'paperless']
 export const SYSTEM_NAME: Record<System, string> = { homebox: 'Homebox', paperless: 'paperless' }
@@ -91,12 +104,18 @@ export async function removeIntegration(exec: Executor, scope: PropertyScope, ac
   await exec.delete(integrations).where(and(eq(integrations.propertyId, scope.propertyId), eq(integrations.system, system)))
 }
 
-export async function searchSystem(exec: Executor, scope: PropertyScope, system: System, query: string): Promise<Hit[]> {
+export async function searchSystem(
+  exec: Executor,
+  scope: PropertyScope,
+  system: System,
+  query: string,
+  opts: { locations?: boolean } = {},
+): Promise<Hit[]> {
   const conn = await connectionFor(exec, scope, system)
   if (!conn) throw new ValidationError(`${SYSTEM_NAME[system]} isn’t connected. An admin can connect it in Settings.`)
   if (!query.trim()) return []
   try {
-    return await searchRemote(conn, query)
+    return await searchRemote(conn, query, opts)
   } catch (err) {
     if (err instanceof IntegrationError) throw new ValidationError(err.message)
     throw err
@@ -154,6 +173,124 @@ export async function linkPicked(
       after: { system, externalId: hit.externalId, owner: `${owner.kind}:${owner.id}` },
     })
     return row!
+  })
+}
+
+// ─── a place's Homebox location ──────────────────────────────────────────────
+
+/** The Homebox location a place is linked to, if any (the first, if several). */
+export async function homeboxLocationOf(exec: Executor, scope: PropertyScope, spaceId: string) {
+  const refs = await exec
+    .select()
+    .from(externalRefs)
+    .where(
+      and(
+        eq(externalRefs.propertyId, scope.propertyId),
+        eq(externalRefs.spaceId, spaceId),
+        eq(externalRefs.system, 'homebox'),
+        isNull(externalRefs.deletedAt),
+      ),
+    )
+  return refs.find((r) => isHomeboxLocation(r.url)) ?? null
+}
+
+export type HomeboxHere =
+  | { state: 'none' }
+  | { state: 'error'; location: { title: string; url: string }; message: string }
+  | {
+      state: 'ok'
+      location: { title: string; url: string }
+      total: number
+      items: (Hit & { fixture: { id: string; name: string } | null })[]
+    }
+
+/**
+ * What Homebox has stored in the location this place is linked to, each item
+ * marked with the fixture already linked to it, so the rest can be added in one tap.
+ */
+export async function homeboxItemsHere(exec: Executor, scope: PropertyScope, spaceId: string): Promise<HomeboxHere> {
+  const ref = await homeboxLocationOf(exec, scope, spaceId)
+  if (!ref) return { state: 'none' }
+  const location = { title: ref.title, url: ref.url }
+  const conn = await connectionFor(exec, scope, 'homebox')
+  if (!conn) return { state: 'error', location, message: 'Homebox isn’t connected. An admin can connect it in Settings.' }
+  let found: { hits: Hit[]; total: number }
+  try {
+    found = await itemsInLocation(conn, ref.externalId)
+  } catch (err) {
+    if (!(err instanceof IntegrationError)) throw err
+    return { state: 'error', location, message: err.kind === 'missing' ? 'That location is no longer in Homebox.' : err.message }
+  }
+  const ids = found.hits.map((h) => h.externalId)
+  const linked = ids.length
+    ? await exec
+        .select({ externalId: externalRefs.externalId, id: fixtures.id, name: fixtures.name })
+        .from(externalRefs)
+        .innerJoin(fixtures, eq(fixtures.id, externalRefs.fixtureId))
+        .where(
+          and(
+            eq(externalRefs.propertyId, scope.propertyId),
+            eq(externalRefs.system, 'homebox'),
+            inArray(externalRefs.externalId, ids),
+            isNotNull(externalRefs.fixtureId),
+            isNull(externalRefs.deletedAt),
+            isNull(fixtures.deletedAt),
+          ),
+        )
+    : []
+  const byId = new Map(linked.map((l) => [l.externalId, { id: l.id, name: l.name }]))
+  return { state: 'ok', location, total: found.total, items: found.hits.map((h) => ({ ...h, fixture: byId.get(h.externalId) ?? null })) }
+}
+
+/**
+ * Add a Homebox item to a place as a fixture, linked back to the item. The
+ * name comes from Homebox (fetched here, not taken from the browser), and the
+ * fixture and its link are written together.
+ */
+export async function addFixtureFromHomebox(
+  exec: Executor,
+  scope: PropertyScope,
+  actor: ActorContext,
+  spaceId: string,
+  externalId: string,
+) {
+  assertCanEdit(actor)
+  if (!validExternalId('homebox', externalId)) throw new ValidationError('That isn’t a Homebox item.')
+  const conn = await connectionFor(exec, scope, 'homebox')
+  if (!conn) throw new ValidationError('Homebox isn’t connected.')
+  let hit: Hit
+  try {
+    hit = await fetchRemote(conn, externalId)
+  } catch (err) {
+    if (err instanceof IntegrationError) throw new ValidationError(err.message)
+    throw err
+  }
+  if (isHomeboxLocation(hit.url)) throw new ValidationError('That’s a Homebox location, not an item.')
+  return inTransaction(exec, async (tx) => {
+    const fixture = await createFixture(tx, scope, actor, { name: hit.title.slice(0, 200), spaceId })
+    const [row] = await tx
+      .insert(externalRefs)
+      .values({
+        propertyId: scope.propertyId,
+        system: 'homebox',
+        externalId: hit.externalId,
+        url: hit.url,
+        title: hit.title.slice(0, 200),
+        subtitle: hit.subtitle.slice(0, 200),
+        status: 'ok',
+        lastCheckedAt: new Date(),
+        fixtureId: fixture.id,
+        createdBy: actor.userId,
+        updatedBy: actor.userId,
+      })
+      .returning()
+    await recordAudit(tx, actor, {
+      action: 'link',
+      entityType: 'external_ref',
+      entityId: row!.id,
+      after: { system: 'homebox', externalId: hit.externalId, owner: `fixture:${fixture.id}` },
+    })
+    return fixture
   })
 }
 

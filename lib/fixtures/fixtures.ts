@@ -1,7 +1,7 @@
 /*
- * Things: installed fixtures and systems — the overhead light, the water
+ * Fixtures: installed fixtures and systems — the overhead light, the water
  * heater, the main shutoff. Not inventory: serial numbers, warranties and
- * manuals belong to Homebox, and a thing links to its Homebox item instead.
+ * manuals belong to Homebox, and a fixture links to its Homebox item instead.
  */
 
 import { and, asc, eq, isNull } from 'drizzle-orm'
@@ -22,7 +22,7 @@ import { cascadeFixture, rebuildFixture, spacePath } from '../search/rebuild'
 export type Fixture = typeof fixtures.$inferSelect
 
 /** Suggestions for the category box; free text is fine too. */
-export const THING_CATEGORIES = [
+export const FIXTURE_CATEGORIES = [
   'Light fixture',
   'Ceiling fan',
   'Shutoff valve',
@@ -38,7 +38,7 @@ export const THING_CATEGORIES = [
   'Other',
 ]
 
-export type ThingInput = {
+export type FixtureInput = {
   name: string
   spaceId?: string | null
   category?: string
@@ -53,7 +53,7 @@ async function assertSpace(exec: Executor, scope: PropertyScope, spaceId: string
   if (!row) throw new ValidationError('That place no longer exists.')
 }
 
-export async function listThings(exec: Executor, scope: PropertyScope, filter: { spaceId?: string } = {}) {
+export async function listFixtures(exec: Executor, scope: PropertyScope, filter: { spaceId?: string } = {}) {
   return exec
     .select()
     .from(fixtures)
@@ -67,13 +67,13 @@ export async function listThings(exec: Executor, scope: PropertyScope, filter: {
     .orderBy(asc(fixtures.name))
 }
 
-export async function getThing(exec: Executor, scope: PropertyScope, id: string) {
+export async function getFixture(exec: Executor, scope: PropertyScope, id: string) {
   const [row] = await exec.select().from(fixtures).where(liveIn(fixtures, scope.propertyId, id))
-  if (!row) throw new NotFoundError('thing')
+  if (!row) throw new NotFoundError('fixture')
   return { ...row, path: await spacePath(exec, row.spaceId) }
 }
 
-export async function createThing(exec: Executor, scope: PropertyScope, actor: ActorContext, input: ThingInput) {
+export async function createFixture(exec: Executor, scope: PropertyScope, actor: ActorContext, input: FixtureInput) {
   assertCanEdit(actor)
   return inTransaction(exec, async (tx) => {
     const spaceId = input.spaceId || null
@@ -83,7 +83,7 @@ export async function createThing(exec: Executor, scope: PropertyScope, actor: A
       .values({
         propertyId: scope.propertyId,
         spaceId,
-        name: requireText(input.name, 'Give the thing a name.'),
+        name: requireText(input.name, 'Give the fixture a name.'),
         category: cleanText(input.category, 100),
         notes: cleanText(input.notes),
         inGuide: input.inGuide ?? false,
@@ -98,20 +98,20 @@ export async function createThing(exec: Executor, scope: PropertyScope, actor: A
   })
 }
 
-export async function updateThing(
+export async function updateFixture(
   exec: Executor,
   scope: PropertyScope,
   actor: ActorContext,
   id: string,
-  input: Partial<ThingInput>,
+  input: Partial<FixtureInput>,
   expectedUpdatedAt?: Date,
 ) {
   assertCanEdit(actor)
   return inTransaction(exec, async (tx) => {
     const [current] = await tx.select().from(fixtures).where(liveIn(fixtures, scope.propertyId, id)).for('update')
-    assertFresh('thing', current, expectedUpdatedAt)
+    assertFresh('fixture', current, expectedUpdatedAt)
     const patch: Partial<Fixture> = {}
-    if (input.name !== undefined) patch.name = requireText(input.name, 'Give the thing a name.')
+    if (input.name !== undefined) patch.name = requireText(input.name, 'Give the fixture a name.')
     if (input.category !== undefined) patch.category = cleanText(input.category, 100)
     if (input.notes !== undefined) patch.notes = cleanText(input.notes)
     if (input.inGuide !== undefined) patch.inGuide = input.inGuide
@@ -134,6 +134,6 @@ export async function updateThing(
   })
 }
 
-export async function deleteThing(exec: Executor, scope: PropertyScope, actor: ActorContext, id: string) {
+export async function deleteFixture(exec: Executor, scope: PropertyScope, actor: ActorContext, id: string) {
   return inTransaction(exec, (tx) => softDelete(tx, fixtures, 'fixture', scope, id, actor))
 }

@@ -15,9 +15,20 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { eq, sql } from 'drizzle-orm'
 import { externalRefs } from '../lib/db/schema'
-import { linkedThumb, linkPicked, listIntegrations, refreshStale, saveIntegration, searchSystem } from '../lib/integrations/integrations'
+import {
+  addFixtureFromHomebox,
+  homeboxItemsHere,
+  linkedThumb,
+  linkPicked,
+  listIntegrations,
+  refreshStale,
+  saveIntegration,
+  searchSystem,
+} from '../lib/integrations/integrations'
+import { createSpace } from '../lib/places/places'
+import { listFixtures } from '../lib/fixtures/fixtures'
 import { parseExternalUrl } from '../lib/links/links'
-import { createThing } from '../lib/things/things'
+import { createFixture } from '../lib/fixtures/fixtures'
 import { db, resetBetweenTests } from './helpers/db'
 import { household } from './helpers/fixtures'
 
@@ -26,6 +37,10 @@ process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'homedocs-int-'))
 
 const ITEM = '0b8e1f5c-1d2a-4c6e-9a51-3e0f2b7c9d11'
 const THUMB = '7d1e2f3a-4b5c-4d6e-8f90-a1b2c3d4e5f6'
+const BASEMENT = '3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f'
+const DEHUMIDIFIER = '5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b'
+const LOCATION_TYPE = { id: 'lt', name: 'Room', isLocation: true }
+const ITEM_TYPE = { id: 'it', name: 'Item', isLocation: false }
 let png: Buffer
 const seen: { url: string; auth: string | undefined; accept: string | undefined }[] = []
 let deleted = false
@@ -47,9 +62,21 @@ beforeAll(async () => {
       if (!hbAuth) return send(401, { error: 'unauthorized' })
       const p = url.pathname.slice('/hb/api/v1'.length)
       if (p === '/status') return send(200, { build: { version: 'v0.26.2' } })
+      if (p === '/entities' && url.searchParams.get('isLocation') === 'true') {
+        return send(200, { items: [{ id: BASEMENT, name: 'Basement', entityType: LOCATION_TYPE, itemCount: 2 }], total: 1 })
+      }
+      if (p === '/entities' && url.searchParams.getAll('parentIds').includes(BASEMENT)) {
+        const items = [
+          { id: DEHUMIDIFIER, name: 'Dehumidifier', parent: { id: BASEMENT, name: 'Basement' }, entityType: ITEM_TYPE },
+          { id: ITEM, name: 'Water heater', parent: { id: BASEMENT, name: 'Basement' }, entityType: ITEM_TYPE },
+        ]
+        return send(200, { items, page: 1, pageSize: 100, total: 2 })
+      }
+      if (p === `/entities/${BASEMENT}`) return send(200, { id: BASEMENT, name: 'Basement', entityType: LOCATION_TYPE })
+      if (p === `/entities/${DEHUMIDIFIER}`) return send(200, { id: DEHUMIDIFIER, name: 'Dehumidifier', parent: { name: 'Basement' }, entityType: ITEM_TYPE })
       if (p === '/entities') {
         const q = url.searchParams.get('q') ?? ''
-        const items = q.includes('heater') || !q ? [{ id: ITEM, name: 'Water heater', parent: { name: 'Basement' }, thumbnailId: THUMB }] : []
+        const items = url.searchParams.has('parentIds') ? [] : q.includes('heater') || !q ? [{ id: ITEM, name: 'Water heater', parent: { name: 'Basement' }, thumbnailId: THUMB }] : []
         return send(200, { items, page: 1, pageSize: 20, total: items.length })
       }
       if (p === `/entities/${ITEM}`) return deleted ? send(404, {}) : send(200, { id: ITEM, name: 'Water heater', parent: { name: 'Basement' }, thumbnailId: THUMB })
@@ -109,7 +136,7 @@ describe('linking and thumbnails', () => {
     const { scope, admin, member } = await household()
     await saveIntegration(db, scope, admin, 'homebox', { baseUrl: `${base}/hb`, token: 'hb_good' })
     await saveIntegration(db, scope, admin, 'paperless', { baseUrl: `${base}/pl`, token: 'pl_good' })
-    const heater = await createThing(db, scope, member, { name: 'Water heater' })
+    const heater = await createFixture(db, scope, member, { name: 'Water heater' })
 
     const hits = await searchSystem(db, scope, 'homebox', 'heater')
     expect(hits[0]).toMatchObject({ externalId: ITEM, title: 'Water heater', subtitle: 'Basement' })
@@ -132,7 +159,7 @@ describe('linking and thumbnails', () => {
   it('marks a deleted item as missing, keeping its title', async () => {
     const { scope, admin, member } = await household()
     await saveIntegration(db, scope, admin, 'homebox', { baseUrl: `${base}/hb`, token: 'hb_good' })
-    const heater = await createThing(db, scope, member, { name: 'Water heater' })
+    const heater = await createFixture(db, scope, member, { name: 'Water heater' })
     const ref = await linkPicked(db, scope, member, { kind: 'fixture', id: heater.id }, 'homebox', ITEM)
     await db.update(externalRefs).set({ lastCheckedAt: new Date(Date.now() - 2 * 86_400_000) }).where(eq(externalRefs.id, ref.id))
     deleted = true
@@ -143,6 +170,61 @@ describe('linking and thumbnails', () => {
     }
     const [after] = await db.select().from(externalRefs).where(eq(externalRefs.id, ref.id))
     expect(after).toMatchObject({ status: 'missing', title: 'Water heater' })
+  })
+})
+
+describe('a place linked to a Homebox location', () => {
+  it('lists what Homebox keeps there and adds an item as a linked fixture in one step', async () => {
+    const { scope, admin, member, viewer } = await household()
+    await saveIntegration(db, scope, admin, 'homebox', { baseUrl: `${base}/hb`, token: 'hb_good' })
+    const basement = await createSpace(db, scope, member, { name: 'Basement' })
+    expect(await homeboxItemsHere(db, scope, basement.id)).toEqual({ state: 'none' })
+
+    const [loc] = await searchSystem(db, scope, 'homebox', 'basement', { locations: true })
+    expect(seen.at(-1)!.url).toContain('isLocation=true')
+    expect(loc).toMatchObject({ externalId: BASEMENT, url: `${base}/hb/location/${BASEMENT}`, subtitle: 'Room · 2 items' })
+    await linkPicked(db, scope, member, { kind: 'space', id: basement.id }, 'homebox', BASEMENT)
+
+    // The water heater is already a fixture somewhere and linked; the dehumidifier isn't.
+    const heater = await createFixture(db, scope, member, { name: 'Water heater', spaceId: basement.id })
+    await linkPicked(db, scope, member, { kind: 'fixture', id: heater.id }, 'homebox', ITEM)
+    let here = await homeboxItemsHere(db, scope, basement.id)
+    expect(here.state).toBe('ok')
+    if (here.state !== 'ok') return
+    expect(here.location.title).toBe('Basement')
+    expect(here.items.map((i) => [i.title, i.fixture?.name ?? null])).toEqual([
+      ['Dehumidifier', null],
+      ['Water heater', 'Water heater'],
+    ])
+
+    await expect(addFixtureFromHomebox(db, scope, viewer, basement.id, DEHUMIDIFIER)).rejects.toThrow()
+    await expect(addFixtureFromHomebox(db, scope, member, basement.id, BASEMENT)).rejects.toThrow(/location, not an item/)
+    const added = await addFixtureFromHomebox(db, scope, member, basement.id, DEHUMIDIFIER)
+    expect(added).toMatchObject({ name: 'Dehumidifier', spaceId: basement.id })
+    const [ref] = await db.select().from(externalRefs).where(eq(externalRefs.fixtureId, added.id))
+    expect(ref).toMatchObject({ system: 'homebox', externalId: DEHUMIDIFIER, url: `${base}/hb/item/${DEHUMIDIFIER}` })
+
+    here = await homeboxItemsHere(db, scope, basement.id)
+    expect(here.state === 'ok' && here.items.every((i) => i.fixture)).toBe(true)
+    expect((await listFixtures(db, scope, { spaceId: basement.id })).map((t) => t.name).sort()).toEqual(['Dehumidifier', 'Water heater'])
+  })
+
+  it('shows an empty list for a location Homebox no longer has items in', async () => {
+    const { scope, admin, member } = await household()
+    await saveIntegration(db, scope, admin, 'homebox', { baseUrl: `${base}/hb`, token: 'hb_good' })
+    const attic = await createSpace(db, scope, member, { name: 'Attic' })
+    const gone = '9f8e7d6c-5b4a-4392-8170-6f5e4d3c2b1a'
+    await db.insert(externalRefs).values({
+      propertyId: scope.propertyId,
+      system: 'homebox',
+      externalId: gone,
+      url: `${base}/hb/location/${gone}`,
+      title: 'Attic',
+      spaceId: attic.id,
+    })
+    const here = await homeboxItemsHere(db, scope, attic.id)
+    // The fake answers an unknown parent with an empty item list, as Homebox does.
+    expect(here.state === 'ok' ? here.items : here).toEqual([])
   })
 })
 

@@ -1,16 +1,16 @@
 import { db } from '../db'
 import type { PropertyScope } from '../core/types'
 import { getSpace } from '../places/places'
-import { getThing } from '../things/things'
+import { getFixture } from '../fixtures/fixtures'
 
-/** The thing or place a page was opened from (?thing= or ?space=), for "add here" flows. */
+/** The fixture or place a page was opened from (?fixture= or ?space=), for "add here" flows. */
 export async function ownerFromParams(
   scope: PropertyScope,
-  params: { thing?: string; space?: string },
-): Promise<{ kind: 'thing' | 'place'; id: string; name: string; href: string } | undefined> {
-  if (params.thing) {
-    const t = await getThing(db, scope, params.thing)
-    return { kind: 'thing', id: t.id, name: t.name, href: `/things/${t.id}` }
+  params: { fixture?: string; space?: string },
+): Promise<{ kind: 'fixture' | 'place'; id: string; name: string; href: string } | undefined> {
+  if (params.fixture) {
+    const t = await getFixture(db, scope, params.fixture)
+    return { kind: 'fixture', id: t.id, name: t.name, href: `/fixtures/${t.id}` }
   }
   if (params.space) {
     const s = await getSpace(db, scope, params.space)

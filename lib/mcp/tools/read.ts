@@ -1,6 +1,6 @@
 /*
  * Read tools (homedocs:read). Every one returns plain data shaped for a model to
- * answer a person's question from — names and paths, not just ids. Codes and
+ * answer a contact's question from — names and paths, not just ids. Codes and
  * passwords are not reachable from any tool.
  */
 
@@ -8,12 +8,12 @@ import { z } from 'zod'
 import { getNote, listNotes, comingUp, lessons } from '../../notes/notes'
 import { getPart, listUses } from '../../parts/parts'
 import { summarize, TEMPLATES } from '../../parts/templates'
-import { getPerson, listPeople, preferredByTrade } from '../../people/people'
+import { getContact, listContacts, preferredByTrade } from '../../contacts/contacts'
 import { buildTree, flattenTree, getSpace, listSpaces } from '../../places/places'
 import { getProject, listProjects, OPEN_STATUSES, STATUS_LABEL, STATUSES } from '../../projects/projects'
 import { listProperties } from '../../property/property'
 import { search } from '../../search/search'
-import { getThing, listThings } from '../../things/things'
+import { getFixture, listFixtures } from '../../fixtures/fixtures'
 import { listLinks } from '../../links/links'
 import { resolveRef } from './resolve'
 import { defineTool, ToolRefusal, type ToolContext } from './types'
@@ -57,7 +57,7 @@ export const readTools = [
     name: 'search',
     title: 'Search',
     description:
-      'Search everything — places, things, parts, notes, people, projects — by words: a room, a ' +
+      'Search everything — places, fixtures, parts, notes, contacts, projects — by words: a room, a ' +
       'colour, a brand, a trade. Returns the best matches with their kind and id.',
     scope: 'homedocs:read',
     annotations: { readOnlyHint: true },
@@ -72,23 +72,23 @@ export const readTools = [
     name: 'find_part_for',
     title: 'What does it take?',
     description:
-      'What a thing or place takes or used: the bulb a light needs, the filter size for the furnace, ' +
+      'What a fixture or place takes or used: the bulb a light needs, the filter size for the furnace, ' +
       'the paint colour in a room, the mulch in a bed — with quantities, finishes and any ' +
-      '"next time" lessons. Give a thing or a place by name or id.',
+      '"next time" lessons. Give a fixture or a place by name or id.',
     scope: 'homedocs:read',
     annotations: { readOnlyHint: true },
     input: z.object({
-      thing: ref('thing').optional(),
+      fixture: ref('fixture').optional(),
       place: ref('place').optional(),
     }),
-    handler: async ({ thing, place }, ctx) => {
+    handler: async ({ fixture, place }, ctx) => {
       const scope = await scopeOf(ctx)
-      if (!thing && !place) throw new ToolRefusal('Say which thing or place.')
-      if (thing) {
-        const t = await getThing(ctx.exec, scope, await resolveRef(ctx.exec, scope, 'thing', thing))
+      if (!fixture && !place) throw new ToolRefusal('Say which fixture or place.')
+      if (fixture) {
+        const t = await getFixture(ctx.exec, scope, await resolveRef(ctx.exec, scope, 'fixture', fixture))
         const uses = await listUses(ctx.exec, scope, { fixtureId: t.id })
         return {
-          thing: { id: t.id, name: t.name, where: t.path.map((p) => p.name).join(' › ') || 'whole house' },
+          fixture: { id: t.id, name: t.name, where: t.path.map((p) => p.name).join(' › ') || 'whole house' },
           parts: uses.map((u) => ({
             ...partView(u.part),
             quantity: u.quantity ? Number(u.quantity) : undefined,
@@ -99,11 +99,11 @@ export const readTools = [
         }
       }
       const s = await getSpace(ctx.exec, scope, await resolveRef(ctx.exec, scope, 'place', place!))
-      const [uses, things] = await Promise.all([listUses(ctx.exec, scope, { spaceId: s.id }), listThings(ctx.exec, scope, { spaceId: s.id })])
-      const thingParts = []
-      for (const t of things) {
+      const [uses, fixtures] = await Promise.all([listUses(ctx.exec, scope, { spaceId: s.id }), listFixtures(ctx.exec, scope, { spaceId: s.id })])
+      const fixtureParts = []
+      for (const t of fixtures) {
         const tu = await listUses(ctx.exec, scope, { fixtureId: t.id })
-        if (tu.length) thingParts.push({ thing: t.name, parts: tu.map((u) => ({ ...partView(u.part), quantity: u.quantity ? Number(u.quantity) : undefined })) })
+        if (tu.length) fixtureParts.push({ fixture: t.name, parts: tu.map((u) => ({ ...partView(u.part), quantity: u.quantity ? Number(u.quantity) : undefined })) })
       }
       return {
         place: { id: s.id, name: s.name, path: s.path.map((p) => p.name) },
@@ -114,7 +114,7 @@ export const readTools = [
           quantity: u.quantity ? Number(u.quantity) : undefined,
           really_needs: u.quantityNeeded ? Number(u.quantityNeeded) : undefined,
         })),
-        things_here: thingParts,
+        fixtures_here: fixtureParts,
         next_time: (await lessons(ctx.exec, scope, { spaceId: s.id })).map((l) => l.note.nextTime),
       }
     },
@@ -123,10 +123,10 @@ export const readTools = [
   defineTool({
     name: 'who_to_call',
     title: 'Who to call',
-    description: 'The people for a trade (plumber, electrician, hvac…), with the preferred one first and their phone numbers.',
+    description: 'The contacts for a trade (plumber, electrician, hvac…), with the preferred one first and their phone numbers.',
     scope: 'homedocs:read',
     annotations: { readOnlyHint: true },
-    input: z.object({ trade: z.string().min(1).max(60).optional().describe('Leave out for every preferred person') }),
+    input: z.object({ trade: z.string().min(1).max(60).optional().describe('Leave out for every preferred contact') }),
     handler: async ({ trade }, ctx) => {
       const scope = await scopeOf(ctx)
       if (!trade) {
@@ -134,11 +134,11 @@ export const readTools = [
         return { preferred: preferred.map((p) => ({ trade: p.trade, id: p.contact.id, name: p.contact.name, company: p.contact.company, phones: p.contact.phones })) }
       }
       const want = trade.trim().toLowerCase()
-      const people = (await listPeople(ctx.exec, scope)).filter((p) => p.trades.some((t) => t.trade.includes(want)))
-      people.sort((a, b) => Number(b.trades.some((t) => t.preferred && t.trade.includes(want))) - Number(a.trades.some((t) => t.preferred && t.trade.includes(want))))
+      const contacts = (await listContacts(ctx.exec, scope)).filter((p) => p.trades.some((t) => t.trade.includes(want)))
+      contacts.sort((a, b) => Number(b.trades.some((t) => t.preferred && t.trade.includes(want))) - Number(a.trades.some((t) => t.preferred && t.trade.includes(want))))
       return {
         trade: want,
-        people: people.map((p) => ({
+        contacts: contacts.map((p) => ({
           id: p.id,
           name: p.name,
           company: p.company,
@@ -166,15 +166,15 @@ export const readTools = [
   defineTool({
     name: 'get_place',
     title: 'Get a place',
-    description: 'A place with what is in it: places inside, things, parts used, recent notes, and photos/links counts.',
+    description: 'A place with what is in it: places inside, fixtures, parts used, recent notes, and photos/links counts.',
     scope: 'homedocs:read',
     annotations: { readOnlyHint: true },
     input: z.object({ place: ref('place') }),
     handler: async ({ place }, ctx) => {
       const scope = await scopeOf(ctx)
       const s = await getSpace(ctx.exec, scope, await resolveRef(ctx.exec, scope, 'place', place))
-      const [things, uses, notes] = await Promise.all([
-        listThings(ctx.exec, scope, { spaceId: s.id }),
+      const [fixtures, uses, notes] = await Promise.all([
+        listFixtures(ctx.exec, scope, { spaceId: s.id }),
         listUses(ctx.exec, scope, { spaceId: s.id }),
         listNotes(ctx.exec, scope, { spaceId: s.id, limit: 10 }),
       ])
@@ -185,7 +185,7 @@ export const readTools = [
         kind: s.kind,
         notes: s.notes || undefined,
         places_inside: s.children.map((c) => ({ id: c.id, name: c.name })),
-        things: things.map((t) => ({ id: t.id, name: t.name, category: t.category || undefined })),
+        fixtures: fixtures.map((t) => ({ id: t.id, name: t.name, category: t.category || undefined })),
         parts_used: uses.map((u) => ({ ...partView(u.part), surface: u.surface || undefined, finish: u.finish || undefined, quantity: u.quantity ? Number(u.quantity) : undefined })),
         recent_notes: notes.map(noteView),
       }
@@ -193,15 +193,15 @@ export const readTools = [
   }),
 
   defineTool({
-    name: 'get_thing',
-    title: 'Get a thing',
-    description: 'A thing (installed fixture) with where it is, the parts it takes, notes, and links to Homebox or paperless.',
+    name: 'get_fixture',
+    title: 'Get a fixture',
+    description: 'A fixture (something installed: a light, a shutoff valve) with where it is, the parts it takes, notes, and links to Homebox or paperless.',
     scope: 'homedocs:read',
     annotations: { readOnlyHint: true },
-    input: z.object({ thing: ref('thing') }),
-    handler: async ({ thing }, ctx) => {
+    input: z.object({ fixture: ref('fixture') }),
+    handler: async ({ fixture }, ctx) => {
       const scope = await scopeOf(ctx)
-      const t = await getThing(ctx.exec, scope, await resolveRef(ctx.exec, scope, 'thing', thing))
+      const t = await getFixture(ctx.exec, scope, await resolveRef(ctx.exec, scope, 'fixture', fixture))
       const [uses, notes, links] = await Promise.all([
         listUses(ctx.exec, scope, { fixtureId: t.id }),
         listNotes(ctx.exec, scope, { fixtureId: t.id, limit: 10 }),
@@ -254,15 +254,15 @@ export const readTools = [
   }),
 
   defineTool({
-    name: 'get_person',
-    title: 'Get a person',
+    name: 'get_contact',
+    title: 'Get a contact',
     description: 'A contact with phones, emails, trades (and which they are our preferred one for), notes, and the work they have done.',
     scope: 'homedocs:read',
     annotations: { readOnlyHint: true },
-    input: z.object({ person: ref('person') }),
-    handler: async ({ person }, ctx) => {
+    input: z.object({ contact: ref('contact') }),
+    handler: async ({ contact }, ctx) => {
       const scope = await scopeOf(ctx)
-      const p = await getPerson(ctx.exec, scope, await resolveRef(ctx.exec, scope, 'person', person))
+      const p = await getContact(ctx.exec, scope, await resolveRef(ctx.exec, scope, 'contact', contact))
       const notes = await listNotes(ctx.exec, scope, { contactId: p.id, limit: 10 })
       return {
         id: p.id,

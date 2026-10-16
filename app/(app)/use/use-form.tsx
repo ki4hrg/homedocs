@@ -15,14 +15,14 @@ export function UseForm({
 }: {
   action: FormAction
   parts: PartOption[]
-  owner: { kind: 'thing' | 'place'; id: string }
+  owner: { kind: 'fixture' | 'place'; id: string }
 }) {
   const [selected, setSelected] = useState(parts[0]?.id ?? '')
   const part = useMemo(() => parts.find((p) => p.id === selected), [parts, selected])
   const template = part ? TEMPLATES[part.category] : undefined
   return (
     <ActionForm action={action}>
-      <input type="hidden" name={owner.kind === 'thing' ? 'fixtureId' : 'spaceId'} value={owner.id} />
+      <input type="hidden" name={owner.kind === 'fixture' ? 'fixtureId' : 'spaceId'} value={owner.id} />
       <Field label="Which part?">
         <Select name="supplyId" value={selected} onChange={(e) => setSelected(e.target.value)} required>
           {parts.map((p) => (

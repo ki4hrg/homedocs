@@ -9,6 +9,15 @@ const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.next',
   // sharp is a native module; bundling it breaks its binary lookup.
   serverExternalPackages: ['sharp', '@node-rs/argon2'],
+  async redirects() {
+    // "Things" became "Fixtures" and "People" became "Contacts"; keep old bookmarks working.
+    return [
+      { source: '/things', destination: '/fixtures', permanent: true },
+      { source: '/things/:path*', destination: '/fixtures/:path*', permanent: true },
+      { source: '/people', destination: '/contacts', permanent: true },
+      { source: '/people/:path*', destination: '/contacts/:path*', permanent: true },
+    ]
+  },
   async headers() {
     return [
       {

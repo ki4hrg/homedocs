@@ -11,7 +11,7 @@ export const metadata = { title: 'New part' }
 export default async function NewPartPage({
   searchParams,
 }: {
-  searchParams: Promise<{ thing?: string; space?: string; category?: string }>
+  searchParams: Promise<{ fixture?: string; space?: string; category?: string }>
 }) {
   await requireRole('member')
   const { scope } = await viewer()

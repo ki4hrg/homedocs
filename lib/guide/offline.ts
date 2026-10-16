@@ -15,14 +15,14 @@ const esc = (s: string) =>
 const tel = (v: string) => `tel:${v.replace(/[^\d+]/g, '')}`
 
 export function offlineHtml(guide: Guide, expiresAt: Date): string {
-  const things = guide.things
+  const fixtures = guide.fixtures
     .map(
       (t) => `<li><strong>${esc(t.name)}</strong><br><span class="m">${esc(t.where)}</span>${
         t.note ? `<p>${esc(t.note)}</p>` : ''
       }</li>`,
     )
     .join('')
-  const people = guide.people
+  const contacts = guide.contacts
     .map(
       (p) =>
         `<li><strong>${esc(p.name)}</strong>${p.company ? ` (${esc(p.company)})` : ''}<br><span class="m">${esc(
@@ -50,8 +50,8 @@ ul{padding:0;list-style:none}li{padding:10px 0;border-bottom:1px solid #8883}.m{
     expiresAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
   )}.</p>
 <h1>${esc(guide.homeName)}</h1>
-${things ? `<h2>In an emergency</h2><ul>${things}</ul>` : ''}
-${people ? `<h2>Who to call</h2><ul>${people}</ul>` : ''}
+${fixtures ? `<h2>In an emergency</h2><ul>${fixtures}</ul>` : ''}
+${contacts ? `<h2>Who to call</h2><ul>${contacts}</ul>` : ''}
 ${wifi ? `<h2>Wi-Fi</h2><ul>${wifi}</ul>` : ''}
 ${sections}
 </body></html>`
