@@ -2,7 +2,6 @@ import { db } from '@/lib/db'
 import type { Owner } from '@/lib/files/attachments'
 import { listLinks, SYSTEM_LABEL } from '@/lib/links/links'
 import { addLinkAction, linkPickedAction, removeLinkAction } from '@/lib/web/link-actions'
-import { paperlessFilter } from '@/lib/integrations/clients'
 import { listIntegrations, refreshStale, SYSTEM_NAME } from '@/lib/integrations/integrations'
 import { LinkPicker } from './LinkPicker'
 import { LinkThumb } from './LinkThumb'
@@ -11,11 +10,11 @@ import { DeleteButton } from './DeleteButton'
 import { LinkForm } from './LinkForm'
 import { List, Pill, Section } from './ui/Card'
 
-/* Links from a record to Homebox, paperless and Home Assistant. */
+/* Links from a record to Homebox and Home Assistant, and pasted addresses. paperless documents list under Documents. */
 export async function LinksSection({ owner, canEdit }: { owner: Owner; canEdit: boolean }) {
   const { scope } = await viewer()
-  // A paperless tag or correspondent shows as its documents (PaperlessDocs), not as a link.
-  const own = async () => (await listLinks(db, scope, owner)).filter((l) => !(l.system === 'paperless' && paperlessFilter(l.externalId)))
+  // paperless documents, tags and correspondents show under Documents (DocumentsSection).
+  const own = async () => (await listLinks(db, scope, owner)).filter((l) => l.system !== 'paperless')
   let links = await own()
   const connected = await listIntegrations(db, scope)
   if (links.length && connected.length) {
@@ -25,6 +24,7 @@ export async function LinksSection({ owner, canEdit }: { owner: Owner; canEdit: 
   }
   if (links.length === 0 && !canEdit) return null
   const thumbable = new Set(connected.map((c) => c.system))
+  const homebox = connected.some((c) => c.system === 'homebox')
   return (
     <Section title="Linked">
       <div className="flex flex-col gap-3">
@@ -48,9 +48,9 @@ export async function LinksSection({ owner, canEdit }: { owner: Owner; canEdit: 
             ))}
           </List>
         ) : null}
-        {canEdit && connected.length ? (
+        {canEdit && homebox ? (
           <LinkPicker
-            systems={connected.map((c) => ({ system: c.system as 'homebox' | 'paperless', name: SYSTEM_NAME[c.system as 'homebox' | 'paperless'] }))}
+            systems={[{ system: 'homebox', name: SYSTEM_NAME.homebox }]}
             link={linkPickedAction.bind(null, `${owner.kind}:${owner.id}`)}
           />
         ) : null}

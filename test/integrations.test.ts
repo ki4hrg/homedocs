@@ -21,6 +21,7 @@ import {
   linkedThumb,
   linkPicked,
   listIntegrations,
+  documentsFor,
   paperlessDocsFor,
   requirePaperlessTag,
   unrequirePaperlessTag,
@@ -281,6 +282,30 @@ describe('linking and thumbnails', () => {
     const panel = await createProject(db, scope, member, { title: 'Panel upgrade' })
     await linkPicked(db, scope, member, { kind: 'project', id: panel.id }, 'paperless', 'tag:8')
     expect(await paperlessDocsFor(db, scope, { kind: 'project', id: panel.id }, 'tag')).toMatchObject({ state: 'ok', filter: { title: 'Panel upgrade' } })
+  })
+
+  it('lists linked documents first, then the rest of the tag’s, each once', async () => {
+    const { scope, admin, member } = await household()
+    await saveIntegration(db, scope, admin, 'paperless', { baseUrl: `${base}/pl`, token: 'pl_good' })
+    const garage = await createSpace(db, scope, member, { name: 'Garage' })
+    const owner = { kind: 'space' as const, id: garage.id }
+    expect(await documentsFor(db, scope, owner, 'tag')).toEqual({ connected: true, documents: [], filter: null })
+
+    // Water heater manual (42) is linked on its own and also filed under Garage (7).
+    const linked = await linkPicked(db, scope, member, owner, 'paperless', '42')
+    await linkPicked(db, scope, member, owner, 'paperless', 'tag:7')
+    const docs = await documentsFor(db, scope, owner, 'tag')
+    expect(docs.documents.map((d) => [d.title, d.linkId])).toEqual([
+      ['Water heater manual', linked.id],
+      ['Garage door opener manual', null],
+    ])
+    expect(docs.filter).toMatchObject({ title: 'Garage', total: 2, shown: 2, error: null })
+
+    // A fixture follows no tag: just what is linked to it.
+    const heater = await createFixture(db, scope, member, { name: 'Water heater' })
+    await linkPicked(db, scope, member, { kind: 'fixture', id: heater.id }, 'paperless', '42')
+    const own = await documentsFor(db, scope, { kind: 'fixture', id: heater.id })
+    expect(own).toMatchObject({ filter: null, documents: [{ title: 'Water heater manual', hasThumb: true }] })
   })
 
   it('marks a deleted item as missing, keeping its title', async () => {

@@ -71,7 +71,7 @@ If the picker lists only a few tags, or a tag shows fewer documents than paperle
 this is why.
 
 If paperless also holds another home's papers, pick this house's tag under Settings → paperless →
-**Only documents tagged**. Every Documents list, and "Find in paperless", then needs that tag too,
+**Only documents tagged**. Every Documents list, and "Add a document", then needs that tag too,
 so a system's "Plumbing" tag shows this house's plumbing only.
 
 ## Reverse proxy

@@ -15,6 +15,7 @@ import { seal, tryUnseal } from '../crypto/sealed'
 import { externalRefs, fixtures, integrations } from '../db/schema'
 import { OWNER_TABLES, type Owner } from '../files/attachments'
 import { dataDir } from '../files/store'
+import { listLinks } from '../links/links'
 import { createFixture } from '../fixtures/fixtures'
 import {
   fetchRemote,
@@ -360,6 +361,51 @@ export async function paperlessDocsFor(
     return { state: 'error', filter, message: err.kind === 'missing' ? gone : err.message }
   }
   return { state: 'ok', filter, total: found.total, documents: found.hits }
+}
+
+/** One row of a record's Documents: linked on its own (`linkId`), or filed under the record's tag or correspondent. */
+export type DocumentRow = Hit & { linkId: string | null; status: string }
+
+export type Documents = {
+  connected: boolean
+  documents: DocumentRow[]
+  /** The tag or correspondent the record follows; `total` counts everything filed under it, `shown` the newest fetched. */
+  filter: null | { id: string; title: string; url: string; total: number; shown: number; error: string | null }
+}
+
+/**
+ * Everything a record's Documents section lists: the paperless documents
+ * linked to it one by one, then the rest of what is filed under its tag or
+ * correspondent (`kind`), newest first. A document that is both shows once,
+ * as linked, so it can still be removed. Linked documents not checked in a
+ * day are re-checked first.
+ */
+export async function documentsFor(exec: Executor, scope: PropertyScope, owner: Owner, kind?: PaperlessFilterKind): Promise<Documents> {
+  const connected = (await connectionFor(exec, scope, 'paperless')) !== null
+  const own = async () => (await listLinks(exec, scope, owner)).filter((l) => l.system === 'paperless' && !paperlessFilter(l.externalId))
+  let links = await own()
+  if (links.length && connected) {
+    await refreshStale(exec, scope, links.map((l) => l.id))
+    links = await own()
+  }
+  const documents: DocumentRow[] = links.map((l) => ({
+    externalId: l.externalId,
+    title: l.title,
+    subtitle: l.subtitle,
+    url: l.url,
+    hasThumb: connected && l.status === 'ok',
+    linkId: l.id,
+    status: l.status,
+  }))
+
+  const filed = kind && connected ? await paperlessDocsFor(exec, scope, owner, kind) : ({ state: 'none' } as const)
+  if (filed.state === 'none') return { connected, documents, filter: null }
+  if (filed.state === 'error') return { connected, documents, filter: { ...filed.filter, total: 0, shown: 0, error: filed.message } }
+  const linked = new Set(documents.map((d) => d.externalId))
+  for (const d of filed.documents) {
+    if (!linked.has(d.externalId)) documents.push({ ...d, linkId: null, status: 'ok' })
+  }
+  return { connected, documents, filter: { ...filed.filter, total: filed.total, shown: filed.documents.length, error: null } }
 }
 
 /**

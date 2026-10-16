@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { DocumentsSection } from '@/components/DocumentsSection'
 import { LinksSection } from '@/components/LinksSection'
 import { PhotoUpload } from '@/components/PhotoUpload'
 import { Photos } from '@/components/Photos'
@@ -102,6 +103,7 @@ export default async function NotePage({ params }: { params: Promise<{ id: strin
         </div>
       </Section>
 
+      <DocumentsSection owner={{ kind: 'log', id }} canEdit={canEdit} />
       <LinksSection owner={{ kind: 'log', id }} canEdit={canEdit} />
 
       <p className="mt-8 px-1 text-xs text-ink-3">{edited}</p>

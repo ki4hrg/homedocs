@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { LinksSection } from '@/components/LinksSection'
 import { NoteList } from '@/components/NoteList'
-import { PaperlessDocs } from '@/components/PaperlessDocs'
+import { DocumentsSection } from '@/components/DocumentsSection'
 import { PhotoUpload } from '@/components/PhotoUpload'
 import { Photos } from '@/components/Photos'
 import { LinkButton } from '@/components/ui/Button'
@@ -154,7 +154,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">None yet.</p>}
       </Section>
 
-      <PaperlessDocs owner={{ kind: 'project', id }} kind="tag" canEdit={canEdit} />
+      <DocumentsSection owner={{ kind: 'project', id }} kind="tag" canEdit={canEdit} />
 
       <Section title="Photos and files">
         <div className="flex flex-col gap-3">

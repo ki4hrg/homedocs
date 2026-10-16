@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { HomeboxHere } from '@/components/HomeboxHere'
-import { PaperlessDocs } from '@/components/PaperlessDocs'
+import { DocumentsSection } from '@/components/DocumentsSection'
 import { Lessons } from '@/components/Lessons'
 import { LinksSection } from '@/components/LinksSection'
 import { NoteList } from '@/components/NoteList'
@@ -99,7 +99,7 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
       </Section>
 
       <HomeboxHere spaceId={id} placeName={place.name} canEdit={canEdit} />
-      <PaperlessDocs owner={{ kind: 'space', id }} kind="tag" canEdit={canEdit} />
+      <DocumentsSection owner={{ kind: 'space', id }} kind="tag" canEdit={canEdit} />
 
       {uses.length ? (
         <Section title="Used here">

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Lessons } from '@/components/Lessons'
+import { DocumentsSection } from '@/components/DocumentsSection'
 import { LinksSection } from '@/components/LinksSection'
 import { NoteList } from '@/components/NoteList'
 import { PhotoUpload } from '@/components/PhotoUpload'
@@ -100,6 +101,7 @@ export default async function PartPage({ params }: { params: Promise<{ id: strin
         </div>
       </Section>
 
+      <DocumentsSection owner={{ kind: 'supply', id }} canEdit={canEdit} />
       <LinksSection owner={{ kind: 'supply', id }} canEdit={canEdit} />
 
       <p className="mt-8 px-1 text-xs text-ink-3">{edited}</p>
