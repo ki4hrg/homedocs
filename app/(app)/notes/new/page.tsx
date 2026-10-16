@@ -25,7 +25,7 @@ export default async function NewNotePage({
   const back = p.fixture ? `/fixtures/${p.fixture}` : p.space ? `/places/${p.space}` : p.part ? `/parts/${p.part}` : p.project ? `/projects/${p.project}` : p.contact ? `/contacts/${p.contact}` : '/notes'
   return (
     <>
-      <PageHeader title="New note" subtitle="Something that happened, and what to remember" back={{ href: back, label: 'Back' }} />
+      <PageHeader title="New note" back={{ href: back, label: 'Back' }} />
       <NoteForm
         action={createNoteAction}
         options={options}

@@ -29,7 +29,7 @@ export function PlaceForm({
       <Field label="Name">
         <TextInput name="name" defaultValue={initial?.name} placeholder="Living room, Front flowerbed, Garage" required autoFocus={!initial?.name} />
       </Field>
-      <Field label="Inside" hint="Optional. Put rooms inside a floor, or beds inside “Yard”.">
+      <Field label="Inside" hint="Optional, e.g. a room inside a floor.">
         <PlaceSelect name="parentId" defaultValue={initial?.parentId ?? ''} options={places} emptyLabel="Nothing — top level" />
       </Field>
       <Field label="Kind">
@@ -41,7 +41,7 @@ export function PlaceForm({
           ))}
         </Select>
       </Field>
-      <Field label="Notes" hint="Anything worth knowing about this place.">
+      <Field label="Notes">
         <TextArea name="notes" defaultValue={initial?.notes} />
       </Field>
       <SubmitButton>{submit}</SubmitButton>

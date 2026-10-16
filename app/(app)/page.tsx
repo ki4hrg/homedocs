@@ -9,6 +9,8 @@ import { comingUp } from '@/lib/notes/notes'
 import { partsToRebuy } from '@/lib/parts/parts'
 import { buildTree, listSpaces, placeCounts, type SpaceNode } from '@/lib/places/places'
 import { preferredByTrade, telHref } from '@/lib/contacts/contacts'
+import { tradeLabeler } from '@/lib/contacts/trade-labels'
+import { getTradeGroups } from '@/lib/contacts/trades'
 import { listSystems } from '@/lib/systems/systems'
 import { listProjects, OPEN_STATUSES, STATUS_LABEL } from '@/lib/projects/projects'
 import { roleAtLeast } from '@/lib/core/types'
@@ -66,7 +68,7 @@ function placeGroups(roots: SpaceNode[]) {
 
 export default async function HomePage() {
   const { scope, user } = await viewer()
-  const [upcoming, preferred, projects, spaces, counts, rebuy, systems] = await Promise.all([
+  const [upcoming, preferred, projects, spaces, counts, rebuy, systems, tradeGroups] = await Promise.all([
     comingUp(db, scope),
     preferredByTrade(db, scope),
     listProjects(db, scope, { statuses: OPEN_STATUSES }),
@@ -74,7 +76,9 @@ export default async function HomePage() {
     placeCounts(db, scope),
     partsToRebuy(db, scope),
     listSystems(db, scope),
+    getTradeGroups(db, scope),
   ])
+  const tradeLabel = tradeLabeler(tradeGroups)
   const usedSystems = systems.filter((s) => s.fixtures > 0)
   const canEdit = roleAtLeast(user.role, 'member')
   const { loose, groups } = placeGroups(buildTree(spaces))
@@ -87,8 +91,8 @@ export default async function HomePage() {
 
       {spaces.length === 0 ? (
         <Section title="Places">
-          <EmptyState action={canEdit ? <LinkButton href="/places/new" variant="primary">Add the first place</LinkButton> : null}>
-            Start with the rooms you ask questions about most — the living room, the kitchen, the yard.
+          <EmptyState action={canEdit ? <LinkButton href="/places/new" variant="primary">Add a place</LinkButton> : null}>
+            No places yet.
           </EmptyState>
         </Section>
       ) : (
@@ -147,7 +151,7 @@ export default async function HomePage() {
                   href={`/contacts/${contact.id}`}
                   icon="contact"
                   title={contact.name}
-                  detail={trade[0]!.toUpperCase() + trade.slice(1)}
+                  detail={tradeLabel(trade)}
                   trailing={
                     phone ? (
                       <a
@@ -199,7 +203,7 @@ export default async function HomePage() {
           </List>
         ) : (
           <EmptyState action={canEdit ? <LinkButton href="/projects/new">Add a project</LinkButton> : null}>
-            Nothing planned. Jobs you want done around the house go here.
+            No open projects.
           </EmptyState>
         )}
       </Section>

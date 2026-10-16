@@ -12,12 +12,13 @@ import { TextInput } from './ui/Field'
 
 type Hit = { externalId: string; title: string; subtitle: string; hasThumb: boolean }
 
-/** `kind` narrows the search to Homebox locations or paperless tags; `label` replaces the button's "Find in …" text. */
-type Source = { system: 'homebox' | 'paperless'; name: string; kind?: 'location' | 'tag'; label?: string }
+/** `kind` narrows the search to Homebox locations, or paperless tags or correspondents; `label` replaces the button's "Find in …" text. */
+type Source = { system: 'homebox' | 'paperless'; name: string; kind?: 'location' | 'tag' | 'correspondent'; label?: string }
 
 const PLACEHOLDER = {
   location: 'Search Homebox locations',
   tag: 'Search paperless tags',
+  correspondent: 'Search paperless correspondents',
   homebox: 'Search Homebox items',
   paperless: 'Search paperless documents',
 } as const
@@ -37,11 +38,15 @@ export function LinkPicker({
   const kind = source?.kind ?? null
   const [q, setQ] = useState(initialQuery)
   const [hits, setHits] = useState<Hit[]>([])
+  // The query the hits are for, so "Nothing found" shows only once a search came back empty.
+  const [searched, setSearched] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, start] = useTransition()
+  // Tags and correspondents are a short list: an empty search shows them all.
+  const browsable = kind === 'tag' || kind === 'correspondent'
 
   useEffect(() => {
-    if (!system || q.trim().length < 2) return
+    if (!system || (q.trim().length < 2 && !(browsable && q.trim() === ''))) return
     const controller = new AbortController()
     const timer = setTimeout(async () => {
       try {
@@ -50,6 +55,7 @@ export function LinkPicker({
         const body = (await res.json()) as { hits?: Hit[]; error?: string }
         setError(body.error ?? null)
         setHits(body.hits ?? [])
+        setSearched(q)
       } catch {
         // superseded by the next keystroke
       }
@@ -58,13 +64,21 @@ export function LinkPicker({
       clearTimeout(timer)
       controller.abort()
     }
-  }, [system, kind, q])
+  }, [system, kind, browsable, q])
 
   if (!system) {
     return (
       <div className="flex flex-wrap gap-2">
         {systems.map((s) => (
-          <button key={`${s.system}:${s.kind ?? ''}`} type="button" className={buttonClass('secondary')} onClick={() => setSource(s)}>
+          <button
+            key={`${s.system}:${s.kind ?? ''}`}
+            type="button"
+            className={buttonClass('secondary')}
+            onClick={() => {
+              setSource(s)
+              setSearched(null)
+            }}
+          >
             {s.label ?? `Find in ${s.name}`}
           </button>
         ))}
@@ -87,7 +101,8 @@ export function LinkPicker({
         </button>
       </div>
       {error ? <p className="text-sm text-danger">{error}</p> : null}
-      <ul className="divide-y divide-line">
+      {!error && searched === q && hits.length === 0 ? <p className="px-1 text-sm text-ink-3">Nothing found.</p> : null}
+      <ul className="max-h-80 divide-y divide-line overflow-y-auto">
         {hits.map((h) => (
           <li key={h.externalId}>
             <button
@@ -102,6 +117,7 @@ export function LinkPicker({
                     setSource(null)
                     setQ(initialQuery)
                     setHits([])
+                    setSearched(null)
                   }
                 })
               }

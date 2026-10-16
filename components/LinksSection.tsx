@@ -2,6 +2,7 @@ import { db } from '@/lib/db'
 import type { Owner } from '@/lib/files/attachments'
 import { listLinks, SYSTEM_LABEL } from '@/lib/links/links'
 import { addLinkAction, linkPickedAction, removeLinkAction } from '@/lib/web/link-actions'
+import { paperlessFilter } from '@/lib/integrations/clients'
 import { listIntegrations, refreshStale, SYSTEM_NAME } from '@/lib/integrations/integrations'
 import { LinkPicker } from './LinkPicker'
 import { LinkThumb } from './LinkThumb'
@@ -13,12 +14,14 @@ import { List, Pill, Section } from './ui/Card'
 /* Links from a record to Homebox, paperless and Home Assistant. */
 export async function LinksSection({ owner, canEdit }: { owner: Owner; canEdit: boolean }) {
   const { scope } = await viewer()
-  let links = await listLinks(db, scope, owner)
+  // A paperless tag or correspondent shows as its documents (PaperlessDocs), not as a link.
+  const own = async () => (await listLinks(db, scope, owner)).filter((l) => !(l.system === 'paperless' && paperlessFilter(l.externalId)))
+  let links = await own()
   const connected = await listIntegrations(db, scope)
   if (links.length && connected.length) {
     // Re-check links not looked at in a day, within a short time budget.
     await refreshStale(db, scope, links.map((l) => l.id))
-    links = await listLinks(db, scope, owner)
+    links = await own()
   }
   if (links.length === 0 && !canEdit) return null
   const thumbable = new Set(connected.map((c) => c.system))

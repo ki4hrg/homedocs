@@ -24,16 +24,11 @@ export async function HomeboxHere({ spaceId, placeName, canEdit }: { spaceId: st
     if (!canEdit) return null
     return (
       <Section title="In Homebox">
-        <div className="flex flex-col gap-2">
-          <p className="px-1 text-sm text-ink-3">
-            Link this place to its Homebox location to see what’s kept here, and add any of it in one tap.
-          </p>
-          <LinkPicker
-            systems={[{ system: 'homebox', name: 'Homebox', kind: 'location', label: 'Pick the Homebox location' }]}
-            initialQuery={placeName}
-            link={linkPickedAction.bind(null, `space:${spaceId}`)}
-          />
-        </div>
+        <LinkPicker
+          systems={[{ system: 'homebox', name: 'Homebox', kind: 'location', label: 'Link a Homebox location' }]}
+          initialQuery={placeName}
+          link={linkPickedAction.bind(null, `space:${spaceId}`)}
+        />
       </Section>
     )
   }
@@ -77,12 +72,12 @@ export async function HomeboxHere({ spaceId, placeName, canEdit }: { spaceId: st
           </List>
           {here.total > here.items.length ? (
             <p className="mt-2 px-1 text-xs text-ink-3">
-              Showing {here.items.length} of {here.total}. Open Homebox for the rest.
+              First {here.items.length} of {here.total}.
             </p>
           ) : null}
         </>
       ) : (
-        <p className="px-1 text-sm text-ink-3">Nothing is stored in this Homebox location.</p>
+        <p className="px-1 text-sm text-ink-3">Nothing stored here.</p>
       )}
     </Section>
   )

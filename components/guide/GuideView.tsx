@@ -136,7 +136,7 @@ export async function GuideView({
                     {p.name}
                     {p.company ? <span className="font-normal text-ink-3"> · {p.company}</span> : null}
                   </p>
-                  {p.roles.length ? <p className="text-sm capitalize text-ink-3">{p.roles.join(', ')}</p> : null}
+                  {p.roles.length ? <p className="text-sm text-ink-3">{p.roles.join(', ')}</p> : null}
                   <div className="mt-2 flex flex-wrap gap-2">
                     {p.phones.map((ph, i) => (
                       <a

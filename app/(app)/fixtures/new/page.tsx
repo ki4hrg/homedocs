@@ -22,7 +22,6 @@ export default async function NewFixturePage({ searchParams }: { searchParams: P
     <>
       <PageHeader
         title="New fixture"
-        subtitle="Something installed: a light, a fan, a shutoff, an appliance"
         back={{ href: space ? `/places/${space}` : system ? `/systems/${system}` : '/fixtures', label: 'Back' }}
       />
       <FixtureForm action={createFixtureAction} places={places} systems={systems} categories={FIXTURE_CATEGORIES} initial={{ spaceId: space, systemId: systems.some((s) => s.id === system) ? system : undefined }} submit="Add fixture" />

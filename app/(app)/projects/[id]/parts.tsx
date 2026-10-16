@@ -103,7 +103,7 @@ export function Checklist({
       {canEdit ? (
         <ActionForm action={add} resetOnSuccess className="flex flex-col gap-2">
           <div className="flex gap-2">
-            <TextInput name="text" placeholder="Add to the list: “2 outlets in the garage”" aria-label="New to-do" required />
+            <TextInput name="text" placeholder="Add a to-do" aria-label="New to-do" required />
             <SubmitButton pendingText="…">Add</SubmitButton>
           </div>
           {details ? (
@@ -147,7 +147,7 @@ export function QuoteForm({ add, contacts }: { add: FormAction; contacts: { id: 
   }
   return (
     <ActionForm action={add} resetOnSuccess onSuccess={() => setOpen(false)}>
-      <Field label="From" hint={contacts.length ? undefined : 'Add the contractor under Contacts first to pick them here.'}>
+      <Field label="From" hint={contacts.length ? undefined : 'Add them under Contacts first.'}>
         <Select name="contactId" defaultValue="">
           <option value="">—</option>
           {contacts.map((p) => (
@@ -165,7 +165,7 @@ export function QuoteForm({ add, contacts }: { add: FormAction; contacts: { id: 
           <TextInput name="receivedOn" type="date" />
         </Field>
       </div>
-      <Field label="What’s included" hint="Attach the PDF on the quote afterwards, or link it from paperless.">
+      <Field label="What’s included">
         <TextArea name="notes" />
       </Field>
       <div className="flex gap-2">

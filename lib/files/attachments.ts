@@ -8,7 +8,7 @@ import { recordAudit } from '../core/audit'
 import { inTransaction, liveIn } from '../core/internal'
 import { cleanText, softDelete } from '../core/records'
 import { assertCanEdit, ValidationError, type ActorContext, type Executor, type PropertyScope } from '../core/types'
-import { attachments, contacts, fixtures, logs, projects, quotes, spaces, supplies } from '../db/schema'
+import { attachments, contacts, fixtures, logs, projects, quotes, spaces, supplies, systems } from '../db/schema'
 import type { Stored } from './store'
 
 export const OWNER_TABLES = {
@@ -19,6 +19,7 @@ export const OWNER_TABLES = {
   contact: { table: contacts, column: 'contactId' },
   project: { table: projects, column: 'projectId' },
   quote: { table: quotes, column: 'quoteId' },
+  system: { table: systems, column: 'systemId' },
 } as const
 
 export type OwnerKind = keyof typeof OWNER_TABLES

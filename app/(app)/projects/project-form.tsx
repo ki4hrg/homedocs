@@ -28,7 +28,7 @@ export function ProjectForm({
   return (
     <ActionForm action={action}>
       {initial?.updatedAt ? <input type="hidden" name="updatedAt" value={initial.updatedAt} /> : null}
-      <Field label="What’s the job?">
+      <Field label="Title">
         <TextInput name="title" defaultValue={initial?.title} placeholder="Replace electrical panel" required autoFocus={!initial?.title} />
       </Field>
       <div className="grid grid-cols-2 gap-3">
@@ -41,7 +41,7 @@ export function ProjectForm({
             ))}
           </Select>
         </Field>
-        <Field label="How soon">
+        <Field label="Priority">
           <Select name="priority" defaultValue={initial?.priority ?? 'normal'}>
             <option value="high">Soon</option>
             <option value="normal">Normal</option>
@@ -49,14 +49,14 @@ export function ProjectForm({
           </Select>
         </Field>
       </div>
-      <Field label="Target date" hint="Optional.">
+      <Field label="Target date">
         <TextInput name="targetDate" type="date" defaultValue={initial?.targetDate ?? ''} />
       </Field>
-      <Field label="Details" hint="Why it needs doing, what you know so far.">
+      <Field label="Details">
         <TextArea name="summary" rows={4} defaultValue={initial?.summary} />
       </Field>
       {places.length ? (
-        <Field label="Places it touches" hint="Hold Ctrl/⌘ to pick more than one on a computer.">
+        <Field label="Places" hint="Ctrl/⌘-click for more than one.">
           <select
             name="spaceIds"
             multiple

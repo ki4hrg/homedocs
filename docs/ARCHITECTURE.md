@@ -33,7 +33,7 @@ housesitter.
 | Part | `supplies` | A reusable spec, defined once: a bulb type, a paint colour, a filter. `fields` jsonb is validated by the category template in `lib/parts/templates.ts`. |
 | (use) | `supply_uses` | A part used by exactly one fixture **or** one place. Holds the quantity, `quantity_needed` (the "really takes 15 bags" figure), surface and finish. Paint sheen lives here. |
 | Note | `logs` | A dated record of what happened, with a "next time" lesson and a `remind_after` date. |
-| Contact | `contacts` + `contact_trades` | One preferred contact per trade, which is what "our plumber" means. |
+| Contact | `contacts` + `contact_trades` | One preferred contact per trade, which is what "our plumber" means. Trades are stored lower-cased; the labels ("HVAC") and the chips offered come from `properties.trade_groups`, the family's own list (null means `DEFAULT_TRADE_GROUPS` in `lib/contacts/trade-labels.ts`). A trade typed on a contact or system joins the list. |
 | Project | `projects`, `project_items`, `quotes` | Status, a checklist, and quotes. Accepting a quote schedules the project. |
 | House guide | `guide_sections`, `secrets`, `share_links` | See below. |
 | — | `attachments`, `external_refs` | One nullable FK column per owner type, with a `num_nonnulls(...) = 1` check. Never `owner_type/owner_id`. |
@@ -82,8 +82,8 @@ A page under `app/(app)/` is authenticated by its layout. Everything else authen
 | `GET /api/health` | none (returns status and git revision only) |
 | `POST /api/files` | `requireApiRole('member')`; the property comes from the owning record |
 | `GET /api/files/[sha]` | `requireApiUser()`, and the sha must belong to a live attachment |
-| `GET /api/ext/search` | `requireApiRole('member')`; `kind=location` searches Homebox locations, `kind=tag` paperless tags |
-| `GET /api/ext/[system]/[id]/thumb` | `requireApiUser()`, plus a strict id format and a live `external_refs` row, or for paperless a document whose tags (asked of paperless) include a linked tag (cannot browse paperless) |
+| `GET /api/ext/search` | `requireApiRole('member')`; `kind=location` searches Homebox locations, `kind=tag` / `kind=correspondent` paperless tags or correspondents (an empty query lists them all) |
+| `GET /api/ext/[system]/[id]/thumb` | `requireApiUser()`, plus a strict id format and a live `external_refs` row, or for paperless a document filed (asked of paperless) under a linked tag or correspondent (cannot browse paperless) |
 | `GET /g/[token]` | share-link token; rate limited per IP; preview bots get a stub |
 | `POST` unlock (server action) | link token + PIN; per-IP limit; 10 failures lock the link in the DB |
 | `GET /g/[token]/files/[sha]` | link token, and the sha must be a photo on a record this guide shows |
@@ -175,10 +175,14 @@ anyway, so that gains nothing.
     column). The place page then lists what Homebox keeps there (`GET /v1/entities?parentIds=`),
     marks the items already linked to a fixture, and adds the others as a linked fixture in one tap
     (`addFixtureFromHomebox`, which fetches the item's name again server-side).
-  - **Places ↔ paperless tags:** a place can link to a paperless tag, stored with `external_id`
-    `tag:<id>` so it never collides with a document number. The place page lists the newest 50
-    documents with that tag (`GET /api/documents/?tags__id__all=`); tagging in paperless is the only
-    upkeep. Their thumbnails go through the proxy, which checks the document's tags first.
+  - **Documents by paperless tag or correspondent:** a place, project or system can follow one
+    paperless tag, and a contact one correspondent. They are `external_refs` rows with `external_id`
+    `tag:<id>` or `correspondent:<id>`, so they never collide with a document number; picking another
+    replaces the first. The record's page lists the newest 50 documents filed under it
+    (`GET /api/documents/?tags__id__all=` or `?correspondent__id=`); filing in paperless is the only
+    upkeep. These rows show as the Documents section, not under Linked. Their documents' thumbnails
+    go through the proxy, which asks paperless how the document is filed first. The picker lists every
+    tag (or correspondent) before anything is typed.
   - **Homebox type names:** built-in entity types come back as translation keys
     (`global.location`) and are left out of subtitles.
 - These response shapes come from the projects' published APIs and are tested against a fake server.

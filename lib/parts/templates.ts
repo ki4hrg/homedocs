@@ -37,7 +37,6 @@ export const TEMPLATES: Record<Category, Template> = {
     category: 'bulb',
     label: 'Light bulb',
     unit: 'bulb',
-    tip: 'A photo of the old bulb’s base and label answers most questions later.',
     fields: [
       { key: 'base', label: 'Base', placeholder: 'E26, E12, GU10' },
       { key: 'shape', label: 'Shape', placeholder: 'A19, BR30, candelabra' },
@@ -53,7 +52,7 @@ export const TEMPLATES: Record<Category, Template> = {
     label: 'Paint colour',
     unit: 'gal',
     finishes: ['Flat', 'Matte', 'Eggshell', 'Satin', 'Semi-gloss', 'Gloss'],
-    tip: 'Take a photo of the can lid — the tint formula is printed on the label.',
+    tip: 'The tint formula is on the can’s label.',
     fields: [
       { key: 'brand', label: 'Brand', placeholder: 'Sherwin-Williams' },
       { key: 'color_name', label: 'Colour name', placeholder: 'Repose Gray' },
@@ -89,7 +88,6 @@ export const TEMPLATES: Record<Category, Template> = {
     category: 'landscaping',
     label: 'Landscaping',
     unit: 'bag',
-    tip: 'Note how much it really took — next year you’ll be glad you did.',
     fields: [
       { key: 'product', label: 'Product', placeholder: 'Hardwood mulch, brown' },
       { key: 'bag_size', label: 'Bag size', placeholder: '2 cu ft' },

@@ -25,6 +25,11 @@ test.beforeAll(async () => {
     const p = url.pathname
     if (p === '/api/tags/') return send(200, { count: 1, results: [{ id: 5, name: 'Pantry', document_count: 1 }] })
     if (p === '/api/tags/5/') return send(200, { id: 5, name: 'Pantry', document_count: 1 })
+    if (p === '/api/correspondents/') return send(200, { count: 1, results: [{ id: 2, name: 'Ace Plumbing', document_count: 1 }] })
+    if (p === '/api/correspondents/2/') return send(200, { id: 2, name: 'Ace Plumbing', document_count: 1 })
+    if (p === '/api/documents/' && url.searchParams.get('correspondent__id') === '2') {
+      return send(200, { count: 1, results: [{ id: 13, title: 'Ace invoice', created_date: '2025-02-01' }] })
+    }
     if (p === '/api/documents/' && url.searchParams.get('tags__id__all') === '5') {
       return send(200, { count: 1, results: [{ id: 12, title: 'Dishwasher manual', created_date: '2025-01-09' }] })
     }
@@ -52,8 +57,9 @@ test('link a place to its paperless tag and see its documents', async ({ page })
   await page.getByRole('button', { name: 'Add place' }).click()
   await expect(page.getByRole('heading', { name: 'Pantry' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Pick the paperless tag' }).click()
-  await expect(page.getByRole('textbox', { name: 'Search' })).toHaveValue('Pantry')
+  // Every tag shows to browse before anything is typed.
+  await page.getByRole('button', { name: 'Show a paperless tag’s documents' }).click()
+  await expect(page.getByRole('textbox', { name: 'Search' })).toHaveValue('')
   await page.getByRole('button', { name: /Pantry.*Tag · 1 document/ }).click()
 
   await expect(page.getByRole('heading', { name: 'Documents · Pantry' })).toBeVisible()
@@ -62,4 +68,22 @@ test('link a place to its paperless tag and see its documents', async ({ page })
   // The thumbnail loads through the proxy (a broken one would fall back to the icon).
   await expect(doc.locator('img')).toHaveJSProperty('complete', true)
   await expect.poll(() => doc.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0)
+})
+
+test('a contact lists its paperless correspondent’s documents', async ({ page }) => {
+  await page.goto('/contacts/new')
+  await page.locator('[name=name]').fill('Ace Plumbing')
+  await page.getByRole('button', { name: 'Add contact' }).click()
+  await expect(page.getByRole('heading', { name: 'Ace Plumbing' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Show a paperless correspondent’s documents' }).click()
+  await page.getByRole('button', { name: /Ace Plumbing.*Correspondent · 1 document/ }).click()
+  await expect(page.getByRole('heading', { name: 'Documents · Ace Plumbing' })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Ace invoice/ })).toHaveAttribute('href', `${base}/documents/13/details`)
+  await expect(page.getByRole('link', { name: /Open/ })).toHaveAttribute('href', `${base}/documents?correspondent__id__in=2`)
+
+  // Unlinking brings the picker back.
+  page.once('dialog', (d) => d.accept())
+  await page.getByRole('button', { name: /Unlink/ }).click()
+  await expect(page.getByRole('button', { name: 'Show a paperless correspondent’s documents' })).toBeVisible()
 })

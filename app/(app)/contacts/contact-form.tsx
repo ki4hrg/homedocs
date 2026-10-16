@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { ActionForm, type FormAction } from '@/components/ActionForm'
+import { TradeChips } from '@/components/TradeChips'
 import { Checkbox, Field, SubmitButton, TextArea, TextInput } from '@/components/ui/Field'
+import { tradeLabeler, type TradeGroup } from '@/lib/contacts/trade-labels'
 
 type Method = { label: string; value: string }
 
@@ -28,7 +30,7 @@ export function ContactForm({
   submit,
 }: {
   action: FormAction
-  groups: { label: string; trades: string[] }[]
+  groups: TradeGroup[]
   initial?: {
     name?: string
     company?: string
@@ -45,19 +47,16 @@ export function ContactForm({
 }) {
   const initialTrades = initial?.trades ?? []
   const [chosen, setChosen] = useState<string[]>(initialTrades.map((t) => t.trade))
-  const common = new Set(groups.flatMap((g) => g.trades))
-  // Trades typed in by hand earlier show as their own group, so they can be unticked.
-  const own = initialTrades.map((t) => t.trade).filter((t) => !common.has(t))
-  const shown = own.length ? [...groups, { label: 'Yours', trades: own }] : groups
   const preferred = new Set(initialTrades.filter((t) => t.preferred).map((t) => t.trade))
+  const label = tradeLabeler(groups)
 
   return (
     <ActionForm action={action}>
       {initial?.updatedAt ? <input type="hidden" name="updatedAt" value={initial.updatedAt} /> : null}
-      <Field label="Name" hint="A company or a person.">
-        <TextInput name="name" defaultValue={initial?.name} placeholder="Ace Plumbing, Duke Energy, or Mike Rivera" required autoFocus={!initial?.name} />
+      <Field label="Name">
+        <TextInput name="name" defaultValue={initial?.name} placeholder="Ace Plumbing, Duke Energy, Mike Rivera" required autoFocus={!initial?.name} />
       </Field>
-      <Field label="Contact person or company" hint="Optional. For a company, who to ask for; for a person, who they work for.">
+      <Field label="Company or contact person">
         <TextInput name="company" defaultValue={initial?.company} />
       </Field>
       <Methods prefix="phone" label="Phone" type="tel" initial={initial?.phones ?? []} placeholder="(555) 123-4567" />
@@ -66,61 +65,23 @@ export function ContactForm({
         <TextInput name="website" type="url" inputMode="url" defaultValue={initial?.website} />
       </Field>
 
-      <fieldset>
-        <legend className="mb-1.5 text-sm font-medium text-ink-2">What do they do?</legend>
-        <div className="flex flex-col gap-3">
-          {shown.map((g) => (
-            <div key={g.label}>
-              <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-ink-3">{g.label}</p>
-              <div className="flex flex-wrap gap-2">
-                {g.trades.map((t) => {
-                  const on = chosen.includes(t)
-                  return (
-                    <label
-                      key={t}
-                      className={`inline-flex min-h-10 cursor-pointer items-center rounded-full border px-3 text-sm capitalize ${
-                        on ? 'border-accent bg-accent-soft text-accent' : 'border-line bg-card text-ink-2'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        name="trades"
-                        value={t}
-                        checked={on}
-                        onChange={(e) => setChosen((c) => (e.target.checked ? [...c, t] : c.filter((x) => x !== t)))}
-                        className="sr-only"
-                      />
-                      {t}
-                    </label>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-        <TextInput name="customTrades" className="mt-2" placeholder="Something else? e.g. chimney sweep, solar" aria-label="Other trades" />
-      </fieldset>
+      <TradeChips legend="What they do" groups={groups} chosen={chosen} onChange={setChosen} />
 
       {chosen.length ? (
         <fieldset>
-          <legend className="mb-1 text-sm font-medium text-ink-2">Our go-to for…</legend>
-          <p className="mb-1 text-xs text-ink-3">The one we call first. Shown on Home and the house guide.</p>
+          <legend className="mb-1 text-sm font-medium text-ink-2">Go-to for</legend>
+          <p className="mb-1 text-xs text-ink-3">Shown on Home and the house guide.</p>
           {chosen.map((t) => (
-            <Checkbox key={t} name="preferred" value={t} label={`Our ${t}`} defaultChecked={preferred.has(t)} />
+            <Checkbox key={t} name="preferred" value={t} label={label(t)} defaultChecked={preferred.has(t)} />
           ))}
         </fieldset>
       ) : null}
 
-      <Checkbox
-        name="inGuide"
-        label="Show on the house guide"
-        hint="For anyone a housesitter might need to call."
-        defaultChecked={initial?.inGuide}
-      />
-      <Field label="Account number" hint="For utilities and services. Never shown on the house guide.">
+      <Checkbox name="inGuide" label="Show on the house guide" defaultChecked={initial?.inGuide} />
+      <Field label="Account number" hint="Never shown on the house guide.">
         <TextInput name="accountNumber" defaultValue={initial?.accountNumber} />
       </Field>
-      <Field label="Notes" hint="What they did for us, how much it cost, whether we'd use them again.">
+      <Field label="Notes">
         <TextArea name="notes" defaultValue={initial?.notes} />
       </Field>
       <SubmitButton>{submit}</SubmitButton>

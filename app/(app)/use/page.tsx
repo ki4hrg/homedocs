@@ -13,7 +13,7 @@ import { UseForm } from './use-form'
 
 export const metadata = { title: 'Add a part' }
 
-/* "What did we use?" — link a part we already know about, or describe a new one. */
+/* Add a part to a fixture or place: link a part we already know about, or describe a new one. */
 export default async function UsePage({ searchParams }: { searchParams: Promise<{ fixture?: string; space?: string }> }) {
   await requireRole('member')
   const { scope } = await viewer()
@@ -31,10 +31,10 @@ export default async function UsePage({ searchParams }: { searchParams: Promise<
   return (
     <>
       <PageHeader
-        title={owner.kind === 'fixture' ? `What does ${owner.name} take?` : `What did we use in ${owner.name}?`}
+        title={`Add part to ${owner.name}`}
         back={{ href: owner.href, label: owner.name }}
       />
-      <p className="mb-2 px-1 text-sm font-semibold uppercase tracking-wide text-ink-3">Something new</p>
+      <p className="mb-2 px-1 text-sm font-semibold uppercase tracking-wide text-ink-3">New part</p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {CATEGORIES.map((c) => (
           <LinkButton key={c} href={`/parts/new?${q}&category=${c}`}>
@@ -43,7 +43,7 @@ export default async function UsePage({ searchParams }: { searchParams: Promise<
         ))}
       </div>
       {parts.length ? (
-        <Section title="Or one we already have">
+        <Section title="Existing part">
           <UseForm action={addUseAction} parts={parts} owner={{ kind: owner.kind, id: owner.id }} />
         </Section>
       ) : null}

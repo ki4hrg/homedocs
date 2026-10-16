@@ -21,7 +21,7 @@ export default async function NewPartPage({
     <>
       <PageHeader
         title="New part"
-        subtitle={owner ? `Used by ${owner.name}` : 'A bulb, paint colour, filter or battery — defined once, used anywhere'}
+        subtitle={owner ? `For ${owner.name}` : undefined}
         back={owner ? { href: owner.href, label: owner.name } : { href: '/parts', label: 'Parts' }}
       />
       <PartForm

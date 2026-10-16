@@ -13,7 +13,7 @@ test('a shutoff lands in Water & plumbing, and the system hands it over', async 
   await page.goto('/fixtures/new')
   await page.locator('[name=name]').fill('Main water shutoff')
   await page.locator('[name=category]').fill('Shutoff valve')
-  const system = page.getByRole('combobox', { name: 'Part of which system?' })
+  const system = page.getByRole('combobox', { name: 'System' })
   await expect(system.locator('option:checked')).toHaveText('Water & plumbing')
   await page.getByText('Show on the house guide').click()
   await page.locator('[name=guideNote]').fill('Red handle, quarter turn clockwise.')
@@ -22,7 +22,7 @@ test('a shutoff lands in Water & plumbing, and the system hands it over', async 
 
   await page.getByRole('link', { name: 'Water & plumbing' }).click()
   await expect(page.getByRole('heading', { name: 'Water & plumbing' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'First, find these' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Key fixtures' })).toBeVisible()
   await expect(page.getByText('Red handle, quarter turn clockwise.')).toBeVisible()
 
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
@@ -32,7 +32,7 @@ test('a shutoff lands in Water & plumbing, and the system hands it over', async 
   // The + menu on a system page starts a fixture already in it.
   await page.getByRole('button', { name: 'Add something' }).click()
   await page.getByRole('menuitem', { name: /Fixture/ }).click()
-  await expect(page.getByRole('combobox', { name: 'Part of which system?' }).locator('option:checked')).toHaveText('Water & plumbing')
+  await expect(page.getByRole('combobox', { name: 'System' }).locator('option:checked')).toHaveText('Water & plumbing')
 
   await page.goto('/')
   await expect(page.getByRole('link', { name: /Water & plumbing.*fixtures? · [0-9]+ on the guide/ })).toBeVisible()
@@ -43,17 +43,17 @@ test('a shutoff lands in Water & plumbing, and the system hands it over', async 
 
 test('a choice made by hand sticks while typing, and the family can add a system', async ({ page }) => {
   await page.goto('/fixtures/new')
-  const system = page.getByRole('combobox', { name: 'Part of which system?' })
+  const system = page.getByRole('combobox', { name: 'System' })
   await system.selectOption({ label: 'Electrical' })
   await page.locator('[name=name]').fill('Water heater breaker')
   await expect(system.locator('option:checked')).toHaveText('Electrical')
 
   await page.goto('/systems/new')
   await page.locator('[name=name]').fill('Pool')
-  await page.getByText('pool', { exact: true }).click()
+  await page.getByText('Pool', { exact: true }).click()
   await page.getByRole('button', { name: 'Add system' }).click()
   await expect(page.getByRole('heading', { name: 'Pool' })).toBeVisible()
-  await expect(page.getByText('Nothing is in Pool yet.', { exact: false })).toBeVisible()
+  await expect(page.getByText('None yet.')).toBeVisible()
   await page.goto('/systems')
   await expect(page.getByRole('link', { name: /Pool.*Nothing yet/ })).toBeVisible()
 })

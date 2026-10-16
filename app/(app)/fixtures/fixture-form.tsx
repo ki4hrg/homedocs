@@ -58,7 +58,7 @@ export function FixtureForm({
       <Field label="Where is it?">
         <PlaceSelect name="spaceId" defaultValue={initial?.spaceId ?? ''} options={places} />
       </Field>
-      <Field label="Kind of fixture" hint="Pick one or type your own.">
+      <Field label="Kind">
         <TextInput name="category" list="fixture-categories" defaultValue={initial?.category} onChange={(e) => retype({ category: e.target.value })} />
         <datalist id="fixture-categories">
           {categories.map((c) => (
@@ -66,7 +66,7 @@ export function FixtureForm({
           ))}
         </datalist>
       </Field>
-      <Field label="Part of which system?" hint="Water, electrical, heating… so it shows up there, and on the house guide under it.">
+      <Field label="System">
         <Select
           name="systemId"
           value={systemId}
@@ -83,19 +83,18 @@ export function FixtureForm({
           ))}
         </Select>
       </Field>
-      <Field label="Notes" hint="Quirks, how it works, what to watch for.">
+      <Field label="Notes">
         <TextArea name="notes" defaultValue={initial?.notes} />
       </Field>
       <Checkbox
         name="inGuide"
         label="Show on the house guide"
-        hint="For shutoffs, the breaker panel, the water heater — what a housesitter might need in a hurry."
         checked={inGuide}
         onChange={(e) => setInGuide(e.target.checked)}
       />
       {inGuide ? (
-        <Field label="What should a housesitter know?" hint="e.g. “Turn the red handle a quarter turn to shut off all water.”">
-          <TextArea name="guideNote" defaultValue={initial?.guideNote} />
+        <Field label="Note for the house guide">
+          <TextArea name="guideNote" defaultValue={initial?.guideNote} placeholder="Turn the red handle a quarter turn." />
         </Field>
       ) : (
         <input type="hidden" name="guideNote" value={initial?.guideNote ?? ''} />

@@ -14,12 +14,20 @@ import { assertFresh, inTransaction, liveIn } from '../core/internal'
 import { cleanText, requireText, softDelete } from '../core/records'
 import { assertCanEdit, NotFoundError, ValidationError, type ActorContext, type Executor, type PropertyScope } from '../core/types'
 import { attachments, contacts, contactTrades, fixtures, supplies, supplyUses, systems } from '../db/schema'
+import { addToTradeList } from '../contacts/trades'
 import { cascadeSystem, rebuildSystem, spacePath } from '../search/rebuild'
 import { guessSystemKey, isSystemIcon, SYSTEM_SEEDS } from './seeds'
 
 export type HouseSystem = typeof systems.$inferSelect
 
-export type SystemInput = { name: string; icon?: string; trades?: string[] | string; notes?: string }
+export type SystemInput = {
+  name: string
+  icon?: string
+  trades?: string[] | string
+  /** Trades typed rather than ticked; they join the family's list too. */
+  newTrades?: string[]
+  notes?: string
+}
 
 /** Give a home its starting systems. Idempotent: a seed already there (even deleted) is not added again. */
 export async function seedSystems(exec: Executor, propertyId: string, actorId: string | null) {
@@ -109,7 +117,7 @@ export async function createSystem(exec: Executor, scope: PropertyScope, actor: 
         propertyId: scope.propertyId,
         name: requireText(input.name, 'Give the system a name, like “Pool” or “Solar”.', 100),
         icon: cleanIcon(input.icon),
-        trades: cleanTrades(input.trades),
+        trades: cleanTrades([...cleanTrades(input.trades), ...(await addToTradeList(tx, scope, input.newTrades ?? []))]),
         notes: cleanText(input.notes),
         sort: Number(last?.sort ?? 0) + 1,
         createdBy: actor.userId,
@@ -137,7 +145,10 @@ export async function updateSystem(
     const patch: Partial<HouseSystem> = {}
     if (input.name !== undefined) patch.name = requireText(input.name, 'Give the system a name.', 100)
     if (input.icon !== undefined) patch.icon = cleanIcon(input.icon)
-    if (input.trades !== undefined) patch.trades = cleanTrades(input.trades)
+    if (input.trades !== undefined || input.newTrades?.length) {
+      const typed = await addToTradeList(tx, scope, input.newTrades ?? [])
+      patch.trades = cleanTrades([...cleanTrades(input.trades ?? current!.trades), ...typed])
+    }
     if (input.notes !== undefined) patch.notes = cleanText(input.notes)
     const changes = diff(current!, patch)
     if (Object.keys(changes.after).length === 0) return current!

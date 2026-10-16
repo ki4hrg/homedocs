@@ -5,27 +5,30 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { roleAtLeast } from '@/lib/core/types'
 import { db } from '@/lib/db'
 import { listContacts, telHref } from '@/lib/contacts/contacts'
+import { tradeLabeler } from '@/lib/contacts/trade-labels'
+import { getTradeGroups } from '@/lib/contacts/trades'
 import { viewer } from '@/lib/web/context'
 
 export const metadata = { title: 'Contacts' }
 
 export default async function ContactsPage() {
   const { scope, user } = await viewer()
-  const contacts = await listContacts(db, scope)
+  const [contacts, groups] = await Promise.all([listContacts(db, scope), getTradeGroups(db, scope)])
+  const label = tradeLabeler(groups)
   const canEdit = roleAtLeast(user.role, 'member')
   return (
     <>
       <PageHeader
         title="Contacts"
-        subtitle="Who we call"
         actions={canEdit ? <LinkButton href="/contacts/new" variant="primary">Add</LinkButton> : null}
       />
       {contacts.length ? (
         <List>
           {contacts.map((p) => {
             const phone = p.phones[0]?.value
-            const ours = p.trades.filter((t) => t.preferred).map((t) => `our ${t.trade}`)
-            const other = p.trades.filter((t) => !t.preferred).map((t) => t.trade)
+            // "★ Plumber, HVAC": the ones they're the go-to for first.
+            const ours = p.trades.filter((t) => t.preferred).map((t) => `★ ${label(t.trade)}`)
+            const other = p.trades.filter((t) => !t.preferred).map((t) => label(t.trade))
             return (
               <Row
                 key={p.id}
@@ -50,7 +53,7 @@ export default async function ContactsPage() {
         </List>
       ) : (
         <EmptyState action={canEdit ? <LinkButton href="/contacts/new" variant="primary">Add a contact</LinkButton> : null}>
-          Plumber, electrician, HVAC, the HOA, utilities — whoever you’d have to look up in a hurry.
+          No contacts yet.
         </EmptyState>
       )}
     </>

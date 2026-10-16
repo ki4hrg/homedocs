@@ -26,7 +26,7 @@ export default async function SharePage() {
     <>
       <PageHeader
         title="Share the house guide"
-        subtitle="A link for a housesitter — no account needed"
+        subtitle="No account needed"
         back={{ href: '/guide', label: 'House guide' }}
       />
       <Card className="p-4">
@@ -34,7 +34,7 @@ export default async function SharePage() {
       </Card>
 
       {live.length ? (
-        <Section title="Working links">
+        <Section title="Active">
           <div className="flex flex-col gap-3">
             {live.map(({ link }) => (
               <Card key={link.id} className="p-4">
@@ -68,7 +68,7 @@ export default async function SharePage() {
       ) : null}
 
       {past.length ? (
-        <Section title="Expired or turned off">
+        <Section title="Expired or off">
           <List>
             {past.map(({ link, views: n }) => (
               <li key={link.id} className="px-4 py-3 text-sm">

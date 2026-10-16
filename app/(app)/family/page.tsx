@@ -16,7 +16,7 @@ export default async function FamilyPage() {
   const [people, invites, signIn] = await Promise.all([listUsers(), listOpenInvites(), signInOptions()])
   return (
     <>
-      <PageHeader title="Family" subtitle="Who can sign in, and what they can do" back={{ href: '/more', label: 'More' }} />
+      <PageHeader title="Family" back={{ href: '/more', label: 'More' }} />
       <List>
         {people.map((p) => (
           <li key={p.id} className="flex flex-col gap-2 px-4 py-3">

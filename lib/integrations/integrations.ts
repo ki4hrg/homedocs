@@ -20,16 +20,18 @@ import {
   fetchRemote,
   fetchThumb,
   IntegrationError,
-  documentsTagged,
-  documentTags,
+  documentFiling,
+  documentsFiled,
   isHomeboxLocation,
-  isPaperlessTag,
   itemsInLocation,
+  paperlessFilter,
   probe,
   searchRemote,
   validExternalId,
   type Connection,
   type Hit,
+  type PaperlessFilterKind,
+  type SearchKind,
   type System,
 } from './clients'
 
@@ -112,13 +114,14 @@ export async function searchSystem(
   scope: PropertyScope,
   system: System,
   query: string,
-  opts: { locations?: boolean; tags?: boolean } = {},
+  kind?: SearchKind,
 ): Promise<Hit[]> {
   const conn = await connectionFor(exec, scope, system)
   if (!conn) throw new ValidationError(`${SYSTEM_NAME[system]} isn’t connected. An admin can connect it in Settings.`)
-  if (!query.trim()) return []
+  const browsable = kind === 'tag' || kind === 'correspondent'
+  if (!query.trim() && !browsable) return []
   try {
-    return await searchRemote(conn, query, opts)
+    return await searchRemote(conn, query, kind)
   } catch (err) {
     if (err instanceof IntegrationError) throw new ValidationError(err.message)
     throw err
@@ -153,6 +156,14 @@ export async function linkPicked(
   return inTransaction(exec, async (tx) => {
     const found = await tx.select({ id: table.id }).from(table as never).where(liveIn(table, scope.propertyId, owner.id))
     if (found.length === 0) throw new ValidationError('That record no longer exists.')
+    // A record follows one tag (or one correspondent): picking another replaces it.
+    const filter = paperlessFilter(hit.externalId)
+    if (filter) {
+      const before = await filterRefOf(tx, scope, owner, filter.kind)
+      if (before) {
+        await tx.update(externalRefs).set({ deletedAt: new Date(), updatedBy: actor.userId }).where(eq(externalRefs.id, before.id))
+      }
+    }
     const [row] = await tx
       .insert(externalRefs)
       .values({
@@ -247,46 +258,59 @@ export async function homeboxItemsHere(exec: Executor, scope: PropertyScope, spa
 
 // ─── a place's paperless tag ─────────────────────────────────────────────────
 
-export type PaperlessHere =
-  | { state: 'none' }
-  | { state: 'error'; tag: { title: string; url: string }; message: string }
-  | {
-      state: 'ok'
-      tag: { title: string; url: string }
-      total: number
-      documents: Hit[]
-    }
-
-/**
- * The documents filed under the paperless tag this place is linked to, so the
- * place page lists the manuals, receipts and warranties for it without anyone
- * linking them one by one. Tagging in paperless is the only upkeep.
- */
-export async function paperlessDocsHere(exec: Executor, scope: PropertyScope, spaceId: string): Promise<PaperlessHere> {
+/** The live paperless tag or correspondent a record follows, if any. */
+export async function filterRefOf(exec: Executor, scope: PropertyScope, owner: Owner, kind: PaperlessFilterKind) {
+  const { column } = OWNER_TABLES[owner.kind]
   const refs = await exec
     .select()
     .from(externalRefs)
     .where(
       and(
         eq(externalRefs.propertyId, scope.propertyId),
-        eq(externalRefs.spaceId, spaceId),
+        eq(externalRefs[column], owner.id),
         eq(externalRefs.system, 'paperless'),
         isNull(externalRefs.deletedAt),
       ),
     )
-  const ref = refs.find((r) => isPaperlessTag(r.externalId))
+  return refs.find((r) => paperlessFilter(r.externalId)?.kind === kind) ?? null
+}
+
+export type PaperlessDocs =
+  | { state: 'none' }
+  | { state: 'error'; filter: { id: string; title: string; url: string }; message: string }
+  | {
+      state: 'ok'
+      filter: { id: string; title: string; url: string }
+      total: number
+      documents: Hit[]
+    }
+
+/**
+ * The documents paperless has filed under the tag (or, for a contact, the
+ * correspondent) a record follows, so a place, project, system or contact
+ * lists its manuals, receipts and invoices without anyone linking them one by
+ * one. Filing in paperless is the only upkeep.
+ */
+export async function paperlessDocsFor(
+  exec: Executor,
+  scope: PropertyScope,
+  owner: Owner,
+  kind: PaperlessFilterKind,
+): Promise<PaperlessDocs> {
+  const ref = await filterRefOf(exec, scope, owner, kind)
   if (!ref) return { state: 'none' }
-  const tag = { title: ref.title, url: ref.url }
+  const filter = { id: ref.id, title: ref.title, url: ref.url }
   const conn = await connectionFor(exec, scope, 'paperless')
-  if (!conn) return { state: 'error', tag, message: 'paperless isn’t connected. An admin can connect it in Settings.' }
+  if (!conn) return { state: 'error', filter, message: 'paperless isn’t connected. An admin can connect it in Settings.' }
   let found: { hits: Hit[]; total: number }
   try {
-    found = await documentsTagged(conn, ref.externalId)
+    found = await documentsFiled(conn, ref.externalId)
   } catch (err) {
     if (!(err instanceof IntegrationError)) throw err
-    return { state: 'error', tag, message: err.kind === 'missing' ? 'That tag is no longer in paperless.' : err.message }
+    const gone = kind === 'tag' ? 'That tag is no longer in paperless.' : 'That correspondent is no longer in paperless.'
+    return { state: 'error', filter, message: err.kind === 'missing' ? gone : err.message }
   }
-  return { state: 'ok', tag, total: found.total, documents: found.hits }
+  return { state: 'ok', filter, total: found.total, documents: found.hits }
 }
 
 /**
@@ -387,22 +411,23 @@ export async function refreshStale(exec: Executor, scope: PropertyScope, refIds:
 const THUMB_TTL_MS = DAY_MS
 
 /**
- * Whether a paperless document is filed under a tag some place links to — what
- * makes it reachable from a place's Documents list. Asked of paperless, not the
- * browser.
+ * Whether a paperless document is filed under a tag or correspondent some
+ * record follows — what makes it reachable from that record's Documents list.
+ * Asked of paperless, not the browser.
  */
-async function underLinkedTag(exec: Executor, scope: PropertyScope, docId: string): Promise<boolean> {
-  if (isPaperlessTag(docId)) return false
-  const tags = await exec
+async function underLinkedFilter(exec: Executor, scope: PropertyScope, docId: string): Promise<boolean> {
+  if (paperlessFilter(docId)) return false
+  const refs = await exec
     .select({ externalId: externalRefs.externalId })
     .from(externalRefs)
     .where(and(eq(externalRefs.propertyId, scope.propertyId), eq(externalRefs.system, 'paperless'), isNull(externalRefs.deletedAt)))
-  const linked = new Set(tags.map((t) => t.externalId).filter(isPaperlessTag).map((t) => Number(t.slice(4))))
-  if (linked.size === 0) return false
+  const filters = refs.map((r) => paperlessFilter(r.externalId)).filter((f) => f !== null)
+  if (filters.length === 0) return false
   const conn = await connectionFor(exec, scope, 'paperless')
   if (!conn) return false
   try {
-    return (await documentTags(conn, docId)).some((t) => linked.has(t))
+    const filed = await documentFiling(conn, docId)
+    return filters.some((f) => (f.kind === 'tag' ? filed.tags.includes(f.id) : filed.correspondent === f.id))
   } catch {
     return false
   }
@@ -411,7 +436,7 @@ async function underLinkedTag(exec: Executor, scope: PropertyScope, docId: strin
 /**
  * A linked record's thumbnail, through our server and cached on disk. Only ids
  * that a live link in this property points at (or, for paperless, documents
- * under a linked tag) are ever fetched, so this cannot be used to browse the other app.
+ * under a linked tag or correspondent) are ever fetched, so this cannot be used to browse the other app.
  */
 export async function linkedThumb(exec: Executor, scope: PropertyScope, system: System, externalId: string): Promise<Buffer | null> {
   if (!validExternalId(system, externalId)) return null
@@ -427,7 +452,7 @@ export async function linkedThumb(exec: Executor, scope: PropertyScope, system: 
       ),
     )
     .limit(1)
-  if (!ref && !(system === 'paperless' && (await underLinkedTag(exec, scope, externalId)))) return null
+  if (!ref && !(system === 'paperless' && (await underLinkedFilter(exec, scope, externalId)))) return null
 
   const path = join(dataDir(), 'ext-cache', `${system}-${externalId}.jpg`)
   try {

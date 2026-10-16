@@ -32,7 +32,7 @@ export function PartForm({
     <ActionForm action={action}>
       {initial?.updatedAt ? <input type="hidden" name="updatedAt" value={initial.updatedAt} /> : null}
       {owner ? <input type="hidden" name={owner.kind === 'fixture' ? 'fixtureId' : 'spaceId'} value={owner.id} /> : null}
-      <Field label="What kind of part?">
+      <Field label="Kind">
         <Select name="category" value={category} onChange={(e) => setCategory(e.target.value as Category)}>
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>
@@ -51,11 +51,11 @@ export function PartForm({
           )}
         </Field>
       ))}
-      <Field label="Name" hint="Leave blank and we’ll make one from the details above.">
+      <Field label="Name" hint="Blank: made from the details above.">
         <TextInput name="name" defaultValue={initial?.name} />
       </Field>
       <input type="hidden" name="unit" value={initial?.unit ?? template.unit} />
-      <Field label="Where to buy it" hint="A link to the product page, if you have one.">
+      <Field label="Where to buy">
         <TextInput name="buyUrl" type="url" inputMode="url" defaultValue={initial?.buyUrl} />
       </Field>
       <Field label="Notes">
