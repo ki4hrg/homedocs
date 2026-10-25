@@ -8,7 +8,7 @@
 import { z } from 'zod'
 import { createNote } from '../../notes/notes'
 import { addUse, createPart } from '../../parts/parts'
-import { CATEGORIES } from '../../parts/templates'
+import { CATEGORIES, TEMPLATES } from '../../parts/templates'
 import { createContact } from '../../contacts/contacts'
 import { createSpace } from '../../places/places'
 import { addItem, createProject, setProjectStatus, STATUSES } from '../../projects/projects'
@@ -117,10 +117,8 @@ export const writeTools = [
     title: 'Create a part',
     description:
       `Define a reusable part once (then link it with link_part). Categories: ${CATEGORIES.join(', ')}. ` +
-      'Fields by category — bulb: base, shape, color_temp, brightness, dimmable, smart, brand; paint: brand, ' +
-      'color_name, color_code, product_line, base, formula, store; filter: size, rating, brand, interval; ' +
-      'battery: size, count, chemistry; landscaping: product, bag_size, brand; other: brand, model, size. ' +
-      'Paint sheen is not a part field — give it as `finish` on link_part.',
+      `Fields by category — ${CATEGORIES.map((c) => `${c}: ${TEMPLATES[c].fields.map((f) => f.key).join(', ')}`).join('; ')}. ` +
+      'Paint `sheen` is what the can says; the sheen on a wall goes as `finish` on link_part.',
     scope: 'homedocs:write',
     input: z.object({
       category: z.enum(CATEGORIES as [string, ...string[]]),

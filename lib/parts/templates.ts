@@ -6,8 +6,9 @@
  * form shows the right questions for a bulb vs. a can of paint. Adding a field
  * is a code change and no migration; template values feed search.
  *
- * Paint sheen is deliberately NOT here — it belongs to the *use* (eggshell walls,
- * semi-gloss trim of the same colour), on supply_uses.finish.
+ * Paint's `sheen` is what the can's label says was mixed. The sheen on a wall
+ * belongs to the *use* (eggshell walls, semi-gloss trim of the same colour), on
+ * supply_uses.finish.
  */
 
 export type Category = 'bulb' | 'paint' | 'filter' | 'battery' | 'landscaping' | 'other'
@@ -52,15 +53,28 @@ export const TEMPLATES: Record<Category, Template> = {
     label: 'Paint colour',
     unit: 'gal',
     finishes: ['Flat', 'Matte', 'Eggshell', 'Satin', 'Semi-gloss', 'Gloss'],
-    tip: 'The tint formula is on the can’s label.',
+    tip: 'Copy these from the sticker on the can’s lid or side, then add a photo of it.',
+    // In the order a store's tint label reads, top to bottom.
     fields: [
       { key: 'brand', label: 'Brand', placeholder: 'Sherwin-Williams' },
+      { key: 'store', label: 'Store', placeholder: '#702151, 205-822-8795', hint: 'Store number and phone.' },
+      { key: 'mixed_on', label: 'Date mixed', placeholder: '04/22/24' },
+      { key: 'order', label: 'Order number', placeholder: '0582820', hint: 'The store can look up the formula by this.' },
+      { key: 'interior_exterior', label: 'Interior or exterior', placeholder: 'Interior' },
+      { key: 'product_line', label: 'Product', placeholder: 'ProMar 200 Zero, Duration, Emerald' },
+      { key: 'sheen', label: 'Sheen on the label', placeholder: 'Flat', hint: 'Walls painted in another sheen of this colour say so where it’s used.' },
       { key: 'color_name', label: 'Colour name', placeholder: 'Repose Gray' },
-      { key: 'color_code', label: 'Colour code', placeholder: 'SW 7015' },
-      { key: 'product_line', label: 'Product line', placeholder: 'Duration, Emerald' },
-      { key: 'base', label: 'Base', placeholder: 'Extra White, Deep' },
-      { key: 'formula', label: 'Tint formula', placeholder: 'Colorant / oz / 48ths / 96ths from the label', multiline: true },
-      { key: 'store', label: 'Where it was mixed', placeholder: 'SW on Main St' },
+      { key: 'color_code', label: 'Colour code', placeholder: 'SW 7015, or “Custom match”' },
+      {
+        key: 'formula',
+        label: 'Tint formula',
+        placeholder: 'Copy the table, headings too:\nCOLORANT  OZ 32 64 128\nB1-Black   2  3  1  1',
+        hint: 'A custom match exists only as this formula, so copy every row.',
+        multiline: true,
+      },
+      { key: 'size', label: 'Container size', placeholder: 'Five gallon' },
+      { key: 'base', label: 'Base', placeholder: 'Extra White' },
+      { key: 'product_number', label: 'Product number', placeholder: 'B30W12651' },
     ],
   },
   filter: {
@@ -126,7 +140,7 @@ export function cleanFields(category: Category, raw: Record<string, unknown>): R
 export function summarize(category: Category, fields: Record<string, string>): string {
   const keys: Record<Category, string[]> = {
     bulb: ['base', 'shape', 'color_temp'],
-    paint: ['brand', 'color_code', 'product_line'],
+    paint: ['brand', 'color_code', 'product_line', 'sheen'],
     filter: ['size', 'rating'],
     battery: ['size', 'count'],
     landscaping: ['product', 'bag_size'],

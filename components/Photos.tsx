@@ -6,6 +6,9 @@ import { Icon } from './ui/icons'
  * A grid of a record's photos and files. `base` is where files are served from.
  * With `hero`, a leading photo spans the full width: for a fixture, the first
  * picture ("the shutoff is here, behind the furnace") is usually the answer.
+ *
+ * This is a server component, so `remove` must be a server action and is
+ * bound per photo: an inline arrow can't cross to the client DeleteButton.
  */
 export function Photos({
   items,
@@ -44,7 +47,7 @@ export function Photos({
             {a.caption ? <p className="px-2 py-1.5 text-xs text-ink-2">{a.caption}</p> : null}
             {remove ? (
               <div className="absolute right-1 top-1 rounded-full bg-card/90">
-                <DeleteButton compact recoverable={false} what="this photo" label="Remove" action={() => remove(a.id)} />
+                <DeleteButton compact recoverable={false} what="this photo" label="Remove" action={remove.bind(null, a.id)} />
               </div>
             ) : null}
           </li>
