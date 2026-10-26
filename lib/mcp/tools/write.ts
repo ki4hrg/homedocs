@@ -11,7 +11,9 @@ import { addUse, createPart } from '../../parts/parts'
 import { CATEGORIES, TEMPLATES } from '../../parts/templates'
 import { createContact } from '../../contacts/contacts'
 import { createSpace } from '../../places/places'
+import { addMaterial } from '../../projects/materials'
 import { addItem, createProject, setProjectStatus, STATUSES } from '../../projects/projects'
+import { getSeries, nextTitle } from '../../projects/series'
 import { createFixture } from '../../fixtures/fixtures'
 import { scopeOf } from './read'
 import { optionalRef, resolveRef } from './resolve'
@@ -124,6 +126,7 @@ export const writeTools = [
       category: z.enum(CATEGORIES as [string, ...string[]]),
       name: z.string().max(200).optional().describe('Made from the fields when left out'),
       fields: z.record(z.string(), z.string()).optional(),
+      units: z.array(z.string().min(1).max(30)).max(9).optional().describe('Units it is sold by, the usual one first: ["roll", "bale"]'),
       buy_url: z.string().max(2000).optional(),
       notes: z.string().max(20_000).optional(),
     }),
@@ -133,6 +136,8 @@ export const writeTools = [
         category: input.category,
         name: input.name ?? '',
         fields: input.fields,
+        unit: input.units?.[0],
+        extraUnits: input.units?.slice(1),
         buyUrl: input.buy_url,
         notes: input.notes,
       })
@@ -210,10 +215,14 @@ export const writeTools = [
   defineTool({
     name: 'create_project',
     title: 'Create a project',
-    description: 'Start tracking a job around the house.',
+    description:
+      'Start tracking a job around the house. Give `series` to start this year’s round of a recurring job: it copies ' +
+      'the series’ checklist and materials (and its places and contact unless given), and the title defaults to ' +
+      '"<series> <year>".',
     scope: 'homedocs:write',
     input: z.object({
-      title: z.string().min(1).max(200),
+      title: z.string().min(1).max(200).optional().describe('Required unless series is given'),
+      series: ref('series').optional(),
       summary: z.string().max(20_000).optional(),
       status: z.enum(STATUSES as [string, ...string[]]).optional(),
       priority: z.enum(['low', 'normal', 'high']).optional(),
@@ -223,14 +232,17 @@ export const writeTools = [
       const scope = await scopeOf(ctx)
       const spaceIds = []
       for (const p of input.places ?? []) spaceIds.push(await resolveRef(ctx.exec, scope, 'place', p))
+      const seriesId = await optionalRef(ctx.exec, scope, 'series', input.series)
+      const title = input.title ?? (seriesId ? await nextTitle(ctx.exec, scope, await getSeries(ctx.exec, scope, seriesId)) : '')
       const row = await createProject(ctx.exec, scope, ctx.actor, {
-        title: input.title,
+        title,
         summary: input.summary,
         status: input.status,
         priority: input.priority,
-        spaceIds,
+        spaceIds: input.places ? spaceIds : seriesId ? undefined : [],
+        seriesId,
       })
-      return { id: row.id, title: row.title, status: row.status }
+      return { id: row.id, title: row.title, status: row.status, series_id: row.seriesId ?? undefined }
     },
   }),
 
@@ -247,6 +259,44 @@ export const writeTools = [
         spaceId: await optionalRef(ctx.exec, scope, 'place', input.place),
       })
       return { id: item.id, text: item.text }
+    },
+  }),
+
+  defineTool({
+    name: 'add_project_material',
+    title: 'Add a material',
+    description:
+      'Add a line to what a job takes — "8 rolls of pine straw, around the stairs" — on a project or on a series ' +
+      '(the default every new round starts with). Link a part to fill in its name and limit the unit to the units ' +
+      'it is sold by. Changing a series from a project is done in the app, where a person confirms it.',
+    scope: 'homedocs:write',
+    input: z.object({
+      project: ref('project').optional(),
+      series: ref('series').optional(),
+      name: z.string().max(200).optional().describe('Required unless part is given'),
+      part: ref('part').optional(),
+      quantity: z.number().nonnegative().optional(),
+      unit: z.string().max(30).optional(),
+      place: ref('place').optional(),
+      notes: z.string().max(2000).optional().describe('Where or what for: "around the stairs"'),
+      only_this_project: z.boolean().optional().describe('Projects only: never offered back to the series'),
+    }),
+    handler: async (input, ctx) => {
+      const scope = await scopeOf(ctx)
+      if (Boolean(input.project) === Boolean(input.series)) throw new ToolRefusal('Give exactly one of project or series.')
+      const owner = input.project
+        ? { projectId: await resolveRef(ctx.exec, scope, 'project', input.project) }
+        : { seriesId: await resolveRef(ctx.exec, scope, 'series', input.series!) }
+      const row = await addMaterial(ctx.exec, scope, ctx.actor, owner, {
+        name: input.name,
+        supplyId: await optionalRef(ctx.exec, scope, 'part', input.part),
+        quantity: input.quantity?.toString(),
+        unit: input.unit,
+        spaceId: await optionalRef(ctx.exec, scope, 'place', input.place),
+        notes: input.notes,
+        oneOff: input.only_this_project,
+      })
+      return { id: row.id, name: row.name, quantity: row.quantity === null ? undefined : Number(row.quantity), unit: row.unit || undefined }
     },
   }),
 

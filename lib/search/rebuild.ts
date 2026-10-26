@@ -17,6 +17,9 @@
  *   part use added / removed       the part, and the fixture or place it is used by
  *   contact renamed / trades        it, its notes
  *   project renamed                it, its notes
+ *   material added / changed /     its project or series (their documents carry
+ *     removed                        material names, so "pine straw" finds them)
+ *   series renamed / how-to        it
  *   system renamed / deleted /     it, and every fixture in it
  *     restored
  *   fixture's system changed       the fixture (its own rebuild)
@@ -26,7 +29,19 @@
 
 import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm'
 import type { Executor } from '../core/types'
-import { contacts, contactTrades, fixtures, logs, projects, spaces, supplies, supplyUses, systems } from '../db/schema'
+import {
+  contacts,
+  contactTrades,
+  fixtures,
+  logs,
+  materials,
+  projects,
+  projectSeries,
+  spaces,
+  supplies,
+  supplyUses,
+  systems,
+} from '../db/schema'
 import { TEMPLATES, isCategory } from '../parts/templates'
 
 type Doc = { a?: string[]; b?: string[]; c?: string[] }
@@ -185,13 +200,38 @@ export async function rebuildContact(exec: Executor, id: string) {
     .where(eq(contacts.id, id))
 }
 
+/* Material names are stored on the line (not read from the part), so a part rename needs no cascade here. */
+async function materialNames(exec: Executor, owner: { projectId: string } | { seriesId: string }) {
+  const rows = await exec
+    .select({ name: materials.name })
+    .from(materials)
+    .where(
+      and(
+        'projectId' in owner ? eq(materials.projectId, owner.projectId) : eq(materials.seriesId, owner.seriesId),
+        isNull(materials.deletedAt),
+      ),
+    )
+  return rows.map((r) => r.name)
+}
+
 export async function rebuildProject(exec: Executor, id: string) {
   const [row] = await exec.select().from(projects).where(eq(projects.id, id))
   if (!row) return
+  const names = await materialNames(exec, { projectId: id })
   await exec
     .update(projects)
-    .set({ searchDoc: vector({ a: [row.title], b: [row.status.replace('_', ' ')], c: [row.summary] }) } as never)
+    .set({ searchDoc: vector({ a: [row.title], b: [row.status.replace('_', ' '), ...names], c: [row.summary] }) } as never)
     .where(eq(projects.id, id))
+}
+
+export async function rebuildSeries(exec: Executor, id: string) {
+  const [row] = await exec.select().from(projectSeries).where(eq(projectSeries.id, id))
+  if (!row) return
+  const names = await materialNames(exec, { seriesId: id })
+  await exec
+    .update(projectSeries)
+    .set({ searchDoc: vector({ a: [row.title], b: names, c: [row.howTo] }) } as never)
+    .where(eq(projectSeries.id, id))
 }
 
 export async function rebuildSystem(exec: Executor, id: string) {
@@ -286,5 +326,6 @@ export async function rebuildAll(exec: Executor) {
   for (const r of await exec.select({ id: supplies.id }).from(supplies)) await rebuildSupply(exec, r.id)
   for (const r of await exec.select({ id: contacts.id }).from(contacts)) await rebuildContact(exec, r.id)
   for (const r of await exec.select({ id: projects.id }).from(projects)) await rebuildProject(exec, r.id)
+  for (const r of await exec.select({ id: projectSeries.id }).from(projectSeries)) await rebuildSeries(exec, r.id)
   for (const r of await exec.select({ id: logs.id }).from(logs)) await rebuildLog(exec, r.id)
 }

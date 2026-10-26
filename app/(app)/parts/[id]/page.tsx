@@ -15,7 +15,7 @@ import { db } from '@/lib/db'
 import { listAttachments } from '@/lib/files/attachments'
 import { lessons, listNotes } from '@/lib/notes/notes'
 import { parseFormula } from '@/lib/parts/formula'
-import { getPart, listUses } from '@/lib/parts/parts'
+import { getPart, listUses, partUnits } from '@/lib/parts/parts'
 import { TEMPLATES } from '@/lib/parts/templates'
 import { editedBy } from '@/lib/web/attribution'
 import { viewer } from '@/lib/web/context'
@@ -47,12 +47,15 @@ export default async function PartPage({ params }: { params: Promise<{ id: strin
       />
 
       <Facts
-        items={template.fields
-          .filter((f) => !(formula && f.key === 'formula'))
-          .map((f) => ({
-            label: f.label,
-            value: f.multiline && part.fields[f.key] ? <span className="whitespace-pre-line">{part.fields[f.key]}</span> : (part.fields[f.key] ?? ''),
-          }))}
+        items={[
+          ...template.fields
+            .filter((f) => !(formula && f.key === 'formula'))
+            .map((f) => ({
+              label: f.label,
+              value: f.multiline && part.fields[f.key] ? <span className="whitespace-pre-line">{part.fields[f.key]}</span> : (part.fields[f.key] ?? ''),
+            })),
+          { label: 'Sold by', value: partUnits(part).length > 1 ? partUnits(part).join(', ') : '' },
+        ]}
       />
 
       {formula ? (

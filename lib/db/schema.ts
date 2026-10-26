@@ -289,6 +289,8 @@ export const supplies = pgTable(
     fields: jsonb('fields').$type<Record<string, string>>().notNull().default({}),
     /** The default unit a use or a note counts in: bag, gal, bulb. */
     unit: text('unit').notNull().default(''),
+    /** Other units it is sold by: pine straw comes by the roll *and* the bale. */
+    extraUnits: text('extra_units').array().notNull().default(sql`'{}'::text[]`),
     buyUrl: text('buy_url').notNull().default(''),
     notes: text('notes').notNull().default(''),
     searchDoc: tsvector('search_doc'),
@@ -388,11 +390,16 @@ export const projects = pgTable(
     priority: projectPriority('priority').notNull().default('normal'),
     targetDate: date('target_date'),
     summary: text('summary').notNull().default(''),
+    /** The recurring job this is one round of: "Back yard pine straw". */
+    seriesId: uuid('series_id').references((): AnyPgColumn => projectSeries.id),
+    /** Who is doing it. Starts as the series' usual contact. */
+    contactId: uuid('contact_id').references(() => contacts.id),
     searchDoc: tsvector('search_doc'),
     ...authored,
   },
   (t) => [
     index('projects_property').on(t.propertyId, t.status),
+    index('projects_series').on(t.seriesId),
     index('projects_search').using('gin', t.searchDoc),
   ],
 )
@@ -441,10 +448,103 @@ export const projectItems = pgTable(
     spaceId: uuid('space_id').references(() => spaces.id),
     /** Which quote covers this item, if any. */
     quoteId: uuid('quote_id').references(() => quotes.id),
+    /** The series item this was copied from; what "differs from the series" compares against. */
+    seriesItemId: uuid('series_item_id').references((): AnyPgColumn => projectSeriesItems.id),
+    /** "Only this project": never offered back to the series. */
+    oneOff: boolean('one_off').notNull().default(false),
     sort: integer('sort').notNull().default(0),
     ...authored,
   },
   (t) => [index('project_items_project').on(t.projectId)],
+)
+
+/**
+ * "Series": a job done again and again — mulching the front bed every spring.
+ * It holds the defaults each new round starts from (places, checklist,
+ * materials, who usually does it) and the one "how we do it" text every round
+ * shows. A round can send its changes back, one row at a time, after asking.
+ */
+export const projectSeries = pgTable(
+  'project_series',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    propertyId: propertyId(),
+    title: text('title').notNull(),
+    /** Shown on every project in the series, never copied, so it cannot drift. */
+    howTo: text('how_to').notNull().default(''),
+    contactId: uuid('contact_id').references(() => contacts.id),
+    searchDoc: tsvector('search_doc'),
+    ...authored,
+  },
+  (t) => [
+    index('project_series_property').on(t.propertyId),
+    index('project_series_search').using('gin', t.searchDoc),
+  ],
+)
+
+export const projectSeriesSpaces = pgTable(
+  'project_series_spaces',
+  {
+    seriesId: uuid('series_id')
+      .notNull()
+      .references(() => projectSeries.id, { onDelete: 'cascade' }),
+    spaceId: uuid('space_id')
+      .notNull()
+      .references(() => spaces.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.seriesId, t.spaceId] })],
+)
+
+/** The checklist a new project in the series starts with. */
+export const projectSeriesItems = pgTable(
+  'project_series_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    propertyId: propertyId(),
+    seriesId: uuid('series_id')
+      .notNull()
+      .references(() => projectSeries.id),
+    text: text('text').notNull(),
+    spaceId: uuid('space_id').references(() => spaces.id),
+    sort: integer('sort').notNull().default(0),
+    ...authored,
+  },
+  (t) => [index('project_series_items_series').on(t.seriesId)],
+)
+
+/**
+ * "Material": one line of what a job takes — 8 rolls of pine straw around the
+ * stairs. On a series it is the default; on a project, what this round took.
+ */
+export const materials = pgTable(
+  'materials',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    propertyId: propertyId(),
+    seriesId: uuid('series_id').references(() => projectSeries.id),
+    projectId: uuid('project_id').references(() => projects.id),
+    name: text('name').notNull(),
+    /** Optional: the part it is. Its name and units fill in the line. */
+    supplyId: uuid('supply_id').references(() => supplies.id),
+    quantity: numeric('quantity', { precision: 12, scale: 2 }),
+    unit: text('unit').notNull().default(''),
+    spaceId: uuid('space_id').references(() => spaces.id),
+    /** "around the stairs", "1 roll covers about 50 sq ft". */
+    notes: text('notes').notNull().default(''),
+    /** On a project: the series line it was copied from. */
+    seriesMaterialId: uuid('series_material_id').references((): AnyPgColumn => materials.id),
+    /** On a project: "only this project", never offered back to the series. */
+    oneOff: boolean('one_off').notNull().default(false),
+    sort: integer('sort').notNull().default(0),
+    ...authored,
+  },
+  (t) => [
+    check('materials_one_owner', sql`num_nonnulls(${t.seriesId}, ${t.projectId}) = 1`),
+    check('materials_series_rows_plain', sql`${t.seriesId} is null or (not ${t.oneOff} and ${t.seriesMaterialId} is null)`),
+    index('materials_series').on(t.seriesId),
+    index('materials_project').on(t.projectId),
+    index('materials_supply').on(t.supplyId),
+  ],
 )
 
 // ─── notes (logs) ────────────────────────────────────────────────────────────

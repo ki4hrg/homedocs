@@ -43,6 +43,13 @@
       "when": 1792183246402,
       "tag": "0005_paperless_required_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792977488219,
+      "tag": "0006_project_series",
+      "breakpoints": true
     }
   ]
 }

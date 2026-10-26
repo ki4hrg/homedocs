@@ -6,6 +6,9 @@
  * the quotes received for it. Accepting a quote moves the project to
  * `scheduled` and declines the others — the one piece of workflow worth
  * automating.
+ *
+ * A project can be one round of a series (lib/projects/series.ts), which it
+ * starts from and can send changes back to.
  */
 
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
@@ -20,8 +23,10 @@ import {
   type Executor,
   type PropertyScope,
 } from '../core/types'
-import { contacts, projectItems, projects, projectSpaces, quotes, spaces } from '../db/schema'
+import { contacts, projectItems, projects, projectSeries, projectSpaces, quotes, spaces } from '../db/schema'
 import { cascadeProject, rebuildProject } from '../search/rebuild'
+import { listMaterials, seriesDiff } from './materials'
+import { lastTimeLessons, startFromSeries } from './series'
 
 export type Project = typeof projects.$inferSelect
 export type ProjectStatus = Project['status']
@@ -61,6 +66,15 @@ export type ProjectInput = {
   targetDate?: string
   summary?: string
   spaceIds?: string[]
+  /** Start from this series: its checklist, materials, and (unless given) places and contact. */
+  seriesId?: string | null
+  contactId?: string | null
+}
+
+async function assertContact(exec: Executor, scope: PropertyScope, contactId: string | null | undefined) {
+  if (!contactId) return
+  const [c] = await exec.select({ id: contacts.id }).from(contacts).where(liveIn(contacts, scope.propertyId, contactId))
+  if (!c) throw new ValidationError('That contact no longer exists.')
 }
 
 async function setSpaces(tx: Executor, scope: PropertyScope, projectId: string, spaceIds: string[]) {
@@ -106,7 +120,7 @@ export async function listProjects(
 export async function getProject(exec: Executor, scope: PropertyScope, id: string) {
   const [row] = await exec.select().from(projects).where(liveIn(projects, scope.propertyId, id))
   if (!row) throw new NotFoundError('project')
-  const [places, items, quoteRows] = await Promise.all([
+  const [places, items, quoteRows, lines, series, contact, diff, lessons] = await Promise.all([
     exec
       .select({ id: spaces.id, name: spaces.name })
       .from(projectSpaces)
@@ -125,13 +139,36 @@ export async function getProject(exec: Executor, scope: PropertyScope, id: strin
       .leftJoin(contacts, eq(contacts.id, quotes.contactId))
       .where(and(eq(quotes.projectId, id), isNull(quotes.deletedAt)))
       .orderBy(asc(quotes.createdAt)),
+    listMaterials(exec, { projectId: id }),
+    row.seriesId
+      ? exec
+          .select({ id: projectSeries.id, title: projectSeries.title, howTo: projectSeries.howTo, updatedAt: projectSeries.updatedAt })
+          .from(projectSeries)
+          .where(liveIn(projectSeries, scope.propertyId, row.seriesId))
+      : Promise.resolve([]),
+    row.contactId
+      ? exec.select({ id: contacts.id, name: contacts.name, company: contacts.company }).from(contacts).where(liveIn(contacts, scope.propertyId, row.contactId))
+      : Promise.resolve([]),
+    seriesDiff(exec, scope, id),
+    lastTimeLessons(exec, scope, row),
   ])
-  return { ...row, places, items, quotes: quoteRows }
+  return {
+    ...row,
+    places,
+    items,
+    quotes: quoteRows,
+    materials: lines,
+    series: series[0] ?? null,
+    contact: contact[0] ?? null,
+    diff,
+    lessons,
+  }
 }
 
 export async function createProject(exec: Executor, scope: PropertyScope, actor: ActorContext, input: ProjectInput) {
   assertCanEdit(actor)
   return inTransaction(exec, async (tx) => {
+    await assertContact(tx, scope, input.contactId)
     const [row] = await tx
       .insert(projects)
       .values({
@@ -141,14 +178,24 @@ export async function createProject(exec: Executor, scope: PropertyScope, actor:
         priority: priority(input.priority) ?? 'normal',
         targetDate: parseDate(input.targetDate, 'Target date'),
         summary: cleanText(input.summary),
+        contactId: input.contactId || null,
         createdBy: actor.userId,
         updatedBy: actor.userId,
       })
       .returning()
-    await setSpaces(tx, scope, row!.id, input.spaceIds ?? [])
+    if (input.spaceIds !== undefined || !input.seriesId) await setSpaces(tx, scope, row!.id, input.spaceIds ?? [])
+    if (input.seriesId) {
+      await startFromSeries(tx, scope, actor, input.seriesId, row!.id, { spaceIds: input.spaceIds, contactId: input.contactId })
+    }
     await rebuildProject(tx, row!.id)
-    await recordAudit(tx, actor, { action: 'create', entityType: 'project', entityId: row!.id, after: { title: row!.title } })
-    return row!
+    await recordAudit(tx, actor, {
+      action: 'create',
+      entityType: 'project',
+      entityId: row!.id,
+      after: { title: row!.title, ...(input.seriesId ? { seriesId: input.seriesId } : {}) },
+    })
+    const [created] = await tx.select().from(projects).where(eq(projects.id, row!.id))
+    return created!
   })
 }
 
@@ -164,12 +211,14 @@ export async function updateProject(
   return inTransaction(exec, async (tx) => {
     const [current] = await tx.select().from(projects).where(liveIn(projects, scope.propertyId, id)).for('update')
     assertFresh('project', current, expectedUpdatedAt)
+    await assertContact(tx, scope, input.contactId)
     const patch: Partial<Project> = {}
     if (input.title !== undefined) patch.title = requireText(input.title, 'Give the project a name.')
     if (input.status !== undefined) patch.status = status(input.status)!
     if (input.priority !== undefined) patch.priority = priority(input.priority)!
     if (input.targetDate !== undefined) patch.targetDate = parseDate(input.targetDate, 'Target date')
     if (input.summary !== undefined) patch.summary = cleanText(input.summary)
+    if (input.contactId !== undefined) patch.contactId = input.contactId || null
     const changes = diff(current!, patch)
     if (input.spaceIds !== undefined) {
       await setSpaces(tx, scope, id, input.spaceIds)
@@ -202,7 +251,7 @@ export async function addItem(
   scope: PropertyScope,
   actor: ActorContext,
   projectId: string,
-  input: { text: string; spaceId?: string | null; quoteId?: string | null },
+  input: { text: string; spaceId?: string | null; quoteId?: string | null; oneOff?: boolean },
 ) {
   assertCanEdit(actor)
   return inTransaction(exec, async (tx) => {
@@ -215,6 +264,7 @@ export async function addItem(
         text: requireText(input.text, 'Say what needs doing.', 500),
         spaceId: input.spaceId || null,
         quoteId: input.quoteId || null,
+        oneOff: input.oneOff ?? false,
         sort: Date.now() % 2_000_000_000,
         createdBy: actor.userId,
         updatedBy: actor.userId,
@@ -231,7 +281,7 @@ export async function updateItem(
   scope: PropertyScope,
   actor: ActorContext,
   id: string,
-  input: { text?: string; done?: boolean; spaceId?: string | null; quoteId?: string | null },
+  input: { text?: string; done?: boolean; spaceId?: string | null; quoteId?: string | null; oneOff?: boolean },
 ) {
   assertCanEdit(actor)
   return inTransaction(exec, async (tx) => {
@@ -242,6 +292,7 @@ export async function updateItem(
     if (input.done !== undefined) patch.done = input.done
     if (input.spaceId !== undefined) patch.spaceId = input.spaceId || null
     if (input.quoteId !== undefined) patch.quoteId = input.quoteId || null
+    if (input.oneOff !== undefined) patch.oneOff = input.oneOff
     const changes = diff(current, patch)
     if (Object.keys(changes.after).length === 0) return current
     const [row] = await tx

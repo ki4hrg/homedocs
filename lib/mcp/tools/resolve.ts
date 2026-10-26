@@ -11,7 +11,7 @@
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import type { PgColumn, PgTable } from 'drizzle-orm/pg-core'
 import type { Executor, PropertyScope } from '../../core/types'
-import { contacts, fixtures, projects, spaces, supplies, systems } from '../../db/schema'
+import { contacts, fixtures, projects, projectSeries, spaces, supplies, systems } from '../../db/schema'
 import { ToolRefusal } from './types'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -25,6 +25,7 @@ const KINDS = {
   part: { table: supplies, name: supplies.name, label: 'part', list: 'search' },
   contact: { table: contacts, name: contacts.name, label: 'contact', list: 'search' },
   project: { table: projects, name: projects.title, label: 'project', list: 'list_projects' },
+  series: { table: projectSeries, name: projectSeries.title, label: 'series', list: 'list_series' },
 } as const
 
 export type RefKind = keyof typeof KINDS

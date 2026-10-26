@@ -8,8 +8,17 @@ import { and, desc, eq, gt, isNotNull, sql } from 'drizzle-orm'
 import { inTransaction } from '../core/internal'
 import { restoreRow } from '../core/records'
 import { ValidationError, type ActorContext, type Executor, type PropertyScope } from '../core/types'
-import { contacts, fixtures, logs, projects, spaces, supplies, systems, users } from '../db/schema'
-import { cascadeContact, cascadeFixture, cascadeProject, cascadeSpace, cascadeSupply, cascadeSystem, rebuildLog } from '../search/rebuild'
+import { contacts, fixtures, logs, projects, projectSeries, spaces, supplies, systems, users } from '../db/schema'
+import {
+  cascadeContact,
+  cascadeFixture,
+  cascadeProject,
+  cascadeSpace,
+  cascadeSupply,
+  cascadeSystem,
+  rebuildLog,
+  rebuildSeries,
+} from '../search/rebuild'
 
 const TABLES = {
   place: { table: spaces, entity: 'space', title: spaces.name, cascade: cascadeSpace },
@@ -19,6 +28,7 @@ const TABLES = {
   note: { table: logs, entity: 'log', title: logs.title, cascade: rebuildLog },
   contact: { table: contacts, entity: 'contact', title: contacts.name, cascade: cascadeContact },
   project: { table: projects, entity: 'project', title: projects.title, cascade: cascadeProject },
+  series: { table: projectSeries, entity: 'project_series', title: projectSeries.title, cascade: rebuildSeries },
 } as const
 
 export type TrashKind = keyof typeof TABLES

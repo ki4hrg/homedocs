@@ -32,8 +32,29 @@ export type PartInput = {
   name: string
   fields?: Record<string, unknown>
   unit?: string
+  /** Other units it is sold by, besides `unit`. */
+  extraUnits?: string[]
   buyUrl?: string
   notes?: string
+}
+
+/** Every unit a part is sold by, the default first: ["roll", "bale"]. */
+export function partUnits(part: Pick<Supply, 'unit' | 'extraUnits'>): string[] {
+  return [part.unit, ...part.extraUnits].filter(Boolean)
+}
+
+/* The extra units, tidied: no blanks, no repeats, nothing that repeats the default unit. */
+function extraUnits(raw: string[] | undefined, unit: string): string[] {
+  const seen = new Set([unit.toLowerCase()])
+  const out: string[] = []
+  for (const u of raw ?? []) {
+    const text = cleanText(u, 30)
+    if (text === '' || seen.has(text.toLowerCase())) continue
+    seen.add(text.toLowerCase())
+    out.push(text)
+  }
+  if (out.length > 8) throw new ValidationError('That’s a lot of units — keep it to eight.')
+  return out
 }
 
 function category(raw: string): Category {
@@ -88,6 +109,7 @@ export async function createPart(exec: Executor, scope: PropertyScope, actor: Ac
   const cat = category(input.category)
   const fields = cleanFields(cat, input.fields ?? {})
   const name = (input.name ?? '').trim() || suggestName(cat, fields)
+  const unit = cleanText(input.unit, 30) || TEMPLATES[cat].unit
   return inTransaction(exec, async (tx) => {
     const [row] = await tx
       .insert(supplies)
@@ -96,7 +118,8 @@ export async function createPart(exec: Executor, scope: PropertyScope, actor: Ac
         category: cat,
         name: requireText(name, 'Give the part a name, or fill in a few details.'),
         fields,
-        unit: cleanText(input.unit, 30) || TEMPLATES[cat].unit,
+        unit,
+        extraUnits: extraUnits(input.extraUnits, unit),
         buyUrl: cleanUrl(input.buyUrl),
         notes: cleanText(input.notes),
         createdBy: actor.userId,
@@ -129,6 +152,9 @@ export async function updatePart(
       patch.name = requireText(input.name.trim() || suggestName(cat, patch.fields ?? current!.fields), 'Give the part a name.')
     }
     if (input.unit !== undefined) patch.unit = cleanText(input.unit, 30)
+    if (input.extraUnits !== undefined || input.unit !== undefined) {
+      patch.extraUnits = extraUnits(input.extraUnits ?? current!.extraUnits, patch.unit ?? current!.unit)
+    }
     if (input.buyUrl !== undefined) patch.buyUrl = cleanUrl(input.buyUrl)
     if (input.notes !== undefined) patch.notes = cleanText(input.notes)
     const changes = diff(current!, patch)

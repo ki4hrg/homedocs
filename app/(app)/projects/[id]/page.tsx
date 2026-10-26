@@ -14,37 +14,79 @@ import { listAttachments } from '@/lib/files/attachments'
 import { listNotes } from '@/lib/notes/notes'
 import { listContacts } from '@/lib/contacts/contacts'
 import { buildTree, flattenTree, listSpaces } from '@/lib/places/places'
+import { listParts, partUnits } from '@/lib/parts/parts'
 import { getProject, PRIORITY_LABEL, STATUS_LABEL } from '@/lib/projects/projects'
+import { getSeries } from '@/lib/projects/series'
 import { editedBy } from '@/lib/web/attribution'
 import { viewer } from '@/lib/web/context'
 import { formatDay, formatMoney } from '@/lib/web/format'
 import { removeAttachmentAction } from '@/lib/web/shared-actions'
 import {
   addItemAction,
+  addMaterialAction,
   addQuoteAction,
+  copySeriesLineAction,
+  makeSeriesAction,
+  sendLineToSeriesAction,
   removeItemAction,
+  removeMaterialAction,
   removeQuoteAction,
+  setItemOneOffAction,
+  setMaterialOneOffAction,
   setQuoteStatusAction,
   setStatusAction,
   toggleItemAction,
+  updateMaterialAction,
+  updateSeriesAction,
 } from '../actions'
+import { Materials, SeriesBanner } from '../materials'
+import { allChanges, itemChange, materialViews, missingMaterials, type ItemView, type MissingView } from '../series-view'
+import { HowTo, LastTime, MakeSeriesButton } from './series-parts'
 import { Checklist, QuoteButtons, QuoteForm, StatusStepper } from './parts'
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const { scope, user } = await viewer()
   const project = await getProject(db, scope, id)
-  const [notes, photos, contacts, spaces, edited] = await Promise.all([
+  const [notes, photos, contacts, spaces, parts, series, edited] = await Promise.all([
     listNotes(db, scope, { projectId: id, limit: 20 }),
     listAttachments(db, scope, { kind: 'project', id }),
     listContacts(db, scope),
     listSpaces(db, scope),
+    listParts(db, scope),
+    project.diff ? getSeries(db, scope, project.diff.seriesId) : null,
     editedBy(project),
   ])
   const canEdit = roleAtLeast(user.role, 'member')
   const quoteLabel = new Map(
     project.quotes.map(({ quote, contactName }) => [quote.id, contactName ?? (quote.amount ? formatMoney(quote.amount) : 'a quote')]),
   )
+  const places = flattenTree(buildTree(spaces))
+
+  // How this round compares with its series (open projects only).
+  const diff = project.diff
+  const seenAt = diff?.seriesUpdatedAt.toISOString() ?? ''
+  const materials = materialViews(project.materials, diff?.materials, series?.materials)
+  const missing = missingMaterials(diff?.materials, series?.materials ?? [])
+  const seriesItems = new Map((series?.items ?? []).map(({ item }) => [item.id, item]))
+  const items: ItemView[] = project.items.map(({ item, spaceName }) => {
+    const r = diff?.checklist.rows[item.id]
+    return {
+      id: item.id,
+      text: item.text,
+      done: item.done,
+      spaceName,
+      quoteLabel: item.quoteId ? (quoteLabel.get(item.quoteId) ?? null) : null,
+      oneOff: item.oneOff,
+      status: r?.status,
+      change: itemChange(item.text, r?.status, r?.seriesRowId ? seriesItems.get(r.seriesRowId)?.text : undefined),
+    }
+  })
+  const missingItems: MissingView[] = (diff?.checklist.missing ?? []).flatMap((sid) => {
+    const item = seriesItems.get(sid)
+    return item ? [{ id: sid, label: item.text, change: `Remove the to-do “${item.text}” from the series` }] : []
+  })
+  const changes = allChanges(materials, missing, items, missingItems)
 
   return (
     <>
@@ -67,10 +109,47 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         <Pill tone="neutral">Dropped</Pill>
       )}
 
+      {project.series ? (
+        <p className="mt-3 px-1 text-sm text-ink-3">
+          Part of{' '}
+          <Link href={`/projects/series/${project.series.id}`} className="font-medium text-accent">
+            {project.series.title}
+          </Link>
+        </p>
+      ) : null}
+
+      <LastTime
+        lessons={project.lessons}
+        seenAt={project.series?.updatedAt.toISOString() ?? ''}
+        canEdit={canEdit}
+        howTo={project.series?.howTo ?? ''}
+      />
+
+      {project.series ? <HowTo seriesId={project.series.id} text={project.series.howTo} canEdit={canEdit} /> : null}
+
       {project.summary ? (
         <Card className="mt-4 px-4 py-3">
           <p className="whitespace-pre-wrap text-[15px] text-ink-2">{project.summary}</p>
         </Card>
+      ) : null}
+
+      {project.contact ? (
+        <p className="mt-3 px-1 text-sm text-ink-2">
+          Doing it:{' '}
+          <Link href={`/contacts/${project.contact.id}`} className="font-medium text-accent">
+            {project.contact.name}
+            {project.contact.company ? ` (${project.contact.company})` : ''}
+          </Link>
+        </p>
+      ) : null}
+
+      {project.series ? (
+        <SeriesBanner
+          seriesTitle={project.series.title}
+          changes={changes}
+          canEdit={canEdit}
+          sendAll={updateSeriesAction.bind(null, id, 'all', seenAt)}
+        />
       ) : null}
 
       {project.places.length ? (
@@ -86,19 +165,45 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
       <Section title="To do">
         <Checklist
-          items={project.items.map(({ item, spaceName }) => ({
-            id: item.id,
-            text: item.text,
-            done: item.done,
-            spaceName,
-            quoteLabel: item.quoteId ? (quoteLabel.get(item.quoteId) ?? null) : null,
-          }))}
+          items={items}
+          missing={missingItems}
           toggle={toggleItemAction}
           remove={removeItemAction}
           add={addItemAction.bind(null, id)}
-          places={flattenTree(buildTree(spaces))}
+          places={places}
           quotes={[...quoteLabel].map(([qid, label]) => ({ id: qid, label }))}
           canEdit={canEdit}
+          inSeries={Boolean(project.series)}
+          setOneOff={setItemOneOffAction}
+          {...(diff
+            ? {
+                sendToSeries: sendLineToSeriesAction.bind(null, id, 'item', seenAt),
+                copyHere: copySeriesLineAction.bind(null, id, 'item'),
+                dropFromSeries: sendLineToSeriesAction.bind(null, id, 'item', seenAt),
+              }
+            : {})}
+        />
+      </Section>
+
+      <Section title="Materials">
+        <Materials
+          rows={materials}
+          missing={missing}
+          parts={parts.map(({ part }) => ({ id: part.id, name: part.name, units: partUnits(part) }))}
+          places={places}
+          canEdit={canEdit}
+          onProject={Boolean(project.series)}
+          add={addMaterialAction.bind(null, 'project', id)}
+          update={updateMaterialAction}
+          remove={removeMaterialAction}
+          setOneOff={setMaterialOneOffAction}
+          {...(diff
+            ? {
+                sendToSeries: sendLineToSeriesAction.bind(null, id, 'material', seenAt),
+                copyHere: copySeriesLineAction.bind(null, id, 'material'),
+                dropFromSeries: sendLineToSeriesAction.bind(null, id, 'material', seenAt),
+              }
+            : {})}
         />
       </Section>
 
@@ -164,6 +269,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       </Section>
 
       <LinksSection owner={{ kind: 'project', id }} canEdit={canEdit} />
+
+      {canEdit && !project.series ? <MakeSeriesButton title={project.title} make={makeSeriesAction.bind(null, id)} /> : null}
 
       <p className="mt-8 px-1 text-xs text-ink-3">{edited}</p>
     </>

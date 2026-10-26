@@ -4,8 +4,12 @@ import { useState, useTransition } from 'react'
 import { ActionForm, type FormAction } from '@/components/ActionForm'
 import { DeleteButton } from '@/components/DeleteButton'
 import { buttonClass } from '@/components/ui/Button'
-import { Field, Select, SubmitButton, TextArea, TextInput } from '@/components/ui/Field'
+import { Pill } from '@/components/ui/Card'
+import { Checkbox, Field, Select, SubmitButton, TextArea, TextInput } from '@/components/ui/Field'
 import { Icon } from '@/components/ui/icons'
+import type { ActionResult } from '@/lib/web/action'
+import { confirmSeries } from '../materials'
+import type { ItemView, MissingView } from '../series-view'
 
 const FLOW = [
   ['idea', 'Idea'],
@@ -56,46 +60,114 @@ export function StatusStepper({
 
 export function Checklist({
   items,
+  missing = [],
   toggle,
   remove,
   add,
   places,
   quotes,
   canEdit,
+  inSeries = false,
+  setOneOff,
+  sendToSeries,
+  copyHere,
+  dropFromSeries,
 }: {
-  items: { id: string; text: string; done: boolean; spaceName: string | null; quoteLabel: string | null }[]
-  toggle: (id: string, done: boolean) => Promise<unknown>
+  items: ItemView[]
+  /** Series to-dos this project doesn't have. */
+  missing?: MissingView[]
+  /** Absent on a series' default checklist, which has nothing to tick. */
+  toggle?: (id: string, done: boolean) => Promise<unknown>
   remove: (id: string) => Promise<unknown>
   add: FormAction
   places: { id: string; label: string }[]
   quotes: { id: string; label: string }[]
   canEdit: boolean
+  /** A project in a series: offer "Only this project" when adding. */
+  inSeries?: boolean
+  setOneOff?: (id: string, oneOff: boolean) => Promise<ActionResult>
+  sendToSeries?: (id: string) => Promise<ActionResult>
+  copyHere?: (seriesRowId: string) => Promise<ActionResult>
+  dropFromSeries?: (seriesRowId: string) => Promise<ActionResult>
 }) {
-  const [, start] = useTransition()
+  const [pending, start] = useTransition()
   const [details, setDetails] = useState(false)
+  const run = (fn: () => Promise<ActionResult>) =>
+    start(async () => {
+      const result = await fn()
+      if (result?.error) alert(result.error)
+    })
+  const link = 'inline-flex min-h-11 items-center text-sm font-medium text-accent'
   return (
     <div className="flex flex-col gap-3">
-      {items.length ? (
+      {items.length || missing.length ? (
         <ul className="divide-y divide-line rounded-card border border-line bg-card">
-          {items.map((item) => (
-            <li key={item.id} className="flex min-h-14 items-center gap-3 px-4 py-2">
-              <input
-                type="checkbox"
-                checked={item.done}
-                disabled={!canEdit}
-                aria-label={item.text}
-                onChange={(e) => start(async () => void (await toggle(item.id, e.target.checked)))}
-                className="h-6 w-6 shrink-0 accent-[var(--color-accent)]"
-              />
-              <span className="min-w-0 flex-1">
-                <span className={`block text-[15px] ${item.done ? 'text-ink-3 line-through' : 'text-ink'}`}>{item.text}</span>
-                {item.spaceName || item.quoteLabel ? (
-                  <span className="block text-xs text-ink-3">
-                    {[item.spaceName, item.quoteLabel ? `in ${item.quoteLabel}’s quote` : ''].filter(Boolean).join(' · ')}
+          {items.map((item) => {
+            const differs = item.status === 'changed' || item.status === 'added'
+            return (
+              <li key={item.id} className={`flex flex-col px-4 py-2 ${differs ? 'border-l-4 border-l-warn bg-warn-soft' : ''}`}>
+                <div className="flex min-h-12 items-center gap-3">
+                  {toggle ? (
+                    <input
+                      type="checkbox"
+                      checked={item.done}
+                      disabled={!canEdit}
+                      aria-label={item.text}
+                      onChange={(e) => start(async () => void (await toggle(item.id, e.target.checked)))}
+                      className="h-6 w-6 shrink-0 accent-[var(--color-accent)]"
+                    />
+                  ) : null}
+                  <span className="min-w-0 flex-1">
+                    <span className={`block text-[15px] ${item.done ? 'text-ink-3 line-through' : 'text-ink'}`}>{item.text}</span>
+                    {item.spaceName || item.quoteLabel ? (
+                      <span className="block text-xs text-ink-3">
+                        {[item.spaceName, item.quoteLabel ? `in ${item.quoteLabel}’s quote` : ''].filter(Boolean).join(' · ')}
+                      </span>
+                    ) : null}
                   </span>
+                  {item.status === 'changed' ? <Pill tone="warn">Changed</Pill> : null}
+                  {item.status === 'added' ? <Pill tone="warn">Not in series</Pill> : null}
+                  {item.oneOff ? <Pill>This project only</Pill> : null}
+                  {canEdit ? <DeleteButton compact what={`“${item.text}”`} label="Remove" action={() => remove(item.id)} /> : null}
+                </div>
+                {canEdit && (differs || item.oneOff) ? (
+                  <div className="flex flex-wrap gap-x-4 pl-9">
+                    {differs && sendToSeries ? (
+                      <button type="button" disabled={pending} className={link} onClick={() => confirmSeries([item.change!]) && run(() => sendToSeries(item.id))}>
+                        Update series
+                      </button>
+                    ) : null}
+                    {item.status === 'added' && setOneOff ? (
+                      <button type="button" disabled={pending} className={link} onClick={() => run(() => setOneOff(item.id, true))}>
+                        Only this project
+                      </button>
+                    ) : null}
+                    {item.oneOff && setOneOff ? (
+                      <button type="button" disabled={pending} className={link} onClick={() => run(() => setOneOff(item.id, false))}>
+                        Not just this project
+                      </button>
+                    ) : null}
+                  </div>
                 ) : null}
-              </span>
-              {canEdit ? <DeleteButton compact what={`“${item.text}”`} label="Remove" action={() => remove(item.id)} /> : null}
+              </li>
+            )
+          })}
+          {missing.map((m) => (
+            <li key={m.id} className="flex flex-col gap-1 border-l-4 border-l-warn bg-warn-soft px-4 py-3">
+              <div className="flex items-start gap-3">
+                <span className="min-w-0 flex-1 text-[15px] text-ink-2 line-through decoration-ink-3">{m.label}</span>
+                <Pill tone="warn">In series, not here</Pill>
+              </div>
+              {canEdit && copyHere && dropFromSeries ? (
+                <div className="flex flex-wrap gap-x-4">
+                  <button type="button" disabled={pending} className={link} onClick={() => run(() => copyHere(m.id))}>
+                    Add here
+                  </button>
+                  <button type="button" disabled={pending} className={link} onClick={() => confirmSeries([m.change]) && run(() => dropFromSeries(m.id))}>
+                    Remove from series
+                  </button>
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -106,8 +178,9 @@ export function Checklist({
             <TextInput name="text" placeholder="Add a to-do" aria-label="New to-do" required />
             <SubmitButton pendingText="…">Add</SubmitButton>
           </div>
+          {inSeries ? <Checkbox name="oneOff" label="Only this project" /> : null}
           {details ? (
-            <div className="grid grid-cols-2 gap-2">
+            <div className={`grid gap-2 ${quotes.length ? 'grid-cols-2' : 'grid-cols-1'}`}>
               <Select name="spaceId" aria-label="Where" defaultValue="">
                 <option value="">Where?</option>
                 {places.map((p) => (
@@ -116,18 +189,20 @@ export function Checklist({
                   </option>
                 ))}
               </Select>
-              <Select name="quoteId" aria-label="Covered by quote" defaultValue="">
-                <option value="">In a quote?</option>
-                {quotes.map((q) => (
-                  <option key={q.id} value={q.id}>
-                    {q.label}
-                  </option>
-                ))}
-              </Select>
+              {quotes.length ? (
+                <Select name="quoteId" aria-label="Covered by quote" defaultValue="">
+                  <option value="">In a quote?</option>
+                  {quotes.map((q) => (
+                    <option key={q.id} value={q.id}>
+                      {q.label}
+                    </option>
+                  ))}
+                </Select>
+              ) : null}
             </div>
           ) : (
-            <button type="button" className="self-start text-sm text-accent" onClick={() => setDetails(true)}>
-              + where, and which quote covers it
+            <button type="button" className="min-h-11 self-start text-sm text-accent" onClick={() => setDetails(true)}>
+              {quotes.length ? '+ where, and which quote covers it' : '+ where'}
             </button>
           )}
         </ActionForm>

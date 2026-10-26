@@ -11,7 +11,8 @@ function partInput(fd: FormData) {
   const category = field(fd, 'category')
   const fields: Record<string, string> = {}
   if (isCategory(category)) for (const f of TEMPLATES[category].fields) fields[f.key] = field(fd, `f_${f.key}`)
-  return { category, name: field(fd, 'name'), fields, unit: field(fd, 'unit'), buyUrl: field(fd, 'buyUrl'), notes: field(fd, 'notes') }
+  const [unit = '', ...extraUnits] = field(fd, 'units').split(',').map((u) => u.trim())
+  return { category, name: field(fd, 'name'), fields, unit, extraUnits, buyUrl: field(fd, 'buyUrl'), notes: field(fd, 'notes') }
 }
 
 function useInput(fd: FormData) {

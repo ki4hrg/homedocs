@@ -56,7 +56,10 @@ export function createMcpServer(identity: BearerIdentity, exec: Executor): Serve
         'that use them. Notes are dated records of what happened, with a "next time" lesson. ' +
         'Contacts are the companies and people the house relies on — contractors, utilities, services — ' +
         'with trades and a preferred contact per trade. ' +
-        'Projects are jobs with a status, a checklist and quotes. To answer "what bulb does X take", ' +
+        'Projects are jobs with a status, a checklist, materials and quotes. A series is a job done again ' +
+        'and again (pine straw every spring): it holds how we do it and the default checklist and materials ' +
+        'each new round starts with; use get_series for "how much do we usually need". ' +
+        'To answer "what bulb does X take", ' +
         'use find_part_for. Codes and passwords are never available here.',
     },
   )
