@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Lessons } from '@/components/Lessons'
 import { DocumentsSection } from '@/components/DocumentsSection'
+import { FormulaTable } from '@/components/FormulaTable'
 import { LinksSection } from '@/components/LinksSection'
 import { NoteList } from '@/components/NoteList'
 import { PhotoUpload } from '@/components/PhotoUpload'
@@ -13,6 +14,7 @@ import { roleAtLeast } from '@/lib/core/types'
 import { db } from '@/lib/db'
 import { listAttachments } from '@/lib/files/attachments'
 import { lessons, listNotes } from '@/lib/notes/notes'
+import { parseFormula } from '@/lib/parts/formula'
 import { getPart, listUses } from '@/lib/parts/parts'
 import { TEMPLATES } from '@/lib/parts/templates'
 import { editedBy } from '@/lib/web/attribution'
@@ -33,6 +35,7 @@ export default async function PartPage({ params }: { params: Promise<{ id: strin
   ])
   const canEdit = roleAtLeast(user.role, 'member')
   const template = TEMPLATES[part.category]
+  const formula = part.category === 'paint' && part.fields.formula ? parseFormula(part.fields.formula) : null
 
   return (
     <>
@@ -43,7 +46,20 @@ export default async function PartPage({ params }: { params: Promise<{ id: strin
         actions={canEdit ? <LinkButton href={`/parts/${id}/edit`}>Edit</LinkButton> : null}
       />
 
-      <Facts items={template.fields.map((f) => ({ label: f.label, value: part.fields[f.key] ?? '' }))} />
+      <Facts
+        items={template.fields
+          .filter((f) => !(formula && f.key === 'formula'))
+          .map((f) => ({
+            label: f.label,
+            value: f.multiline && part.fields[f.key] ? <span className="whitespace-pre-line">{part.fields[f.key]}</span> : (part.fields[f.key] ?? ''),
+          }))}
+      />
+
+      {formula ? (
+        <Section title="Tint formula">
+          <FormulaTable formula={formula} />
+        </Section>
+      ) : null}
 
       {part.buyUrl ? (
         <a href={part.buyUrl} target="_blank" rel="noreferrer" className={buttonClass('secondary', 'mt-3 w-full')}>

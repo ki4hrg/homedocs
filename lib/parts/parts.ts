@@ -45,7 +45,8 @@ function category(raw: string): Category {
 export function suggestName(cat: Category, fields: Record<string, string>): string {
   switch (cat) {
     case 'paint':
-      return [fields.brand, fields.color_code, fields.color_name].filter(Boolean).join(' ')
+      // "Custom match" isn't a code; the name says more.
+      return [fields.brand, /custom/i.test(fields.color_code ?? '') ? '' : fields.color_code, fields.color_name].filter(Boolean).join(' ')
     case 'bulb':
       return [fields.shape, fields.base, fields.color_temp, 'bulb'].filter(Boolean).join(' ')
     case 'filter':

@@ -112,6 +112,38 @@ test('question 3: which paint is in the bedroom?', async ({ page }) => {
   await expect(page.getByText(/walls, Eggshell/)).toBeVisible()
 })
 
+// A 1×1 PNG: enough for the server to re-encode and store.
+const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
+
+test('a paint can’s label: its details, then a photo of it', async ({ page }) => {
+  await create(
+    page,
+    '/parts/new?category=paint',
+    {
+      f_brand: 'Sherwin-Williams',
+      f_order: '0582820',
+      f_product_line: 'ProMar 200 Zero',
+      f_sheen: 'Flat',
+      f_color_name: 'CM Gris',
+      f_color_code: 'Custom match',
+      f_formula: 'B1-Black 2 3 1 1',
+      f_base: 'Extra White',
+      f_product_number: 'B30W12651',
+    },
+    'Add part',
+  )
+  await expect(page.getByText('B30W12651')).toBeVisible()
+
+  // The page has to render again with the photo on it.
+  await page.locator('input[type=file]').setInputFiles({ name: 'label.png', mimeType: 'image/png', buffer: PIXEL })
+  const photo = page.getByRole('img', { name: 'Photo' })
+  await expect(photo).toBeVisible()
+
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: 'Remove this photo' }).click()
+  await expect(photo).toHaveCount(0)
+})
+
 test('question 4: who is our plumber?', async ({ page }) => {
   await page.goto('/contacts/new')
   await page.locator('[name=name]').fill('Ace Plumbing')
