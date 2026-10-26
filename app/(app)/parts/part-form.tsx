@@ -18,6 +18,7 @@ export function PartForm({
     name?: string
     fields?: Record<string, string>
     unit?: string
+    extraUnits?: string[]
     buyUrl?: string
     notes?: string
     updatedAt?: string
@@ -54,7 +55,14 @@ export function PartForm({
       <Field label="Name" hint="Blank: made from the details above.">
         <TextInput name="name" defaultValue={initial?.name} />
       </Field>
-      <input type="hidden" name="unit" value={initial?.unit ?? template.unit} />
+      <Field label="Sold by" hint="The usual unit first, then any others: roll, bale.">
+        <TextInput
+          key={`units-${category}`}
+          name="units"
+          defaultValue={[initial?.unit ?? template.unit, ...(initial?.extraUnits ?? [])].filter(Boolean).join(', ')}
+          placeholder={template.unit}
+        />
+      </Field>
       <Field label="Where to buy">
         <TextInput name="buyUrl" type="url" inputMode="url" defaultValue={initial?.buyUrl} />
       </Field>

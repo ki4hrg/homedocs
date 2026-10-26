@@ -10,7 +10,9 @@ import { getPart, listUses } from '../../parts/parts'
 import { summarize, TEMPLATES } from '../../parts/templates'
 import { getContact, listContacts, preferredByTrade } from '../../contacts/contacts'
 import { buildTree, flattenTree, getSpace, listSpaces } from '../../places/places'
+import type { MaterialRow, SeriesDiff } from '../../projects/materials'
 import { getProject, listProjects, OPEN_STATUSES, STATUS_LABEL, STATUSES } from '../../projects/projects'
+import { getSeries, listSeries, seriesNotes } from '../../projects/series'
 import { listProperties } from '../../property/property'
 import { search } from '../../search/search'
 import { getFixture, listFixtures } from '../../fixtures/fixtures'
@@ -50,6 +52,22 @@ function noteView(r: Awaited<ReturnType<typeof listNotes>>[number]) {
     remind_after: r.note.remindAfter ?? undefined,
     about: [r.spaceName, r.fixtureName, r.supplyName, r.contactName, r.projectTitle].filter(Boolean),
     details: r.note.body || undefined,
+  }
+}
+
+function materialView(m: MaterialRow, d?: SeriesDiff['materials'] | null) {
+  const r = d?.rows[m.id]
+  return {
+    id: m.id,
+    name: m.name,
+    quantity: m.quantity === null ? undefined : Number(m.quantity),
+    unit: m.unit || undefined,
+    part: m.partName ?? undefined,
+    where: m.spaceName ?? undefined,
+    notes: m.notes || undefined,
+    only_this_project: m.oneOff || undefined,
+    // Only on open projects in a series: how this line compares with the series.
+    vs_series: r?.status === 'changed' ? r.changes : r?.status === 'added' ? 'not in series' : undefined,
   }
 }
 
@@ -374,7 +392,18 @@ export const readTools = [
         target_date: p.targetDate ?? undefined,
         summary: p.summary || undefined,
         places: p.places.map((s) => s.name),
-        checklist: p.items.map(({ item, spaceName }) => ({ id: item.id, text: item.text, done: item.done, where: spaceName ?? undefined })),
+        series: p.series ? { id: p.series.id, title: p.series.title, how_to: p.series.howTo || undefined } : undefined,
+        contact: p.contact?.name,
+        last_time: p.lessons.length ? p.lessons.map((l) => l.note.nextTime) : undefined,
+        differs_from_series: p.diff ? p.diff.differs : undefined,
+        materials: p.materials.map((m) => materialView(m, p.diff?.materials)),
+        checklist: p.items.map(({ item, spaceName }) => ({
+          id: item.id,
+          text: item.text,
+          done: item.done,
+          where: spaceName ?? undefined,
+          only_this_project: item.oneOff || undefined,
+        })),
         quotes: p.quotes.map(({ quote, contactName }) => ({
           id: quote.id,
           from: contactName ?? undefined,
@@ -384,6 +413,51 @@ export const readTools = [
           notes: quote.notes || undefined,
         })),
         notes: notes.map(noteView),
+      }
+    },
+  }),
+
+  defineTool({
+    name: 'list_series',
+    title: 'List series',
+    description: 'Jobs done again and again (pine straw every spring), each with how many rounds it has had.',
+    scope: 'homedocs:read',
+    annotations: { readOnlyHint: true },
+    input: z.object({}),
+    handler: async (_input, ctx) => {
+      const rows = await listSeries(ctx.exec, await scopeOf(ctx))
+      return { series: rows.map((s) => ({ id: s.id, title: s.title, projects: s.projectCount })) }
+    },
+  }),
+
+  defineTool({
+    name: 'get_series',
+    title: 'Get a series',
+    description:
+      'A recurring job: how we do it, the default materials and checklist a new round starts with, its places and ' +
+      'usual contact, each past round with what it used, and lessons from past rounds.',
+    scope: 'homedocs:read',
+    annotations: { readOnlyHint: true },
+    input: z.object({ series: ref('series') }),
+    handler: async ({ series }, ctx) => {
+      const scope = await scopeOf(ctx)
+      const s = await getSeries(ctx.exec, scope, await resolveRef(ctx.exec, scope, 'series', series))
+      const notes = await seriesNotes(ctx.exec, scope, s.id)
+      return {
+        id: s.id,
+        title: s.title,
+        how_to: s.howTo || undefined,
+        places: s.places.map((p) => p.name),
+        contact: s.contact?.name,
+        materials: s.materials.map((m) => materialView(m)),
+        checklist: s.items.map(({ item, spaceName }) => ({ text: item.text, where: spaceName ?? undefined })),
+        rounds: s.projects.map((p) => ({
+          id: p.id,
+          title: p.title,
+          status: p.status,
+          used: p.materials.map((m) => `${m.name}: ${m.quantity === null ? '?' : Number(m.quantity)} ${m.unit}${m.notes ? ` (${m.notes})` : ''}`.trim()),
+        })),
+        lessons: notes.filter((n) => n.note.nextTime).map((n) => ({ date: n.note.happenedOn, next_time: n.note.nextTime, from: n.note.title })),
       }
     },
   }),

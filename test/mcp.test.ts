@@ -109,4 +109,35 @@ describe('mcp', () => {
     expect(textOf(missing)).toMatch(/No fixture is called/)
     await m.close()
   })
+
+  it('starts this year’s round of a series and reads it back', async () => {
+    const { users, scope, member } = await seeded()
+    const { createSeries } = await import('../lib/projects/series')
+    const { addMaterial } = await import('../lib/projects/materials')
+    const straw = await createPart(db, scope, member, { category: 'landscaping', name: 'Pine straw', unit: 'roll', extraUnits: ['bale'] })
+    const series = await createSeries(db, scope, member, { title: 'Back yard pine straw', howTo: 'Stairs first.' })
+    await addMaterial(db, scope, member, { seriesId: series.id }, { supplyId: straw.id, quantity: '8', notes: 'around the stairs' })
+
+    const m = await connect(identityFor(users.member.id, 'member'))
+    const created = dataOf<{ id: string; title: string }>(await m.call('create_project', { series: 'back yard pine straw' }))
+    expect(created.title).toMatch(/^Back yard pine straw \d{4}$/)
+    const extra = await m.call('add_project_material', { project: created.id, part: 'Pine straw', quantity: 1, unit: 'roll', notes: 'flowerbeds', only_this_project: true })
+    expect(extra.isError).toBeFalsy()
+    const wrongUnit = await m.call('add_project_material', { project: created.id, part: 'Pine straw', unit: 'bag' })
+    expect(textOf(wrongUnit)).toMatch(/comes by roll or bale/)
+
+    const project = dataOf<{ series: { how_to: string }; materials: { quantity: number; notes: string; vs_series?: string }[] }>(
+      await m.call('get_project', { project: created.id }),
+    )
+    expect(project.series.how_to).toBe('Stairs first.')
+    expect(project.materials).toEqual([
+      expect.objectContaining({ quantity: 8, notes: 'around the stairs' }),
+      expect.objectContaining({ quantity: 1, notes: 'flowerbeds', vs_series: undefined }),
+    ])
+
+    const s = dataOf<{ materials: { quantity: number }[]; rounds: { used: string[] }[] }>(await m.call('get_series', { series: 'Back yard pine straw' }))
+    expect(s.materials.map((x) => x.quantity)).toEqual([8])
+    expect(s.rounds[0]!.used).toEqual(['Pine straw: 8 roll (around the stairs)', 'Pine straw: 1 roll (flowerbeds)'])
+    await m.close()
+  })
 })

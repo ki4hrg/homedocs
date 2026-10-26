@@ -13,7 +13,7 @@ import { roleAtLeast } from '@/lib/core/types'
 import { db } from '@/lib/db'
 import { listAttachments } from '@/lib/files/attachments'
 import { lessons, listNotes } from '@/lib/notes/notes'
-import { getPart, listUses } from '@/lib/parts/parts'
+import { getPart, listUses, partUnits } from '@/lib/parts/parts'
 import { TEMPLATES } from '@/lib/parts/templates'
 import { editedBy } from '@/lib/web/attribution'
 import { viewer } from '@/lib/web/context'
@@ -43,7 +43,12 @@ export default async function PartPage({ params }: { params: Promise<{ id: strin
         actions={canEdit ? <LinkButton href={`/parts/${id}/edit`}>Edit</LinkButton> : null}
       />
 
-      <Facts items={template.fields.map((f) => ({ label: f.label, value: part.fields[f.key] ?? '' }))} />
+      <Facts
+        items={[
+          ...template.fields.map((f) => ({ label: f.label, value: part.fields[f.key] ?? '' })),
+          { label: 'Sold by', value: partUnits(part).length > 1 ? partUnits(part).join(', ') : '' },
+        ]}
+      />
 
       {part.buyUrl ? (
         <a href={part.buyUrl} target="_blank" rel="noreferrer" className={buttonClass('secondary', 'mt-3 w-full')}>

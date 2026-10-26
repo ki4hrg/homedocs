@@ -9,7 +9,7 @@
 import { sql } from 'drizzle-orm'
 import type { Executor, PropertyScope } from '../core/types'
 
-export type SearchKind = 'place' | 'system' | 'fixture' | 'part' | 'note' | 'contact' | 'project'
+export type SearchKind = 'place' | 'system' | 'fixture' | 'part' | 'note' | 'contact' | 'project' | 'series'
 
 export type SearchHit = { kind: SearchKind; id: string; title: string; detail: string; rank: number }
 
@@ -53,6 +53,9 @@ export async function search(exec: Executor, scope: PropertyScope, q: string, li
       union all
       select 'project', pr.id, pr.title, replace(pr.status::text, '_', ' '), ts_rank(pr.search_doc, q.query)
         from projects pr, q where pr.property_id = ${p} and pr.deleted_at is null and pr.search_doc @@ q.query
+      union all
+      select 'series', se.id, se.title, 'series', ts_rank(se.search_doc, q.query)
+        from project_series se, q where se.property_id = ${p} and se.deleted_at is null and se.search_doc @@ q.query
     ) hits
     order by rank desc, title
     limit ${limit}`)
@@ -91,4 +94,5 @@ export const KIND_PATH: Record<SearchKind, string> = {
   note: '/notes',
   contact: '/contacts',
   project: '/projects',
+  series: '/projects/series',
 }

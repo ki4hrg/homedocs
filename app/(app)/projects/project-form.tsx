@@ -16,18 +16,31 @@ const STATUSES = [
 export function ProjectForm({
   action,
   places,
+  contacts,
   initial,
   submit,
 }: {
   action: FormAction
   places: { id: string; label: string }[]
-  initial?: { title?: string; status?: string; priority?: string; targetDate?: string | null; summary?: string; spaceIds?: string[]; updatedAt?: string }
+  contacts: { id: string; label: string }[]
+  initial?: {
+    title?: string
+    status?: string
+    priority?: string
+    targetDate?: string | null
+    summary?: string
+    spaceIds?: string[]
+    contactId?: string | null
+    seriesId?: string
+    updatedAt?: string
+  }
   submit: string
 }) {
   const chosen = new Set(initial?.spaceIds ?? [])
   return (
     <ActionForm action={action}>
       {initial?.updatedAt ? <input type="hidden" name="updatedAt" value={initial.updatedAt} /> : null}
+      {initial?.seriesId ? <input type="hidden" name="seriesId" value={initial.seriesId} /> : null}
       <Field label="Title">
         <TextInput name="title" defaultValue={initial?.title} placeholder="Replace electrical panel" required autoFocus={!initial?.title} />
       </Field>
@@ -52,9 +65,21 @@ export function ProjectForm({
       <Field label="Target date">
         <TextInput name="targetDate" type="date" defaultValue={initial?.targetDate ?? ''} />
       </Field>
-      <Field label="Details">
+      <Field label="Details" hint={initial?.seriesId ? 'Just this time’s details. The series’ how-to shows on the project anyway.' : undefined}>
         <TextArea name="summary" rows={4} defaultValue={initial?.summary} />
       </Field>
+      {contacts.length ? (
+        <Field label="Who’s doing it">
+          <Select name="contactId" defaultValue={initial?.contactId ?? ''}>
+            <option value="">—</option>
+            {contacts.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      ) : null}
       {places.length ? (
         <Field label="Places" hint="Ctrl/⌘-click for more than one.">
           <select

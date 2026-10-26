@@ -34,7 +34,9 @@ housesitter.
 | (use) | `supply_uses` | A part used by exactly one fixture **or** one place. Holds the quantity, `quantity_needed` (the "really takes 15 bags" figure), surface and finish. Paint sheen lives here. |
 | Note | `logs` | A dated record of what happened, with a "next time" lesson and a `remind_after` date. |
 | Contact | `contacts` + `contact_trades` | One preferred contact per trade, which is what "our plumber" means. Trades are stored lower-cased; the labels ("HVAC") and the chips offered come from `properties.trade_groups`, the family's own list (null means `DEFAULT_TRADE_GROUPS` in `lib/contacts/trade-labels.ts`). A trade typed on a contact or system joins the list. |
-| Project | `projects`, `project_items`, `quotes` | Status, a checklist, and quotes. Accepting a quote schedules the project. |
+| Project | `projects`, `project_items`, `quotes` | Status, a checklist, materials and quotes. Accepting a quote schedules the project. `contact_id` is who is doing it. |
+| Series | `project_series`, `project_series_spaces`, `project_series_items` | A job done again and again (pine straw every spring). Holds the `how_to` every round shows (never copied), and the places, checklist, materials and usual contact a new project starts from (`lib/projects/series.ts`). |
+| Material | `materials` | One line of what a job takes, on a series **or** a project (`num_nonnulls = 1`): a name, quantity, unit, notes, and optionally a Part, whose units (`unit` + `extra_units`) limit the line's unit. A project's copy keeps `series_material_id` (checklist items: `series_item_id`), which is how an open project shows what differs from its series and sends changes back after a person confirms them (`lib/projects/materials.ts`). `one_off` lines stay on their project. |
 | House guide | `guide_sections`, `secrets`, `share_links` | See below. |
 | — | `attachments`, `external_refs` | One nullable FK column per owner type, with a `num_nonnulls(...) = 1` check. Never `owner_type/owner_id`. |
 
@@ -42,7 +44,7 @@ housesitter.
 - `property_id` on every table, and every domain call takes a `PropertyScope`. There is one property
   today, and the UI hides the property switcher until there are two.
 - Soft delete (`deleted_at`). "Recently deleted" restores places, systems, fixtures, parts, notes,
-  contacts and projects. There is no hard delete in the UI.
+  contacts, projects and series. There is no hard delete in the UI.
 - `created_by`/`updated_by` drive "Edited by Mom, 2 days ago". Edit forms send `updatedAt` for
   optimistic concurrency (`StaleWriteError`).
 - Every mutation writes an `audit_log` row in the same transaction. The source is `web`, `mcp` or

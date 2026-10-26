@@ -15,6 +15,7 @@ const ICON: Record<SearchKind, IconName> = {
   note: 'note',
   contact: 'contact',
   project: 'project',
+  series: 'project',
 }
 
 const KIND_LABEL: Record<SearchKind, string> = {
@@ -25,6 +26,7 @@ const KIND_LABEL: Record<SearchKind, string> = {
   note: 'Note',
   contact: 'Contact',
   project: 'Project',
+  series: 'Series',
 }
 
 export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
