@@ -24,6 +24,25 @@ function split(line: string, cell: RegExp): { name: string; cells: string[] } {
   return { name: tokens.slice(0, i).join(' '), cells: tokens.slice(i) }
 }
 
+/** The column headings a family can drop in from the form, as their labels print them. */
+export const HEADING_PRESETS = [
+  { label: 'OZ 32 64 128 (Sherwin-Williams)', line: 'COLORANT OZ 32 64 128' },
+  { label: 'OZ 48 96', line: 'COLORANT OZ 48 96' },
+]
+
+function isHeading(line: string) {
+  const { name, cells } = split(line.trim(), HEADING)
+  return /colou?rant/i.test(name) || cells.some((c) => /^oz$/i.test(c))
+}
+
+/** Put `line` first, in place of a heading line already there. */
+export function withHeadings(text: string, line: string): string {
+  const lines = text.replace(/^\s*\n/, '').split('\n')
+  if (lines[0]?.trim() && isHeading(lines[0])) lines.shift()
+  const rest = lines.join('\n').trim()
+  return rest ? `${line}\n${rest}` : `${line}\n`
+}
+
 export function parseFormula(text: string): Formula | null {
   const lines = text
     .split('\n')
@@ -32,8 +51,8 @@ export function parseFormula(text: string): Formula | null {
   if (lines.length === 0) return null
 
   let headings: string[] = []
-  const first = split(lines[0]!, HEADING)
-  if (/colou?rant/i.test(first.name) || first.cells.some((c) => /^oz$/i.test(c))) {
+  if (isHeading(lines[0]!)) {
+    const first = split(lines[0]!, HEADING)
     headings = [first.name || 'Colorant', ...first.cells]
     lines.shift()
   }
