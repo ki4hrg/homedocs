@@ -12,7 +12,7 @@ import { TEMPLATES } from '@/lib/parts/templates'
 import { viewer } from '@/lib/web/context'
 import { removeUseAction, updateUseAction } from '../../parts/actions'
 
-export const metadata = { title: 'Edit part use' }
+export const metadata = { title: 'Edit Part Use' }
 
 export default async function EditUsePage({ params }: { params: Promise<{ id: string }> }) {
   await requireRole('member')

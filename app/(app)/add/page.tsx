@@ -9,7 +9,7 @@ export default async function AddPage() {
   await requireRole('member')
   return (
     <>
-      <PageHeader title="Add something" subtitle="Tip: open a place first and tap + there — it fills in where." />
+      <PageHeader title="Add" subtitle="Tap + on a place to fill in where" />
       <List>
         {addItems().map((item) => (
           <Row key={item.title} href={item.href} icon={item.icon} title={item.title} detail={item.detail} />

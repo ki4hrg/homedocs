@@ -8,7 +8,7 @@ import { viewer } from '@/lib/web/context'
 import { createFixtureAction } from '../actions'
 import { FixtureForm } from '../fixture-form'
 
-export const metadata = { title: 'New fixture' }
+export const metadata = { title: 'New Fixture' }
 
 export default async function NewFixturePage({ searchParams }: { searchParams: Promise<{ space?: string; system?: string }> }) {
   await requireRole('member')
@@ -21,10 +21,10 @@ export default async function NewFixturePage({ searchParams }: { searchParams: P
   return (
     <>
       <PageHeader
-        title="New fixture"
+        title="New Fixture"
         back={{ href: space ? `/places/${space}` : system ? `/systems/${system}` : '/fixtures', label: 'Back' }}
       />
-      <FixtureForm action={createFixtureAction} places={places} systems={systems} categories={FIXTURE_CATEGORIES} initial={{ spaceId: space, systemId: systems.some((s) => s.id === system) ? system : undefined }} submit="Add fixture" />
+      <FixtureForm action={createFixtureAction} places={places} systems={systems} categories={FIXTURE_CATEGORIES} initial={{ spaceId: space, systemId: systems.some((s) => s.id === system) ? system : undefined }} submit="Add Fixture" />
     </>
   )
 }

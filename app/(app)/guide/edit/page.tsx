@@ -11,7 +11,7 @@ import { getTradeGroups } from '@/lib/contacts/trades'
 import { listFixtures } from '@/lib/fixtures/fixtures'
 import { viewer } from '@/lib/web/context'
 
-export const metadata = { title: 'Edit the guide' }
+export const metadata = { title: 'Edit Guide' }
 
 export default async function EditGuidePage() {
   await requireRole('member')
@@ -28,23 +28,23 @@ export default async function EditGuidePage() {
   const guideContacts = contacts.filter((p) => p.inGuide || p.trades.some((t) => t.preferred))
   return (
     <>
-      <PageHeader title="Edit the guide" back={{ href: '/guide', label: 'House guide' }} />
+      <PageHeader title="Edit Guide" back={{ href: '/guide', label: 'House Guide' }} />
 
-      <Section title="Emergency fixtures">
+      <Section title="Emergency Fixtures">
         {guideFixtures.length ? (
           <List>
             {guideFixtures.map((t) => (
-              <Row key={t.id} href={`/fixtures/${t.id}/edit`} icon="fixture" title={t.name} detail={t.guideNote || 'No note yet'} />
+              <Row key={t.id} href={`/fixtures/${t.id}/edit`} icon="fixture" title={t.name} detail={t.guideNote || 'No note'} />
             ))}
           </List>
         ) : (
-          <EmptyState action={<LinkButton href="/fixtures">Pick from fixtures</LinkButton>}>None yet.</EmptyState>
+          <EmptyState action={<LinkButton href="/fixtures">Pick Fixtures</LinkButton>}>None yet</EmptyState>
         )}
       </Section>
 
       <Section title="Contacts">
         <p className="mb-2 px-1 text-sm text-ink-3">
-          Go-to contacts show automatically.
+          Go-to contacts show automatically
         </p>
         {guideContacts.length ? (
           <List>
@@ -53,7 +53,7 @@ export default async function EditGuidePage() {
             ))}
           </List>
         ) : (
-          <EmptyState action={<LinkButton href="/contacts">Go to contacts</LinkButton>}>None yet.</EmptyState>
+          <EmptyState action={<LinkButton href="/contacts">Go to Contacts</LinkButton>}>None yet</EmptyState>
         )}
       </Section>
 
@@ -71,7 +71,7 @@ export default async function EditGuidePage() {
             ))}
           </List>
         ) : (
-          <EmptyState action={<LinkButton href="/guide/codes/new">Add Wi-Fi or a code</LinkButton>}>No codes yet.</EmptyState>
+          <EmptyState action={<LinkButton href="/guide/codes/new">Add Wi-Fi or Code</LinkButton>}>No codes yet</EmptyState>
         )}
       </Section>
 
@@ -89,8 +89,8 @@ export default async function EditGuidePage() {
             ))}
           </List>
         ) : (
-          <EmptyState action={<LinkButton href="/guide/sections/new">Add a note</LinkButton>}>
-            None yet.
+          <EmptyState action={<LinkButton href="/guide/sections/new">Add Note</LinkButton>}>
+            None yet
           </EmptyState>
         )}
       </Section>

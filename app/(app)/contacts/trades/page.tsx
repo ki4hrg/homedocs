@@ -6,14 +6,14 @@ import { viewer } from '@/lib/web/context'
 import { saveTradesAction } from '../actions'
 import { TradeListForm } from './trade-list-form'
 
-export const metadata = { title: 'What contacts do' }
+export const metadata = { title: 'Trades' }
 
 export default async function TradesPage() {
   await requireRole('member')
   const { scope } = await viewer()
   return (
     <>
-      <PageHeader title="What contacts do" back={{ href: '/contacts', label: 'Contacts' }} />
+      <PageHeader title="Trades" back={{ href: '/contacts', label: 'Contacts' }} />
       <TradeListForm action={saveTradesAction} initial={await getTradeGroups(db, scope)} />
     </>
   )

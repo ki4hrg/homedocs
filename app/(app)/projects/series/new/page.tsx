@@ -7,7 +7,7 @@ import { viewer } from '@/lib/web/context'
 import { createSeriesAction } from '../actions'
 import { SeriesForm } from '../series-form'
 
-export const metadata = { title: 'New series' }
+export const metadata = { title: 'New Series' }
 
 export default async function NewSeriesPage() {
   await requireRole('member')
@@ -15,7 +15,7 @@ export default async function NewSeriesPage() {
   const [spaces, contacts] = await Promise.all([listSpaces(db, scope), listContacts(db, scope)])
   return (
     <>
-      <PageHeader title="New series" back={{ href: '/projects', label: 'Projects' }} />
+      <PageHeader title="New Series" back={{ href: '/projects', label: 'Projects' }} />
       <p className="mb-4 px-1 text-sm text-ink-3">
         A job you do again and again. Add its checklist and materials next; each new project starts from them.
       </p>
@@ -23,7 +23,7 @@ export default async function NewSeriesPage() {
         action={createSeriesAction}
         places={flattenTree(buildTree(spaces))}
         contacts={contacts.map((c) => ({ id: c.id, label: c.company ? `${c.name} (${c.company})` : c.name }))}
-        submit="Add series"
+        submit="Add Series"
       />
     </>
   )

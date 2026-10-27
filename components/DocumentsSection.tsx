@@ -19,6 +19,8 @@ import { Icon } from './ui/icons'
  * notes). Nothing shows when there is nothing to list and paperless isn't
  * connected.
  */
+const KIND_LABEL: Record<PaperlessFilterKind, string> = { tag: 'Tag', correspondent: 'Correspondent' }
+
 export async function DocumentsSection({ owner, kind, canEdit }: { owner: Owner; kind?: PaperlessFilterKind; canEdit: boolean }) {
   const { scope } = await viewer()
   const { connected, documents, filter } = await documentsFor(db, scope, owner, kind)
@@ -31,7 +33,7 @@ export async function DocumentsSection({ owner, kind, canEdit }: { owner: Owner;
       action={
         filter ? (
           <a href={filter.url} target="_blank" rel="noreferrer" className="flex min-h-10 items-center gap-1 px-1 text-sm text-accent">
-            Open {kind} <Icon name="external" className="h-4 w-4" />
+            Open {kind ? KIND_LABEL[kind] : null} <Icon name="external" className="h-4 w-4" />
           </a>
         ) : null
       }
@@ -47,7 +49,7 @@ export async function DocumentsSection({ owner, kind, canEdit }: { owner: Owner;
                     <span className="block truncate text-[15px] font-medium text-ink">{d.title}</span>
                     <span className="flex items-center gap-2 text-sm text-ink-3">
                       <span className="truncate">{d.subtitle}</span>
-                      {d.status === 'missing' ? <Pill tone="warn">No longer there</Pill> : null}
+                      {d.status === 'missing' ? <Pill tone="warn">Missing</Pill> : null}
                       {d.status === 'auth_error' ? <Pill tone="warn">Reconnect</Pill> : null}
                     </span>
                   </span>
@@ -59,7 +61,7 @@ export async function DocumentsSection({ owner, kind, canEdit }: { owner: Owner;
             ))}
           </List>
         ) : filter?.error ? null : (
-          <p className="px-1 text-sm text-ink-3">No documents yet.</p>
+          <p className="px-1 text-sm text-ink-3">No documents yet</p>
         )}
 
         {filter ? (
@@ -79,8 +81,8 @@ export async function DocumentsSection({ owner, kind, canEdit }: { owner: Owner;
         {canEdit && connected ? (
           <LinkPicker
             systems={[
-              { system: 'paperless', name: 'paperless', label: 'Add a document' },
-              ...(kind ? [{ system: 'paperless' as const, name: 'paperless', kind, label: filter ? `Change ${kind}` : `Add a ${kind}’s documents` }] : []),
+              { system: 'paperless', name: 'paperless', label: 'Add Document' },
+              ...(kind ? [{ system: 'paperless' as const, name: 'paperless', kind, label: filter ? `Change ${KIND_LABEL[kind]}` : `Add ${KIND_LABEL[kind]} Documents` }] : []),
             ]}
             link={link}
           />

@@ -163,7 +163,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         </div>
       ) : null}
 
-      <Section title="To do">
+      <Section title="To Do">
         <Checklist
           items={items}
           missing={missingItems}
@@ -213,7 +213,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             <Card key={quote.id} className="px-4 py-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[17px] font-semibold text-ink">{formatMoney(quote.amount) || 'No amount yet'}</p>
+                  <p className="text-[17px] font-semibold text-ink">{formatMoney(quote.amount) || 'No amount'}</p>
                   <p className="text-sm text-ink-3">
                     {quote.contactId ? (
                       <Link href={`/contacts/${quote.contactId}`} className="text-accent">
@@ -221,7 +221,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                         {contactCompany ? ` (${contactCompany})` : ''}
                       </Link>
                     ) : (
-                      'Unknown contractor'
+                      'Unknown'
                     )}
                     {quote.receivedOn ? ` · ${formatDay(quote.receivedOn)}` : ''}
                   </p>
@@ -238,7 +238,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                     setStatus={setQuoteStatusAction.bind(null, quote.id)}
                     remove={removeQuoteAction.bind(null, quote.id)}
                   />
-                  <PhotoUpload owner={`quote:${quote.id}`} label="Attach quote" />
+                  <PhotoUpload owner={`quote:${quote.id}`} label="Attach Quote" />
                 </div>
               ) : null}
               <QuoteFiles quoteId={quote.id} canEdit={canEdit} />
@@ -247,21 +247,21 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           {canEdit ? (
             <QuoteForm add={addQuoteAction.bind(null, id)} contacts={contacts.map((p) => ({ id: p.id, label: p.company ? `${p.name} (${p.company})` : p.name }))} />
           ) : project.quotes.length === 0 ? (
-            <p className="px-1 text-sm text-ink-3">No quotes yet.</p>
+            <p className="px-1 text-sm text-ink-3">No quotes yet</p>
           ) : null}
         </div>
       </Section>
 
       <Section
         title="Notes"
-        action={canEdit ? <Link href={`/notes/new?project=${id}`} className="text-sm text-accent">Add note</Link> : null}
+        action={canEdit ? <Link href={`/notes/new?project=${id}`} className="text-sm text-accent">Add Note</Link> : null}
       >
-        {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">None yet.</p>}
+        {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">None yet</p>}
       </Section>
 
       <DocumentsSection owner={{ kind: 'project', id }} kind="tag" canEdit={canEdit} />
 
-      <Section title="Photos and files">
+      <Section title="Photos and Files">
         <div className="flex flex-col gap-3">
           <Photos items={photos} remove={canEdit ? removeAttachmentAction : undefined} />
           {canEdit ? <PhotoUpload owner={`project:${id}`} /> : null}

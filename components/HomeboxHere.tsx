@@ -25,7 +25,7 @@ export async function HomeboxHere({ spaceId, placeName, canEdit }: { spaceId: st
     return (
       <Section title="In Homebox">
         <LinkPicker
-          systems={[{ system: 'homebox', name: 'Homebox', kind: 'location', label: 'Link a Homebox location' }]}
+          systems={[{ system: 'homebox', name: 'Homebox', kind: 'location', label: 'Link Homebox Location' }]}
           initialQuery={placeName}
           link={linkPickedAction.bind(null, `space:${spaceId}`)}
         />
@@ -61,7 +61,7 @@ export async function HomeboxHere({ spaceId, placeName, canEdit }: { spaceId: st
                       Fixture: {item.fixture.name}
                     </Link>
                   ) : (
-                    <span className="block truncate text-sm text-ink-3">Not in homedocs yet</span>
+                    <span className="block truncate text-sm text-ink-3">Not in homedocs</span>
                   )}
                 </span>
                 {!item.fixture && canEdit ? (
@@ -77,7 +77,7 @@ export async function HomeboxHere({ spaceId, placeName, canEdit }: { spaceId: st
           ) : null}
         </>
       ) : (
-        <p className="px-1 text-sm text-ink-3">Nothing stored here.</p>
+        <p className="px-1 text-sm text-ink-3">Nothing stored here</p>
       )}
     </Section>
   )

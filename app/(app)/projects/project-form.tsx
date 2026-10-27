@@ -6,9 +6,9 @@ import { Field, Select, SubmitButton, TextArea, TextInput } from '@/components/u
 const STATUSES = [
   ['idea', 'Idea'],
   ['planning', 'Planning'],
-  ['quoted', 'Getting quotes'],
+  ['quoted', 'Getting Quotes'],
   ['scheduled', 'Scheduled'],
-  ['in_progress', 'In progress'],
+  ['in_progress', 'In Progress'],
   ['done', 'Done'],
   ['dropped', 'Dropped'],
 ] as const
@@ -62,14 +62,14 @@ export function ProjectForm({
           </Select>
         </Field>
       </div>
-      <Field label="Target date">
+      <Field label="Target Date">
         <TextInput name="targetDate" type="date" defaultValue={initial?.targetDate ?? ''} />
       </Field>
-      <Field label="Details" hint={initial?.seriesId ? 'Just this time’s details. The series’ how-to shows on the project anyway.' : undefined}>
+      <Field label="Details" hint={initial?.seriesId ? 'For this project only; series instructions show anyway' : undefined}>
         <TextArea name="summary" rows={4} defaultValue={initial?.summary} />
       </Field>
       {contacts.length ? (
-        <Field label="Who’s doing it">
+        <Field label="Who’s Doing It">
           <Select name="contactId" defaultValue={initial?.contactId ?? ''}>
             <option value="">—</option>
             {contacts.map((c) => (
@@ -81,7 +81,7 @@ export function ProjectForm({
         </Field>
       ) : null}
       {places.length ? (
-        <Field label="Places" hint="Ctrl/⌘-click for more than one.">
+        <Field label="Places" hint="Ctrl/⌘-click for more than one">
           <select
             name="spaceIds"
             multiple

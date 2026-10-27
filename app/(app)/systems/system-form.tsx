@@ -11,7 +11,7 @@ import { SYSTEM_ICONS, type SystemIcon } from '@/lib/systems/seeds'
 const ICON_LABEL: Record<SystemIcon, string> = {
   water: 'Water',
   bolt: 'Electric',
-  climate: 'Heating & cooling',
+  climate: 'Heating & Cooling',
   flame: 'Gas / fire',
   drain: 'Drain',
   leaf: 'Yard',
@@ -58,7 +58,7 @@ export function SystemForm({
         </div>
       </fieldset>
 
-      <TradeChips legend="Who to call" groups={groups} chosen={chosen} onChange={setChosen} />
+      <TradeChips legend="Who to Call" groups={groups} chosen={chosen} onChange={setChosen} />
 
       <Field label="Notes">
         <TextArea name="notes" defaultValue={initial?.notes} />

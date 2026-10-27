@@ -11,7 +11,7 @@ export type TradeGroup = { label: string; trades: string[] }
 /* A utility is a company as often as not, so utilities get their own group. */
 export const DEFAULT_TRADE_GROUPS: TradeGroup[] = [
   {
-    label: 'Repairs and services',
+    label: 'Repairs and Services',
     trades: [
       'Plumber',
       'Electrician',

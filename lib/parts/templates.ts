@@ -36,7 +36,7 @@ export type Template = {
 export const TEMPLATES: Record<Category, Template> = {
   bulb: {
     category: 'bulb',
-    label: 'Light bulb',
+    label: 'Light Bulb',
     unit: 'bulb',
     fields: [
       { key: 'base', label: 'Base', placeholder: 'E26, E12, GU10' },
@@ -50,14 +50,14 @@ export const TEMPLATES: Record<Category, Template> = {
   },
   paint: {
     category: 'paint',
-    label: 'Paint colour',
+    label: 'Paint Colour',
     unit: 'gal',
     finishes: ['Flat', 'Matte', 'Eggshell', 'Satin', 'Semi-gloss', 'Gloss'],
     tip: 'Copy these from the can’s label.',
     // In the order a store's tint label reads, top to bottom.
     fields: [
       { key: 'brand', label: 'Brand', placeholder: 'Sherwin-Williams' },
-      { key: 'store', label: 'Store', placeholder: '#702151, 205-822-8795' },
+      { key: 'store', label: 'Store', placeholder: '#1234, 555-123-4567' },
       { key: 'mixed_on', label: 'Date mixed', placeholder: '04/22/24' },
       { key: 'order', label: 'Order number', placeholder: '0582820' },
       { key: 'interior_exterior', label: 'Interior or exterior', placeholder: 'Interior' },
@@ -110,7 +110,7 @@ export const TEMPLATES: Record<Category, Template> = {
   },
   other: {
     category: 'other',
-    label: 'Other part',
+    label: 'Other Part',
     unit: '',
     fields: [
       { key: 'brand', label: 'Brand / product', placeholder: '' },

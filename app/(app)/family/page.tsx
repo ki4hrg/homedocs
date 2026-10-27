@@ -37,7 +37,7 @@ export default async function FamilyPage() {
                 {p.hasPassword ? (
                   <ResetLink action={resetAction.bind(null, p.id)} />
                 ) : signIn.password ? (
-                  <ResetLink action={resetAction.bind(null, p.id)} label="Make a link to set a password" />
+                  <ResetLink action={resetAction.bind(null, p.id)} label="Make Set-Password Link" />
                 ) : (
                   <span />
                 )}
@@ -48,7 +48,7 @@ export default async function FamilyPage() {
         ))}
       </List>
 
-      <Section title="Add someone">
+      <Section title="Add Person">
         <Card className="p-4">
           <AddMemberForm
             action={addMemberAction}
@@ -59,14 +59,14 @@ export default async function FamilyPage() {
         </Card>
       </Section>
 
-      <Section title="Or send an invite link">
+      <Section title="Invite by Link">
         <Card className="p-4">
           <InviteForm action={inviteAction} />
         </Card>
       </Section>
 
       {invites.length ? (
-        <Section title="Open invite links">
+        <Section title="Open Invite Links">
           <List>
             {invites.map((i) => (
               <li key={i.id} className="flex min-h-14 items-center gap-3 px-4 py-2">

@@ -17,7 +17,7 @@ export default async function CodePage({ params }: { params: Promise<{ id: strin
   if (id === 'new') {
     return (
       <>
-        <PageHeader title="New code" back={{ href: '/guide/edit', label: 'Edit the guide' }} />
+        <PageHeader title="New Code" back={{ href: '/guide/edit', label: 'Edit Guide' }} />
         <SecretForm action={saveSecretAction.bind(null, null)} />
       </>
     )
@@ -26,7 +26,7 @@ export default async function CodePage({ params }: { params: Promise<{ id: strin
   if (!code) notFound()
   return (
     <>
-      <PageHeader title={code.label} back={{ href: '/guide/edit', label: 'Edit the guide' }} />
+      <PageHeader title={code.label} back={{ href: '/guide/edit', label: 'Edit Guide' }} />
       <SecretForm
         action={saveSecretAction.bind(null, id)}
         initial={{ ...code, ssid: code.meta.ssid, security: code.meta.security }}

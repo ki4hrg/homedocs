@@ -67,23 +67,23 @@ export function NoteForm({
       <Field label="When">
         <TextInput name="happenedOn" type="date" defaultValue={v('happenedOn') || today} />
       </Field>
-      <Field label="Where">
+      <Field label="Place">
         <PlaceSelect name="spaceId" defaultValue={v('spaceId')} options={options.places} emptyLabel="—" />
       </Field>
-      {pick('fixtureId', 'Which fixture', options.fixtures, v('fixtureId'))}
-      {pick('supplyId', 'Which part', options.parts, v('supplyId'))}
+      {pick('fixtureId', 'Fixture', options.fixtures, v('fixtureId'))}
+      {pick('supplyId', 'Part', options.parts, v('supplyId'))}
       <div className="grid grid-cols-2 gap-3">
-        <Field label="How many">
+        <Field label="Amount">
           <TextInput name="quantity" inputMode="decimal" defaultValue={v('quantity')} placeholder="12" />
         </Field>
         <Field label="Unit">
           <TextInput name="unit" defaultValue={v('unit')} placeholder="bags" />
         </Field>
       </div>
-      <Field label="Next time" hint="E.g. “needed 3 more bags”.">
+      <Field label="Next Time" hint="E.g. “needed 3 more”">
         <TextArea name="nextTime" rows={2} defaultValue={v('nextTime')} />
       </Field>
-      <Field label="Remind around" hint="Shows on Home near this date.">
+      <Field label="Remind Around" hint="Shows on Home near this date">
         <TextInput name="remindAfter" type="date" defaultValue={v('remindAfter')} />
       </Field>
       {more ? (
@@ -91,8 +91,8 @@ export function NoteForm({
           <Field label="Cost">
             <TextInput name="cost" inputMode="decimal" defaultValue={v('cost')} placeholder="$" />
           </Field>
-          {pick('contactId', 'Who did it', options.contacts, v('contactId'))}
-          {pick('projectId', 'Part of project', options.projects, v('projectId'))}
+          {pick('contactId', 'Who Did It', options.contacts, v('contactId'))}
+          {pick('projectId', 'Project', options.projects, v('projectId'))}
           <Field label="Details">
             <TextArea name="body" rows={4} defaultValue={v('body')} />
           </Field>

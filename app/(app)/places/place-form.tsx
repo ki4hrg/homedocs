@@ -6,7 +6,7 @@ import { PlaceSelect } from '@/components/PlaceSelect'
 
 const KINDS = [
   { value: 'room', label: 'Room' },
-  { value: 'floor', label: 'Floor or building' },
+  { value: 'floor', label: 'Floor or Building' },
   { value: 'outdoor', label: 'Outdoors' },
   { value: 'area', label: 'Area (closet, nook, crawlspace)' },
   { value: 'other', label: 'Other' },
@@ -29,8 +29,8 @@ export function PlaceForm({
       <Field label="Name">
         <TextInput name="name" defaultValue={initial?.name} placeholder="Living room, Front flowerbed, Garage" required autoFocus={!initial?.name} />
       </Field>
-      <Field label="Inside" hint="Optional, e.g. a room inside a floor.">
-        <PlaceSelect name="parentId" defaultValue={initial?.parentId ?? ''} options={places} emptyLabel="Nothing — top level" />
+      <Field label="Inside" hint="E.g. a room on a floor">
+        <PlaceSelect name="parentId" defaultValue={initial?.parentId ?? ''} options={places} emptyLabel="Top level" />
       </Field>
       <Field label="Kind">
         <Select name="kind" defaultValue={initial?.kind ?? 'room'}>

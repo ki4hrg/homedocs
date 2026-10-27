@@ -59,11 +59,11 @@ test('link a place to its paperless tag and see its documents', async ({ page })
 
   await page.goto('/places/new')
   await page.locator('[name=name]').fill('Pantry')
-  await page.getByRole('button', { name: 'Add place' }).click()
+  await page.getByRole('button', { name: 'Add Place' }).click()
   await expect(page.getByRole('heading', { name: 'Pantry' })).toBeVisible()
 
   // Every tag shows to browse before anything is typed.
-  await page.getByRole('button', { name: 'Add a tag’s documents' }).click()
+  await page.getByRole('button', { name: 'Add Tag Documents' }).click()
   await expect(page.getByRole('textbox', { name: 'Search' })).toHaveValue('')
   await page.getByRole('button', { name: /Pantry.*Tag · 1 document/ }).click()
 
@@ -76,7 +76,7 @@ test('link a place to its paperless tag and see its documents', async ({ page })
   await expect.poll(() => doc.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0)
 
   // A document linked on its own joins the same list, ahead of the tag's.
-  await page.getByRole('button', { name: 'Add a document' }).click()
+  await page.getByRole('button', { name: 'Add Document' }).click()
   await page.getByRole('textbox', { name: 'Search' }).fill('shelf')
   await page.getByRole('button', { name: /Shelf receipt/ }).click()
   const docs = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Documents' }) }).getByRole('link')
@@ -87,29 +87,29 @@ test('link a place to its paperless tag and see its documents', async ({ page })
 test('a contact lists its paperless correspondent’s documents', async ({ page }) => {
   await page.goto('/contacts/new')
   await page.locator('[name=name]').fill('Ace Plumbing')
-  await page.getByRole('button', { name: 'Add contact' }).click()
+  await page.getByRole('button', { name: 'Add Contact' }).click()
   await expect(page.getByRole('heading', { name: 'Ace Plumbing' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Add a correspondent’s documents' }).click()
+  await page.getByRole('button', { name: 'Add Correspondent Documents' }).click()
   await page.getByRole('button', { name: /Ace Plumbing.*Correspondent · 1 document/ }).click()
   await expect(page.getByRole('heading', { name: 'Documents' })).toBeVisible()
   await expect(page.getByRole('link', { name: /Ace invoice/ })).toHaveAttribute('href', `${base}/documents/13/details`)
-  await expect(page.getByRole('link', { name: /Open correspondent/ })).toHaveAttribute('href', `${base}/documents?correspondent__id__in=2`)
+  await expect(page.getByRole('link', { name: /Open Correspondent/ })).toHaveAttribute('href', `${base}/documents?correspondent__id__in=2`)
 
   // Unlinking brings the picker back.
   page.once('dialog', (d) => d.accept())
   await page.getByRole('button', { name: /Unlink/ }).click()
-  await expect(page.getByRole('button', { name: 'Add a correspondent’s documents' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Add Correspondent Documents' })).toBeVisible()
 })
 
 test('Settings narrows paperless to the house’s tag', async ({ page }) => {
   await page.goto('/settings')
-  await page.getByRole('button', { name: 'Pick a tag' }).click()
+  await page.getByRole('button', { name: 'Pick Tag' }).click()
   await page.getByRole('button', { name: /Pantry.*Tag/ }).click()
-  await expect(page.getByText('Only documents tagged')).toBeVisible()
+  await expect(page.getByText('Only Documents Tagged')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Remove the Pantry filter' })).toBeVisible()
 
   page.once('dialog', (d) => d.accept())
   await page.getByRole('button', { name: 'Remove the Pantry filter' }).click()
-  await expect(page.getByRole('button', { name: 'Pick a tag' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Pick Tag' })).toBeVisible()
 })

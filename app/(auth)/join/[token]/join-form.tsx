@@ -11,15 +11,15 @@ export function JoinForm({ token, kind }: { token: string; kind: 'invite' | 'res
     <form action={action} className="flex flex-col gap-4">
       {kind === 'invite' ? (
         <>
-          <Field label="Your name">
+          <Field label="Your Name">
             <TextInput name="displayName" autoComplete="name" required autoFocus />
           </Field>
-          <Field label="Email" hint="You'll use this to sign in.">
+          <Field label="Email" hint="For signing in">
             <TextInput name="email" type="email" autoComplete="username" required />
           </Field>
         </>
       ) : null}
-      <Field label={kind === 'invite' ? 'Choose a password' : 'New password'} hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
+      <Field label={kind === 'invite' ? 'Choose Password' : 'New Password'} hint={`At least ${MIN_PASSWORD_LENGTH} characters`}>
         <TextInput
           name="password"
           type="password"
@@ -30,7 +30,7 @@ export function JoinForm({ token, kind }: { token: string; kind: 'invite' | 'res
         />
       </Field>
       <FormError>{state.error}</FormError>
-      <SubmitButton pendingText="One moment…">{kind === 'invite' ? 'Join' : 'Set password'}</SubmitButton>
+      <SubmitButton pendingText="One moment…">{kind === 'invite' ? 'Join' : 'Set Password'}</SubmitButton>
     </form>
   )
 }

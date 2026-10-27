@@ -45,13 +45,13 @@ export default async function SettingsPage() {
           <PasswordForm action={passwordAction} hasPassword={Boolean(row?.hash)} />
         </Card>
       </Section>
-      <Section title="Connected apps">
+      <Section title="Connected Apps">
         <Card className="flex flex-col gap-3 p-4">
           <p className="text-sm text-ink-3">
-            Add this as a custom connector in Claude:
+            Add as a custom connector in Claude:
           </p>
           <code className="break-all rounded bg-sunk px-2 py-1.5 text-xs text-ink">{mcpUrl}</code>
-          <CopyButton text={mcpUrl} label="Copy address" />
+          <CopyButton text={mcpUrl} label="Copy Address" />
         </Card>
         {grants.length ? (
           <div className="mt-3">
@@ -61,7 +61,7 @@ export default async function SettingsPage() {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[15px] font-medium text-ink">{g.clientName}</span>
                     <span className="block text-sm text-ink-3">
-                      {g.scopes.includes('homedocs:write') ? 'Can look up and change' : 'Can look up'}
+                      {g.scopes.includes('homedocs:write') ? 'Look Up and Change' : 'Look Up'}
                       {g.lastUsedAt ? ` · used ${timeAgo(g.lastUsedAt)}` : ''}
                     </span>
                   </span>
@@ -73,7 +73,7 @@ export default async function SettingsPage() {
         ) : null}
       </Section>
       {user.role === 'admin' ? (
-        <Section title="The home">
+        <Section title="Home">
           <Card className="p-4">
             <HomeForm action={homeAction} initial={property} seenAs={seenAs} />
           </Card>
@@ -82,7 +82,7 @@ export default async function SettingsPage() {
       {user.role === 'admin' ? (
         <Section title="Homebox and paperless">
           <p className="mb-2 px-1 text-sm text-ink-3">
-            For searching and linking their items and documents.
+            For searching and linking items and documents
           </p>
           <div className="flex flex-col gap-3">
             {(['homebox', 'paperless'] as const).map((system) => {
@@ -98,8 +98,8 @@ export default async function SettingsPage() {
                   <IntegrationForm action={saveIntegrationAction.bind(null, system)} system={system} initial={row ? { baseUrl: row.baseUrl, lastStatus: row.lastStatus } : undefined} />
                   {system === 'paperless' && row ? (
                     <div className="flex flex-col gap-2 border-t border-line pt-3">
-                      <p className="text-sm font-medium text-ink-2">Only documents tagged</p>
-                      <p className="-mt-1 text-xs text-ink-3">E.g. this house’s tag, if paperless also holds another home’s papers.</p>
+                      <p className="text-sm font-medium text-ink-2">Only Documents Tagged</p>
+                      <p className="-mt-1 text-xs text-ink-3">E.g. this house’s tag, if paperless holds another home’s papers</p>
                       {row.requiredTags.length ? (
                         <ul className="flex flex-wrap gap-2">
                           {row.requiredTags.map((t) => (
@@ -111,7 +111,7 @@ export default async function SettingsPage() {
                         </ul>
                       ) : null}
                       <LinkPicker
-                        systems={[{ system: 'paperless', name: 'paperless', kind: 'tag', label: row.requiredTags.length ? 'Add another tag' : 'Pick a tag' }]}
+                        systems={[{ system: 'paperless', name: 'paperless', kind: 'tag', label: row.requiredTags.length ? 'Add Tag' : 'Pick Tag' }]}
                         link={requirePaperlessTagAction}
                       />
                     </div>

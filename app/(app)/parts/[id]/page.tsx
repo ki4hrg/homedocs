@@ -54,12 +54,12 @@ export default async function PartPage({ params }: { params: Promise<{ id: strin
               label: f.label,
               value: f.multiline && part.fields[f.key] ? <span className="whitespace-pre-line">{part.fields[f.key]}</span> : (part.fields[f.key] ?? ''),
             })),
-          { label: 'Sold by', value: partUnits(part).length > 1 ? partUnits(part).join(', ') : '' },
+          { label: 'Sold By', value: partUnits(part).length > 1 ? partUnits(part).join(', ') : '' },
         ]}
       />
 
       {formula ? (
-        <Section title="Tint formula">
+        <Section title="Tint Formula">
           <FormulaTable formula={formula} />
         </Section>
       ) : null}
@@ -67,13 +67,13 @@ export default async function PartPage({ params }: { params: Promise<{ id: strin
       {part.buyUrl ? (
         <a href={part.buyUrl} target="_blank" rel="noreferrer" className={buttonClass('secondary', 'mt-3 w-full')}>
           <Icon name="external" />
-          Where to buy it
+          Where to Buy
         </a>
       ) : null}
 
       <Lessons rows={tips} />
 
-      <Section title="Used in">
+      <Section title="Used In">
         {uses.length ? (
           <List>
             {uses.map((u) => (
@@ -94,7 +94,7 @@ export default async function PartPage({ params }: { params: Promise<{ id: strin
             ))}
           </List>
         ) : (
-          <p className="px-1 text-sm text-ink-3">Not used anywhere yet.</p>
+          <p className="px-1 text-sm text-ink-3">Not used anywhere yet</p>
         )}
       </Section>
 
@@ -108,15 +108,15 @@ export default async function PartPage({ params }: { params: Promise<{ id: strin
 
       <Section
         title="History"
-        action={canEdit ? <Link href={`/notes/new?part=${id}`} className="text-sm text-accent">Add note</Link> : null}
+        action={canEdit ? <Link href={`/notes/new?part=${id}`} className="text-sm text-accent">Add Note</Link> : null}
       >
-        {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">None yet.</p>}
+        {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">None yet</p>}
       </Section>
 
       <Section title="Photos">
         <div className="flex flex-col gap-3">
           <Photos items={photos} remove={canEdit ? removeAttachmentAction : undefined} />
-          {canEdit ? <PhotoUpload owner={`supply:${id}`} label={part.category === 'paint' ? 'Add photo of the label' : 'Add photo'} /> : null}
+          {canEdit ? <PhotoUpload owner={`supply:${id}`} label={part.category === 'paint' ? 'Add Photo of Label' : 'Add Photo'} /> : null}
         </div>
       </Section>
 

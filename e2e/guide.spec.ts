@@ -13,9 +13,9 @@ let link = ''
 test('the family sets up the guide and makes a link', async ({ page }) => {
   await page.goto('/fixtures/new')
   await page.locator('[name=name]').fill('Main water shutoff')
-  await page.getByLabel('Show on the house guide').check()
+  await page.getByLabel('Show on House Guide').check()
   await page.locator('[name=guideNote]').fill('Basement, behind the furnace. Quarter turn.')
-  await page.getByRole('button', { name: 'Add fixture' }).click()
+  await page.getByRole('button', { name: 'Add Fixture' }).click()
 
   await page.goto('/guide/codes/new')
   await page.locator('[name=kind]').selectOption('alarm')
@@ -33,7 +33,7 @@ test('the family sets up the guide and makes a link', async ({ page }) => {
   await page.goto('/share')
   await page.locator('[name=label]').fill('Sarah')
   await page.locator('[name=pin]').fill('246810')
-  await page.getByRole('button', { name: 'Make link' }).click()
+  await page.getByRole('button', { name: 'Make Link' }).click()
   link = (await page.locator('code').first().textContent())!.trim()
   expect(link).toMatch(/\/g\/[A-Za-z0-9_-]{40,}$/)
 })
@@ -63,8 +63,8 @@ test('away from home: hidden until the PIN', async ({ browser }) => {
 test('a turned-off link stops working', async ({ page, browser }) => {
   await page.goto('/share')
   page.on('dialog', (d) => d.accept())
-  await page.getByRole('button', { name: 'Turn off' }).click()
-  await expect(page.getByText('Expired or off')).toBeVisible()
+  await page.getByRole('button', { name: 'Turn Off' }).click()
+  await expect(page.getByText('Expired or Off')).toBeVisible()
 
   const ctx = await browser.newContext({ storageState: undefined })
   const res = await (await ctx.newPage()).goto(link)

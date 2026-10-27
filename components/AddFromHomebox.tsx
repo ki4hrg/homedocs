@@ -12,7 +12,7 @@ export function AddFromHomebox({ name, add }: { name: string; add: () => Promise
       <button
         type="button"
         disabled={pending}
-        aria-label={`Add ${name} as a fixture here`}
+        aria-label={`Add ${name} as fixture`}
         className={buttonClass('secondary', 'px-3')}
         onClick={() =>
           start(async () => {

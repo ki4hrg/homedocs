@@ -7,7 +7,7 @@ import { timeAgo } from '@/lib/web/format'
 import { viewer } from '@/lib/web/context'
 import { RestoreButton } from './restore-button'
 
-export const metadata = { title: 'Recently deleted' }
+export const metadata = { title: 'Recently Deleted' }
 
 const LABEL = { place: 'Place', system: 'System', fixture: 'Fixture', part: 'Part', note: 'Note', contact: 'Contact', project: 'Project', series: 'Series' } as const
 
@@ -17,7 +17,7 @@ export default async function DeletedPage() {
   const canEdit = roleAtLeast(user.role, 'member')
   return (
     <>
-      <PageHeader title="Recently deleted" subtitle="Last 90 days" back={{ href: '/more', label: 'More' }} />
+      <PageHeader title="Recently Deleted" subtitle="Last 90 days" back={{ href: '/more', label: 'More' }} />
       {rows.length ? (
         <List>
           {rows.map((r) => (
@@ -34,7 +34,7 @@ export default async function DeletedPage() {
           ))}
         </List>
       ) : (
-        <EmptyState>Nothing has been deleted.</EmptyState>
+        <EmptyState>Nothing deleted</EmptyState>
       )}
     </>
   )

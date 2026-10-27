@@ -228,7 +228,7 @@ describe('series', () => {
     await appendLessonToHowTo(db, scope, member, note.id, stale)
     expect((await getSeries(db, scope, series.id)).howTo).toBe('Unroll along the stair edge first.\n\nOrder one extra roll.')
     await expect(appendLessonToHowTo(db, scope, member, note.id, stale)).rejects.toBeInstanceOf(StaleWriteError)
-    await expect(appendLessonToHowTo(db, scope, member, note.id)).rejects.toThrow('already in the how-to')
+    await expect(appendLessonToHowTo(db, scope, member, note.id)).rejects.toThrow('already in the instructions')
   })
 
   it('makes a series from an existing project, leaving its one-offs behind', async () => {

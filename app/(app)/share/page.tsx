@@ -9,7 +9,7 @@ import { viewer } from '@/lib/web/context'
 import { createShareAction, revokeShareAction } from './actions'
 import { RevokeLink, ShareForm } from './forms'
 
-export const metadata = { title: 'Share links' }
+export const metadata = { title: 'Share Links' }
 
 const EVENT = { view: 'opened', unlock: 'entered the PIN', pin_failed: 'wrong PIN', locked: 'locked out' } as Record<string, string>
 
@@ -25,9 +25,9 @@ export default async function SharePage() {
   return (
     <>
       <PageHeader
-        title="Share the house guide"
+        title="Share House Guide"
         subtitle="No account needed"
-        back={{ href: '/guide', label: 'House guide' }}
+        back={{ href: '/guide', label: 'House Guide' }}
       />
       <Card className="p-4">
         <ShareForm action={createShareAction} places={flattenTree(buildTree(spaces))} />
@@ -45,7 +45,7 @@ export default async function SharePage() {
                       Until {link.expiresAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       {link.pinHash ? ' · has a PIN' : ' · no PIN'}
                     </p>
-                    {link.lockedAt ? <Pill tone="danger">PIN locked</Pill> : null}
+                    {link.lockedAt ? <Pill tone="danger">PIN Locked</Pill> : null}
                   </div>
                   <RevokeLink action={revokeShareAction.bind(null, link.id)} />
                 </div>
@@ -59,7 +59,7 @@ export default async function SharePage() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-2 text-xs text-ink-3">Not opened yet.</p>
+                  <p className="mt-2 text-xs text-ink-3">Not opened yet</p>
                 )}
               </Card>
             ))}
@@ -68,7 +68,7 @@ export default async function SharePage() {
       ) : null}
 
       {past.length ? (
-        <Section title="Expired or off">
+        <Section title="Expired or Off">
           <List>
             {past.map(({ link, views: n }) => (
               <li key={link.id} className="px-4 py-3 text-sm">

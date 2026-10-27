@@ -8,7 +8,7 @@ import { needsSetup } from '@/lib/auth/users'
 import { LoginForm } from './login-form'
 import { SsoButton } from './sso-button'
 
-export const metadata = { title: 'Sign in' }
+export const metadata = { title: 'Sign In' }
 
 export default async function LoginPage({
   searchParams,
@@ -29,14 +29,14 @@ export default async function LoginPage({
 
   return (
     <>
-      <h2 className="mb-6 text-xl font-semibold text-ink">Sign in</h2>
+      <h2 className="mb-6 text-xl font-semibold text-ink">Sign In</h2>
       <div className="flex flex-col gap-4">
         <FormError>{error}</FormError>
         {options.sso ? <SsoButton name={options.sso.name} next={carried} only={!options.password} /> : null}
         {options.sso && options.password ? <p className="text-center text-sm text-ink-3">or</p> : null}
         {options.password ? <LoginForm next={next} /> : null}
         <p className="mt-2 text-sm text-ink-3">
-          New here? Ask whoever runs homedocs for an invite link.
+          New here? Ask for an invite link.
         </p>
       </div>
     </>

@@ -28,10 +28,10 @@ export function InviteForm({ action }: { action: FormAction }) {
   const [state, formAction] = useActionState<ActionResult, FormData>(action, {})
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <Field label="Who is it for?">
+      <Field label="Name">
         <TextInput name="label" placeholder="Mom" />
       </Field>
-      <Field label="What can they do?">
+      <Field label="Role">
         <Select name="role" defaultValue="member">
           {Object.entries(ROLE_HELP).map(([v, l]) => (
             <option key={v} value={v}>
@@ -42,7 +42,7 @@ export function InviteForm({ action }: { action: FormAction }) {
       </Field>
       {state.error ? <p className="text-sm text-danger">{state.error}</p> : null}
       {state.message ? <MadeLink url={state.message} kind="invite" /> : null}
-      <SubmitButton pendingText="Making link…">Make invite link</SubmitButton>
+      <SubmitButton pendingText="Making link…">Make Invite Link</SubmitButton>
     </form>
   )
 }
@@ -61,20 +61,20 @@ export function AddMemberForm({
   const [state, formAction] = useActionState<ActionResult, FormData>(action, {})
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <Field label="Their name">
+      <Field label="Name">
         <TextInput name="displayName" required placeholder="Mom" />
       </Field>
       <Field
-        label="Email address"
+        label="Email"
         hint={
           sso
-            ? `The one they use with ${sso}.` + (needsVerifiedEmail ? ` ${sso} must show it as verified.` : '')
+            ? `The one they use with ${sso}` + (needsVerifiedEmail ? `; ${sso} must show it as verified` : '')
             : undefined
         }
       >
         <TextInput name="email" type="email" inputMode="email" required />
       </Field>
-      <Field label="What can they do?">
+      <Field label="Role">
         <Select name="role" defaultValue="member">
           {Object.entries(ROLE_HELP).map(([v, l]) => (
             <option key={v} value={v}>
@@ -85,11 +85,11 @@ export function AddMemberForm({
       </Field>
       {password ? (
         <Field
-          label={sso ? 'Password (optional)' : 'Password'}
+          label="Password"
           hint={
             sso
-              ? `Blank if they use ${sso}.`
-              : 'Or leave blank and send a password link.'
+              ? `Blank if they use ${sso}`
+              : 'Or leave blank and send a password link'
           }
         >
           <TextInput name="password" type="password" minLength={8} />
@@ -97,12 +97,12 @@ export function AddMemberForm({
       ) : null}
       {state.error ? <p role="alert" className="text-sm text-danger">{state.error}</p> : null}
       {state.message ? <p role="status" className="text-sm text-accent">{state.message}</p> : null}
-      <SubmitButton pendingText="Adding…">Add them</SubmitButton>
+      <SubmitButton pendingText="Adding…">Add Person</SubmitButton>
     </form>
   )
 }
 
-export function ResetLink({ action, label = 'Make a password reset link' }: { action: FormAction; label?: string }) {
+export function ResetLink({ action, label = 'Make Password Reset Link' }: { action: FormAction; label?: string }) {
   const [state, formAction] = useActionState<ActionResult, FormData>(action, {})
   return (
     <form action={formAction} className="flex flex-col gap-2">
@@ -154,7 +154,7 @@ export function RevokeButton({ action }: { action: () => Promise<unknown> }) {
   const [pending, start] = useTransition()
   return (
     <button type="button" disabled={pending} className={buttonClass('ghost', 'min-h-9 px-2 text-sm')} onClick={() => start(async () => void (await action()))}>
-      Cancel link
+      Cancel Link
     </button>
   )
 }

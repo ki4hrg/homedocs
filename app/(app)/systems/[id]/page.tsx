@@ -35,7 +35,7 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
   for (const f of rest) byPlace.set(f.where, [...(byPlace.get(f.where) ?? []), f])
   const addFixture = canEdit ? (
     <Link href={`/fixtures/new?system=${id}`} className="text-sm text-accent">
-      Add fixture
+      Add Fixture
     </Link>
   ) : null
 
@@ -55,7 +55,7 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
       ) : null}
 
       {first.length ? (
-        <Section title="Key fixtures" action={rest.length ? null : addFixture}>
+        <Section title="Key Fixtures" action={rest.length ? null : addFixture}>
           <div className="flex flex-col gap-3">
             {first.map((f) => (
               <Card key={f.id} className="overflow-hidden">
@@ -77,7 +77,7 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
       ) : null}
 
       {contacts.length ? (
-        <Section title="Who to call">
+        <Section title="Who to Call">
           <List>
             {contacts.map((c) => (
               <Row
@@ -102,20 +102,20 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
           </List>
         </Section>
       ) : system.trades.length && canEdit ? (
-        <Section title="Who to call">
+        <Section title="Who to Call">
           <p className="px-1 text-sm text-ink-3">
             No contact for {system.trades.map(label).join(' or ')} yet.{' '}
             <Link href="/contacts/new" className="text-accent underline">
-              Add contact
+              Add Contact
             </Link>
           </p>
         </Section>
       ) : null}
 
       {rest.length || !first.length ? (
-        <Section title={first.length ? 'Other fixtures' : 'Fixtures'} action={addFixture}>
+        <Section title={first.length ? 'Other Fixtures' : 'Fixtures'} action={addFixture}>
           {fixtures.length === 0 ? (
-            <p className="px-1 text-sm text-ink-3">None yet.</p>
+            <p className="px-1 text-sm text-ink-3">None yet</p>
           ) : (
             <div className="flex flex-col gap-3">
               {[...byPlace].map(([where, items]) => (

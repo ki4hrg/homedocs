@@ -21,7 +21,7 @@ export default async function PartsPage() {
         actions={canEdit ? <LinkButton href="/parts/new" variant="primary">Add</LinkButton> : null}
       />
       {rows.length === 0 ? (
-        <EmptyState>No parts yet.</EmptyState>
+        <EmptyState>No parts yet</EmptyState>
       ) : (
         CATEGORIES.filter((c) => rows.some((r) => r.part.category === c)).map((c) => (
           <Section key={c} title={TEMPLATES[c].label}>

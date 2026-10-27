@@ -9,7 +9,7 @@ setup('create the first account', async ({ page }) => {
   await page.locator('[name=displayName]').fill(ADMIN.name)
   await page.locator('[name=email]').fill(ADMIN.email)
   await page.locator('[name=password]').fill(ADMIN.password)
-  await page.getByRole('button', { name: 'Create account' }).click()
+  await page.getByRole('button', { name: 'Create Account' }).click()
   await expect(page.getByRole('link', { name: ADMIN.home })).toBeVisible()
   await page.context().storageState({ path: AUTH_FILE })
 })

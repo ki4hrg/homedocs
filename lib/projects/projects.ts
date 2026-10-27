@@ -38,9 +38,9 @@ export const OPEN_STATUSES: ProjectStatus[] = ['idea', 'planning', 'quoted', 'sc
 export const STATUS_LABEL: Record<ProjectStatus, string> = {
   idea: 'Idea',
   planning: 'Planning',
-  quoted: 'Getting quotes',
+  quoted: 'Getting Quotes',
   scheduled: 'Scheduled',
-  in_progress: 'In progress',
+  in_progress: 'In Progress',
   done: 'Done',
   dropped: 'Dropped',
 }

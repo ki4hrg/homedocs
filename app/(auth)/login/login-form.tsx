@@ -16,7 +16,7 @@ export function LoginForm({ next }: { next?: string }) {
         <TextInput name="password" type="password" autoComplete="current-password" required />
       </Field>
       <FormError>{state.error}</FormError>
-      <SubmitButton pendingText="Signing in…">Sign in</SubmitButton>
+      <SubmitButton pendingText="Signing in…">Sign In</SubmitButton>
     </form>
   )
 }

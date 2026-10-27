@@ -101,7 +101,7 @@ export function LinkPicker({
         </button>
       </div>
       {error ? <p className="text-sm text-danger">{error}</p> : null}
-      {!error && searched === q && hits.length === 0 ? <p className="px-1 text-sm text-ink-3">Nothing found.</p> : null}
+      {!error && searched === q && hits.length === 0 ? <p className="px-1 text-sm text-ink-3">Nothing found</p> : null}
       <ul className="max-h-80 divide-y divide-line overflow-y-auto">
         {hits.map((h) => (
           <li key={h.externalId}>

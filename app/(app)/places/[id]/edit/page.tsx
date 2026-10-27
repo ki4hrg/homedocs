@@ -7,7 +7,7 @@ import { viewer } from '@/lib/web/context'
 import { deletePlaceAction, updatePlaceAction } from '../../actions'
 import { PlaceForm } from '../../place-form'
 
-export const metadata = { title: 'Edit place' }
+export const metadata = { title: 'Edit Place' }
 
 export default async function EditPlacePage({ params }: { params: Promise<{ id: string }> }) {
   await requireRole('member')

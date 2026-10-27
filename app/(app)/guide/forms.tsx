@@ -23,7 +23,7 @@ export function SectionForm({
       <Checkbox
         name="sensitive"
         label="Private"
-        hint="Only at the house, or with the link’s PIN."
+        hint="Only at the house, or with the link’s PIN"
         defaultChecked={initial?.sensitive}
       />
       <SubmitButton>Save</SubmitButton>
@@ -33,9 +33,9 @@ export function SectionForm({
 
 const KINDS = [
   ['wifi', 'Wi-Fi'],
-  ['alarm', 'Alarm code'],
-  ['lockbox', 'Lockbox / key safe'],
-  ['gate', 'Gate or garage code'],
+  ['alarm', 'Alarm Code'],
+  ['lockbox', 'Lockbox / Key Safe'],
+  ['gate', 'Gate or Garage Code'],
   ['other', 'Other'],
 ] as const
 
@@ -50,7 +50,7 @@ export function SecretForm({
   const editing = Boolean(initial)
   return (
     <ActionForm action={action}>
-      <Field label="What is it?">
+      <Field label="Kind">
         <Select name="kind" value={kind} onChange={(e) => setKind(e.target.value)}>
           {KINDS.map(([v, l]) => (
             <option key={v} value={v}>
@@ -61,7 +61,7 @@ export function SecretForm({
       </Field>
       {kind === 'wifi' ? (
         <>
-          <Field label="Network name">
+          <Field label="Network Name">
             <TextInput name="ssid" defaultValue={initial?.ssid} required />
           </Field>
           <Field label="Security">
@@ -73,16 +73,16 @@ export function SecretForm({
           </Field>
         </>
       ) : null}
-      <Field label="Label" hint={kind === 'wifi' ? 'Optional.' : undefined}>
+      <Field label="Label" hint={kind === 'wifi' ? 'Optional' : undefined}>
         <TextInput name="label" defaultValue={initial?.label} />
       </Field>
       <Field
         label={kind === 'wifi' ? 'Password' : 'Code'}
-        hint={editing ? 'Leave blank to keep the current one.' : 'Stored encrypted.'}
+        hint={editing ? 'Leave blank to keep the current one' : 'Stored encrypted'}
       >
         <TextInput name="value" type="text" autoComplete="off" spellCheck={false} />
       </Field>
-      <Field label="On a shared link, who sees it">
+      <Field label="Who Sees It on a Shared Link">
         {/* Keyed by kind: an uncontrolled select keeps its first default, so
             switching Wi-Fi → Alarm would otherwise leave the code visible to
             anyone with the link. */}
@@ -96,7 +96,7 @@ export function SecretForm({
           They need the password before they’re on the Wi-Fi.
         </p>
       ) : null}
-      <Checkbox name="inGuide" label="Show on the house guide" defaultChecked={initial?.inGuide ?? true} />
+      <Checkbox name="inGuide" label="Show on House Guide" defaultChecked={initial?.inGuide ?? true} />
       <Field label="Notes">
         <TextArea name="notes" rows={2} defaultValue={initial?.notes} />
       </Field>

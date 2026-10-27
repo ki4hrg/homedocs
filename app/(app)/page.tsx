@@ -91,8 +91,8 @@ export default async function HomePage() {
 
       {spaces.length === 0 ? (
         <Section title="Places">
-          <EmptyState action={canEdit ? <LinkButton href="/places/new" variant="primary">Add a place</LinkButton> : null}>
-            No places yet.
+          <EmptyState action={canEdit ? <LinkButton href="/places/new" variant="primary">Add Place</LinkButton> : null}>
+            No places yet
           </EmptyState>
         </Section>
       ) : (
@@ -125,7 +125,7 @@ export default async function HomePage() {
       ) : null}
 
       {rebuy.length > 0 ? (
-        <Section title="What the house takes" action={<Link href="/parts" className="text-sm text-accent">All parts</Link>}>
+        <Section title="Parts in Use" action={<Link href="/parts" className="text-sm text-accent">All Parts</Link>}>
           <List>
             {rebuy.slice(0, 8).map((p) => (
               <Row
@@ -141,7 +141,7 @@ export default async function HomePage() {
       ) : null}
 
       {preferred.length > 0 ? (
-        <Section title="Who to call" action={<Link href="/contacts" className="text-sm text-accent">All</Link>}>
+        <Section title="Who to Call" action={<Link href="/contacts" className="text-sm text-accent">All</Link>}>
           <List>
             {preferred.slice(0, 6).map(({ trade, contact }) => {
               const phone = contact.phones[0]?.value
@@ -171,7 +171,7 @@ export default async function HomePage() {
       ) : null}
 
       {upcoming.length > 0 ? (
-        <Section title="Coming up">
+        <Section title="Coming Up">
           <List>
             {upcoming.map(({ note, spaceName, fixtureName, supplyName }) => (
               <Row
@@ -202,8 +202,8 @@ export default async function HomePage() {
             ))}
           </List>
         ) : (
-          <EmptyState action={canEdit ? <LinkButton href="/projects/new">Add a project</LinkButton> : null}>
-            No open projects.
+          <EmptyState action={canEdit ? <LinkButton href="/projects/new">Add Project</LinkButton> : null}>
+            No open projects
           </EmptyState>
         )}
       </Section>

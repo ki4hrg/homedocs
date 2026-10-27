@@ -55,7 +55,7 @@ export function FixtureForm({
           autoFocus={!initial?.name}
         />
       </Field>
-      <Field label="Where is it?">
+      <Field label="Place">
         <PlaceSelect name="spaceId" defaultValue={initial?.spaceId ?? ''} options={places} />
       </Field>
       <Field label="Kind">
@@ -88,12 +88,12 @@ export function FixtureForm({
       </Field>
       <Checkbox
         name="inGuide"
-        label="Show on the house guide"
+        label="Show on House Guide"
         checked={inGuide}
         onChange={(e) => setInGuide(e.target.checked)}
       />
       {inGuide ? (
-        <Field label="Note for the house guide">
+        <Field label="House Guide Note">
           <TextArea name="guideNote" defaultValue={initial?.guideNote} placeholder="Turn the red handle a quarter turn." />
         </Field>
       ) : (
