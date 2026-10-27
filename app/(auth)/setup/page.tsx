@@ -4,7 +4,7 @@ import { needsSetup } from '@/lib/auth/users'
 import { SsoButton } from '../login/sso-button'
 import { SetupForm } from './setup-form'
 
-export const metadata = { title: 'Set up' }
+export const metadata = { title: 'Set Up' }
 
 /*
  * Disables itself once a user exists — checked here so the form never renders,
@@ -18,7 +18,7 @@ export default async function SetupPage() {
     <>
       <h2 className="mb-2 text-xl font-semibold text-ink">Welcome</h2>
       <p className="mb-6 text-[15px] text-ink-3">
-        Create the first account. You’ll be the admin, and can invite the rest of the family afterwards.
+        Create the first account. You’ll be the admin and can invite the family later.
       </p>
       {sso ? (
         <div className="mb-4 flex flex-col gap-4">

@@ -57,22 +57,22 @@ export default async function FixturePage({ params }: { params: Promise<{ id: st
       {photos.length ? (
         <div className="flex flex-col gap-2">
           <Photos items={photos} hero remove={canEdit ? removeAttachmentAction : undefined} />
-          {canEdit ? <PhotoUpload owner={`fixture:${id}`} label="Add photo" /> : null}
+          {canEdit ? <PhotoUpload owner={`fixture:${id}`} label="Add Photo" /> : null}
         </div>
       ) : canEdit ? (
-        <PhotoUpload owner={`fixture:${id}`} tile={{ title: 'Add photo', hint: 'Where it is, or its label.' }} />
+        <PhotoUpload owner={`fixture:${id}`} tile={{ title: 'Add Photo', hint: 'Where it is, or its label' }} />
       ) : null}
 
       <Lessons rows={tips} />
 
       <Section
-        title="Uses"
-        action={canEdit ? <Link href={`/use?fixture=${id}`} className="text-sm text-accent">Add part</Link> : null}
+        title="Parts"
+        action={canEdit ? <Link href={`/use?fixture=${id}`} className="text-sm text-accent">Add Part</Link> : null}
       >
         {uses.length ? (
           <UseList uses={uses} show="part" />
         ) : (
-          <p className="px-1 text-sm text-ink-3">None yet.</p>
+          <p className="px-1 text-sm text-ink-3">None yet</p>
         )}
       </Section>
 
@@ -85,9 +85,9 @@ export default async function FixturePage({ params }: { params: Promise<{ id: st
       ) : null}
 
       {fixture.inGuide ? (
-        <Section title="On the house guide">
+        <Section title="On House Guide">
           <Card className="px-4 py-3">
-            <Pill tone="accent">Shown to housesitters</Pill>
+            <Pill tone="accent">Shown to Housesitters</Pill>
             {fixture.guideNote ? <p className="mt-2 whitespace-pre-wrap text-[15px] text-ink-2">{fixture.guideNote}</p> : null}
           </Card>
         </Section>
@@ -95,9 +95,9 @@ export default async function FixturePage({ params }: { params: Promise<{ id: st
 
       <Section
         title="Notes"
-        action={canEdit ? <Link href={`/notes/new?fixture=${id}`} className="text-sm text-accent">Add note</Link> : null}
+        action={canEdit ? <Link href={`/notes/new?fixture=${id}`} className="text-sm text-accent">Add Note</Link> : null}
       >
-        {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">None yet.</p>}
+        {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">None yet</p>}
       </Section>
 
       <DocumentsSection owner={{ kind: 'fixture', id }} canEdit={canEdit} />

@@ -9,20 +9,20 @@ export function SetupForm() {
   const [state, action] = useActionState<FormState, FormData>(setupAction, {})
   return (
     <form action={action} className="flex flex-col gap-4">
-      <Field label="What do you call your home?" hint="Shown at the top of every page. You can change it later.">
+      <Field label="Home Name" hint="Shown at the top of every page">
         <TextInput name="homeName" placeholder="The Maple Street house" required autoFocus />
       </Field>
-      <Field label="Your name">
+      <Field label="Your Name">
         <TextInput name="displayName" autoComplete="name" required />
       </Field>
       <Field label="Email">
         <TextInput name="email" type="email" autoComplete="username" required />
       </Field>
-      <Field label="Password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
+      <Field label="Password" hint={`At least ${MIN_PASSWORD_LENGTH} characters`}>
         <TextInput name="password" type="password" autoComplete="new-password" minLength={MIN_PASSWORD_LENGTH} required />
       </Field>
       <FormError>{state.error}</FormError>
-      <SubmitButton pendingText="Creating…">Create account</SubmitButton>
+      <SubmitButton pendingText="Creating…">Create Account</SubmitButton>
     </form>
   )
 }

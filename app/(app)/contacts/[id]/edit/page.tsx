@@ -8,7 +8,7 @@ import { viewer } from '@/lib/web/context'
 import { deleteContactAction, updateContactAction } from '../../actions'
 import { ContactForm } from '../../contact-form'
 
-export const metadata = { title: 'Edit contact' }
+export const metadata = { title: 'Edit Contact' }
 
 export default async function EditContactPage({ params }: { params: Promise<{ id: string }> }) {
   await requireRole('member')

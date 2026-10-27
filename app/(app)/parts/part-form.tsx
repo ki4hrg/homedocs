@@ -57,10 +57,10 @@ export function PartForm({
           </Field>
         ),
       )}
-      <Field label="Name" hint="Blank: made from the details above.">
+      <Field label="Name" hint="Leave blank to use the details above">
         <TextInput name="name" defaultValue={initial?.name} />
       </Field>
-      <Field label="Sold by" hint="The usual unit first, then any others: roll, bale.">
+      <Field label="Sold By" hint="Usual unit first, then others: roll, bale">
         <TextInput
           key={`units-${category}`}
           name="units"
@@ -68,7 +68,7 @@ export function PartForm({
           placeholder={template.unit}
         />
       </Field>
-      <Field label="Where to buy">
+      <Field label="Where to Buy">
         <TextInput name="buyUrl" type="url" inputMode="url" defaultValue={initial?.buyUrl} />
       </Field>
       <Field label="Notes">
@@ -89,7 +89,7 @@ function FormulaField({ field, initial }: { field: TemplateField; initial?: stri
         <TextArea ref={text} name={`f_${field.key}`} defaultValue={initial} placeholder={field.placeholder} rows={4} />
       </Field>
       <Select
-        aria-label="Add column headings"
+        aria-label="Add Column Headings"
         value=""
         onChange={(e) => {
           const box = text.current
@@ -99,7 +99,7 @@ function FormulaField({ field, initial }: { field: TemplateField; initial?: stri
           box.setSelectionRange(box.value.length, box.value.length)
         }}
       >
-        <option value="">Add column headings…</option>
+        <option value="">Add Column Headings…</option>
         {HEADING_PRESETS.map((p) => (
           <option key={p.line} value={p.line}>
             {p.label}

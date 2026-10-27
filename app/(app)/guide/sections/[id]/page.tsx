@@ -7,7 +7,7 @@ import { viewer } from '@/lib/web/context'
 import { deleteSectionAction, saveSectionAction } from '../../actions'
 import { SectionForm } from '../../forms'
 
-export const metadata = { title: 'Guide note' }
+export const metadata = { title: 'Guide Note' }
 
 export default async function SectionPage({ params }: { params: Promise<{ id: string }> }) {
   await requireRole('member')
@@ -16,7 +16,7 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
   if (id === 'new') {
     return (
       <>
-        <PageHeader title="New guide note" back={{ href: '/guide/edit', label: 'Edit the guide' }} />
+        <PageHeader title="New Guide Note" back={{ href: '/guide/edit', label: 'Edit Guide' }} />
         <SectionForm action={saveSectionAction.bind(null, null)} />
       </>
     )
@@ -24,7 +24,7 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
   const s = await getSection(db, scope, id)
   return (
     <>
-      <PageHeader title={s.title} back={{ href: '/guide/edit', label: 'Edit the guide' }} />
+      <PageHeader title={s.title} back={{ href: '/guide/edit', label: 'Edit Guide' }} />
       <SectionForm action={saveSectionAction.bind(null, id)} initial={{ ...s, updatedAt: s.updatedAt.toISOString() }} />
       <div className="mt-8 border-t border-line pt-6">
         <DeleteButton action={deleteSectionAction.bind(null, id)} what={`“${s.title}”`} />

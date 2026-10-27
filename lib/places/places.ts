@@ -26,7 +26,7 @@ export type SpaceKind = Space['kind']
 
 export const SPACE_KINDS: { value: SpaceKind; label: string }[] = [
   { value: 'room', label: 'Room' },
-  { value: 'floor', label: 'Floor or building' },
+  { value: 'floor', label: 'Floor or Building' },
   { value: 'outdoor', label: 'Outdoors' },
   { value: 'area', label: 'Area (closet, nook, crawlspace)' },
   { value: 'other', label: 'Other' },

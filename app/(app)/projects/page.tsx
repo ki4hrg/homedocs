@@ -19,7 +19,7 @@ export default async function ProjectsPage() {
     series.length || (canEdit && projects.length) ? (
       <Section
         title="Series"
-        action={canEdit ? <Link href="/projects/series/new" className="inline-flex min-h-11 items-center text-sm text-accent">New series</Link> : null}
+        action={canEdit ? <Link href="/projects/series/new" className="inline-flex min-h-11 items-center text-sm text-accent">New Series</Link> : null}
       >
         {series.length ? (
           <List>
@@ -54,8 +54,8 @@ export default async function ProjectsPage() {
       />
       {seriesSection}
       {projects.length === 0 ? (
-        <EmptyState action={canEdit ? <LinkButton href="/projects/new" variant="primary">Add a project</LinkButton> : null}>
-          No projects yet.
+        <EmptyState action={canEdit ? <LinkButton href="/projects/new" variant="primary">Add Project</LinkButton> : null}>
+          No projects yet
         </EmptyState>
       ) : (
         STATUSES.filter((s) => projects.some((p) => p.status === s)).map((s) => (

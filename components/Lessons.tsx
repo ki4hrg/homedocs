@@ -16,7 +16,7 @@ export function Lessons({ rows }: { rows: NoteRow[] }) {
         >
           <Icon name="alert" className="mt-0.5 h-5 w-5 shrink-0" />
           <span className="text-[15px]">
-            <span className="font-semibold">Next time:</span> {note.nextTime}
+            <span className="font-semibold">Next Time:</span> {note.nextTime}
             <span className="block text-xs opacity-80">
               From “{note.title}”, {formatDay(note.happenedOn)}
             </span>

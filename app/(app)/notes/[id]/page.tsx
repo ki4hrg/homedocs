@@ -71,7 +71,7 @@ export default async function NotePage({ params }: { params: Promise<{ id: strin
       {note.nextTime ? (
         <div className="rounded-card border border-warn/30 bg-warn-soft px-4 py-3 text-warn">
           <p className="text-[15px]">
-            <span className="font-semibold">Next time:</span> {note.nextTime}
+            <span className="font-semibold">Next Time:</span> {note.nextTime}
           </p>
           {note.remindAfter ? <p className="mt-1 text-xs opacity-80">Reminder around {formatDay(note.remindAfter)}</p> : null}
           {applicable && need !== null ? <ApplyNeed noteId={id} need={need} unit={applicable.unit} where={applicable.where} /> : null}
@@ -96,10 +96,10 @@ export default async function NotePage({ params }: { params: Promise<{ id: strin
         </Section>
       ) : null}
 
-      <Section title="Photos and files">
+      <Section title="Photos and Files">
         <div className="flex flex-col gap-3">
           <Photos items={photos} remove={canEdit ? removeAttachmentAction : undefined} />
-          {canEdit ? <PhotoUpload owner={`log:${id}`} label="Add photo or file" /> : null}
+          {canEdit ? <PhotoUpload owner={`log:${id}`} label="Add Photo or File" /> : null}
         </div>
       </Section>
 

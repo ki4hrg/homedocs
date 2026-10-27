@@ -75,7 +75,7 @@ export async function GuideView({
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-ink">{guide.homeName}</h1>
-          <p className="text-[15px] text-ink-3">House guide</p>
+          <p className="text-[15px] text-ink-3">House Guide</p>
           {guide.address ? <p className="mt-1 whitespace-pre-wrap text-[15px] text-ink-2">{guide.address}</p> : null}
         </div>
         <PrintButton />
@@ -86,11 +86,11 @@ export async function GuideView({
       {guide.locked && lockSlot ? <div className="no-print mb-4">{lockSlot}</div> : null}
 
       {empty ? (
-        <Card className="px-4 py-6 text-center text-[15px] text-ink-3">Nothing is on the house guide yet.</Card>
+        <Card className="px-4 py-6 text-center text-[15px] text-ink-3">Nothing on the house guide yet</Card>
       ) : null}
 
       {guide.groups.length ? (
-        <Section title="In an emergency">
+        <Section title="In an Emergency">
           <div className="flex flex-col gap-5">
             {guide.groups.map((g) => (
               <div key={g.id ?? 'other'} className="flex flex-col gap-3">
@@ -127,7 +127,7 @@ export async function GuideView({
       ) : null}
 
       {guide.contacts.length ? (
-        <Section title="Who to call">
+        <Section title="Who to Call">
           <Card>
             <ul className="divide-y divide-line">
               {guide.contacts.map((p) => (
@@ -175,14 +175,14 @@ export async function GuideView({
                     ) : s.error ? (
                       <p className="text-sm text-danger">{s.error}</p>
                     ) : (
-                      <p className="text-sm text-ink-3">Hidden — shown at the house or with the PIN</p>
+                      <p className="text-sm text-ink-3">Hidden; shown at the house or with the PIN</p>
                     )}
                     {s.notes ? <p className="mt-1 text-sm text-ink-2">{s.notes}</p> : null}
                   </div>
                   {qrs.has(s.id) ? (
                     <div
                       className="h-24 w-24 shrink-0 rounded bg-white p-1 [&_svg]:h-full [&_svg]:w-full"
-                      title="Scan to join the Wi-Fi"
+                      title="Scan to Join Wi-Fi"
                       dangerouslySetInnerHTML={{ __html: qrs.get(s.id)! }}
                     />
                   ) : null}
@@ -198,7 +198,7 @@ export async function GuideView({
           <Card className="px-4 py-3">
             {s.hidden ? (
               <p className="flex items-center gap-2 text-sm text-ink-3">
-                <Pill tone="warn">Private</Pill> Shown at the house or with the PIN
+                <Pill tone="warn">Private</Pill> Shown at the house or with PIN
               </p>
             ) : (
               <p className="whitespace-pre-wrap text-[15px] text-ink-2">{s.body}</p>

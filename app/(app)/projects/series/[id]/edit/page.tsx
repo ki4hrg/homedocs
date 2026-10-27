@@ -9,7 +9,7 @@ import { viewer } from '@/lib/web/context'
 import { deleteSeriesAction, saveSeriesAction } from '../../actions'
 import { SeriesForm } from '../../series-form'
 
-export const metadata = { title: 'Edit series' }
+export const metadata = { title: 'Edit Series' }
 
 export default async function EditSeriesPage({ params }: { params: Promise<{ id: string }> }) {
   await requireRole('member')

@@ -9,8 +9,8 @@ export function PinForm({ token }: { token: string }) {
   const [state, action] = useActionState<UnlockState, FormData>(unlockAction.bind(null, token), {})
   return (
     <Card className="p-4">
-      <p className="text-[15px] font-medium text-ink">Codes and the address are hidden</p>
-      <p className="mb-3 text-sm text-ink-3">They show automatically on the house Wi-Fi. Away from the house, enter the PIN you were sent.</p>
+      <p className="text-[15px] font-medium text-ink">Codes and Address Hidden</p>
+      <p className="mb-3 text-sm text-ink-3">Shown on the house Wi-Fi. Away from the house, enter the PIN you were sent.</p>
       <form action={action} className="flex flex-col gap-2">
         <div className="flex gap-2">
           <TextInput name="pin" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={8} placeholder="PIN" aria-label="PIN" required />

@@ -23,7 +23,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
         back={place ? { href: `/places/${place.id}`, label: place.name } : { href: '/more', label: 'More' }}
         actions={canEdit ? <LinkButton href={place ? `/notes/new?space=${place.id}` : '/notes/new'} variant="primary">Add</LinkButton> : null}
       />
-      {rows.length ? <NoteList rows={rows} /> : <EmptyState>No notes yet.</EmptyState>}
+      {rows.length ? <NoteList rows={rows} /> : <EmptyState>No notes yet</EmptyState>}
     </>
   )
 }

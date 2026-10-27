@@ -49,9 +49,9 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
       {canEdit ? (
         <div className="grid grid-cols-3 gap-2" role="group" aria-label="Add to this place">
           {[
-            { href: `/fixtures/new?space=${id}`, label: 'Add fixture', icon: 'fixture' as const },
-            { href: `/use?space=${id}`, label: 'Add part', icon: 'part' as const },
-            { href: `/notes/new?space=${id}`, label: 'Add note', icon: 'note' as const },
+            { href: `/fixtures/new?space=${id}`, label: 'Add Fixture', icon: 'fixture' as const },
+            { href: `/use?space=${id}`, label: 'Add Part', icon: 'part' as const },
+            { href: `/notes/new?space=${id}`, label: 'Add Note', icon: 'note' as const },
           ].map((a) => (
             <Link
               key={a.href}
@@ -71,7 +71,7 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
 
       {place.children.length > 0 || canEdit ? (
         <Section
-          title="Places inside"
+          title="Places Inside"
           action={canEdit ? <Link href={`/places/new?parent=${id}`} className="text-sm text-accent">Add</Link> : null}
         >
           {place.children.length ? (
@@ -81,7 +81,7 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
               ))}
             </List>
           ) : (
-            <p className="px-1 text-sm text-ink-3">None.</p>
+            <p className="px-1 text-sm text-ink-3">None</p>
           )}
         </Section>
       ) : null}
@@ -94,7 +94,7 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
             ))}
           </List>
         ) : (
-          <p className="px-1 text-sm text-ink-3">None yet.</p>
+          <p className="px-1 text-sm text-ink-3">None yet</p>
         )}
       </Section>
 
@@ -102,7 +102,7 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
       <DocumentsSection owner={{ kind: 'space', id }} kind="tag" canEdit={canEdit} />
 
       {uses.length ? (
-        <Section title="Used here">
+        <Section title="Parts Used Here">
           <UseList uses={uses} show="part" />
         </Section>
       ) : null}
@@ -116,7 +116,7 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
       <Section title="Photos">
         <div className="flex flex-col gap-3">
           <Photos items={photos} remove={canEdit ? removeAttachmentAction : undefined} />
-          {canEdit ? <PhotoUpload owner={`space:${id}`} /> : photos.length ? null : <p className="px-1 text-sm text-ink-3">None.</p>}
+          {canEdit ? <PhotoUpload owner={`space:${id}`} /> : photos.length ? null : <p className="px-1 text-sm text-ink-3">None</p>}
         </div>
       </Section>
 

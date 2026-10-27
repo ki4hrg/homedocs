@@ -41,7 +41,7 @@ async function shrink(file: File): Promise<Blob> {
  */
 export function PhotoUpload({
   owner,
-  label = 'Add photo',
+  label = 'Add Photo',
   tile,
 }: {
   owner: string
@@ -68,12 +68,12 @@ export function PhotoUpload({
         const res = await fetch(`/api/files?owner=${encodeURIComponent(owner)}`, { method: 'POST', body })
         if (!res.ok) {
           const json = (await res.json().catch(() => ({}))) as { error?: string }
-          throw new Error(json.error ?? 'The upload failed. Try again.')
+          throw new Error(json.error ?? 'Couldn’t upload. Try again.')
         }
       }
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'The upload failed. Try again.')
+      setError(err instanceof Error ? err.message : 'Couldn’t upload. Try again.')
     } finally {
       setBusy(false)
     }

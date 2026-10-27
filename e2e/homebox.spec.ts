@@ -55,19 +55,19 @@ test('link a place to its Homebox location and add what is kept there', async ({
 
   await page.goto('/places/new')
   await page.locator('[name=name]').fill('Garage')
-  await page.getByRole('button', { name: 'Add place' }).click()
+  await page.getByRole('button', { name: 'Add Place' }).click()
   await expect(page.getByRole('heading', { name: 'Garage' })).toBeVisible()
 
   // The search starts from the place's own name.
-  await page.getByRole('button', { name: 'Link a Homebox location' }).click()
+  await page.getByRole('button', { name: 'Link Homebox Location' }).click()
   await expect(page.getByRole('textbox', { name: 'Search' })).toHaveValue('Garage')
   await expect(page.getByRole('button', { name: /Garage.*1 item/ })).not.toContainText('global.')
   await page.getByRole('button', { name: /Garage.*1 item/ }).click()
 
   await expect(page.getByRole('heading', { name: 'In Homebox · Garage' })).toBeVisible()
-  await expect(page.getByText('Not in homedocs yet')).toBeVisible()
+  await expect(page.getByText('Not in homedocs')).toBeVisible()
   await expect(page.getByText(/global\./)).toHaveCount(0)
-  await page.getByRole('button', { name: 'Add Lawn mower as a fixture here' }).click()
+  await page.getByRole('button', { name: 'Add Lawn mower as fixture' }).click()
   await expect(page.getByRole('link', { name: 'Fixture: Lawn mower' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Fixture: Lawn mower' }).click()

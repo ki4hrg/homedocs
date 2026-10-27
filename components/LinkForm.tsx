@@ -12,16 +12,16 @@ export function LinkForm({ action }: { action: FormAction }) {
     return (
       <button type="button" className={buttonClass('secondary')} onClick={() => setOpen(true)}>
         <Icon name="link" />
-        Paste a link
+        Paste Link
       </button>
     )
   }
   return (
     <ActionForm action={action} resetOnSuccess onSuccess={() => setOpen(false)}>
-      <Field label="Address" hint="From Homebox, paperless or Home Assistant.">
+      <Field label="Address" hint="Homebox, paperless or Home Assistant">
         <TextInput name="url" type="url" inputMode="url" placeholder="https://homebox.example/item/…" required autoFocus />
       </Field>
-      <Field label="Label (optional)">
+      <Field label="Label">
         <TextInput name="title" />
       </Field>
       <div className="flex gap-2">

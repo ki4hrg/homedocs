@@ -23,13 +23,13 @@ export function TradeChips({
   const listed = new Set(groups.flatMap((g) => g.trades.map(tradeKey)))
   // Ones this record has that are no longer on the list, so they can still be unticked.
   const off = chosen.filter((k) => !listed.has(k))
-  const shown = [...groups.map((g) => ({ label: g.label, keys: g.trades.map(tradeKey) })), ...(off.length ? [{ label: 'Not on the list', keys: off }] : [])]
+  const shown = [...groups.map((g) => ({ label: g.label, keys: g.trades.map(tradeKey) })), ...(off.length ? [{ label: 'Not on List', keys: off }] : [])]
   return (
     <fieldset>
       <div className="mb-1.5 flex items-center justify-between">
         <legend className="text-sm font-medium text-ink-2">{legend}</legend>
         <Link href="/contacts/trades" className="flex min-h-10 items-center px-1 text-sm text-accent">
-          Edit list
+          Edit List
         </Link>
       </div>
       <div className="flex flex-col gap-3">
@@ -62,7 +62,7 @@ export function TradeChips({
           </div>
         ))}
       </div>
-      <TextInput name="customTrades" className="mt-2" placeholder="Something else, e.g. Chimney sweep" aria-label="Something else" />
+      <TextInput name="customTrades" className="mt-2" placeholder="Other, e.g. Chimney sweep" aria-label="Other trade" />
     </fieldset>
   )
 }

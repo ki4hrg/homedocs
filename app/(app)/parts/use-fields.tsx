@@ -18,7 +18,7 @@ export function UseFields({
     <fieldset className="flex flex-col gap-4 rounded-card border border-line bg-card p-4">
       <legend className="px-1 text-sm font-semibold text-ink-2">How it’s used {ownerKind === 'fixture' ? 'by this fixture' : 'here'}</legend>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="How many">
+        <Field label="Amount">
           <TextInput name="quantity" inputMode="decimal" defaultValue={initial?.quantity ?? ''} placeholder="3" />
         </Field>
         <Field label="Unit">
@@ -26,7 +26,7 @@ export function UseFields({
         </Field>
       </div>
       {ownerKind === 'place' ? (
-        <Field label="Where exactly">
+        <Field label="Where Exactly">
           <TextInput name="surface" defaultValue={initial?.surface} placeholder="Walls, trim, north bed" />
         </Field>
       ) : (
@@ -44,7 +44,7 @@ export function UseFields({
       ) : (
         <input type="hidden" name="finish" value={initial?.finish ?? ''} />
       )}
-      <Field label="How many it really needs" hint="If it took more or less than this.">
+      <Field label="Actual Amount Needed" hint="If it took more or less">
         <TextInput name="quantityNeeded" inputMode="decimal" defaultValue={initial?.quantityNeeded ?? ''} />
       </Field>
       <Field label="Note">

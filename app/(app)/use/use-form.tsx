@@ -23,7 +23,7 @@ export function UseForm({
   return (
     <ActionForm action={action}>
       <input type="hidden" name={owner.kind === 'fixture' ? 'fixtureId' : 'spaceId'} value={owner.id} />
-      <Field label="Which part?">
+      <Field label="Which Part?">
         <Select name="supplyId" value={selected} onChange={(e) => setSelected(e.target.value)} required>
           {parts.map((p) => (
             <option key={p.id} value={p.id}>

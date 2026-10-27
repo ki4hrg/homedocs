@@ -8,7 +8,7 @@ import { noteOptions } from '@/lib/web/note-options'
 import { deleteNoteAction, updateNoteAction } from '../../actions'
 import { NoteForm } from '../../note-form'
 
-export const metadata = { title: 'Edit note' }
+export const metadata = { title: 'Edit Note' }
 
 export default async function EditNotePage({ params }: { params: Promise<{ id: string }> }) {
   await requireRole('member')
@@ -17,7 +17,7 @@ export default async function EditNotePage({ params }: { params: Promise<{ id: s
   const note = await getNote(db, scope, id)
   return (
     <>
-      <PageHeader title="Edit note" back={{ href: `/notes/${id}`, label: note.title }} />
+      <PageHeader title="Edit Note" back={{ href: `/notes/${id}`, label: note.title }} />
       <NoteForm
         action={updateNoteAction.bind(null, id)}
         options={await noteOptions(scope)}

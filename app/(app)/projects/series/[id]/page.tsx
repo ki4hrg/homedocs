@@ -44,16 +44,16 @@ export default async function SeriesPage({ params }: { params: Promise<{ id: str
       {canEdit ? (
         <LinkButton href={`/projects/new?series=${id}`} variant="primary" className="w-full">
           <Icon name="plus" />
-          Start this year’s
+          Start Project
         </LinkButton>
       ) : null}
 
       <Card className="mt-4 px-4 py-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-3">How we do it</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-3">Instructions</h2>
         {series.howTo ? (
           <p className="whitespace-pre-wrap text-[15px] text-ink-2">{series.howTo}</p>
         ) : (
-          <p className="text-sm text-ink-3">Nothing written yet.</p>
+          <p className="text-sm text-ink-3">Nothing written yet</p>
         )}
       </Card>
 
@@ -74,7 +74,7 @@ export default async function SeriesPage({ params }: { params: Promise<{ id: str
         </div>
       ) : null}
 
-      <Section title="To do, each time">
+      <Section title="To Do">
         <Checklist
           items={series.items.map(({ item, spaceName }) => ({
             id: item.id,
@@ -92,7 +92,7 @@ export default async function SeriesPage({ params }: { params: Promise<{ id: str
         />
       </Section>
 
-      <Section title="Materials, each time">
+      <Section title="Materials">
         <Materials
           rows={materialViews(series.materials)}
           parts={parts.map(({ part }) => ({ id: part.id, name: part.name, units: partUnits(part) }))}
@@ -105,7 +105,7 @@ export default async function SeriesPage({ params }: { params: Promise<{ id: str
         />
       </Section>
 
-      <Section title="Past projects">
+      <Section title="Past Projects">
         {series.projects.length ? (
           <List>
             {series.projects.map((p) => (
@@ -123,12 +123,12 @@ export default async function SeriesPage({ params }: { params: Promise<{ id: str
             ))}
           </List>
         ) : (
-          <p className="px-1 text-sm text-ink-3">None yet. “Start this year’s” makes the first.</p>
+          <p className="px-1 text-sm text-ink-3">None yet</p>
         )}
       </Section>
 
       {notes.length ? (
-        <Section title="From past years">
+        <Section title="Past Notes">
           <Lessons rows={lessons} />
           <div className="mt-3">
             <NoteList rows={notes} />

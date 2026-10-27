@@ -42,8 +42,8 @@ export default async function PlacesPage() {
         actions={canEdit ? <LinkButton href="/places/new" variant="primary">Add</LinkButton> : null}
       />
       {tree.length === 0 ? (
-        <EmptyState action={canEdit ? <LinkButton href="/places/new" variant="primary">Add a place</LinkButton> : null}>
-          No places yet.
+        <EmptyState action={canEdit ? <LinkButton href="/places/new" variant="primary">Add Place</LinkButton> : null}>
+          No places yet
         </EmptyState>
       ) : (
         <Card>

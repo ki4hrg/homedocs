@@ -7,7 +7,7 @@ import { viewer } from '@/lib/web/context'
 import { deletePartAction, updatePartAction } from '../../actions'
 import { PartForm } from '../../part-form'
 
-export const metadata = { title: 'Edit part' }
+export const metadata = { title: 'Edit Part' }
 
 export default async function EditPartPage({ params }: { params: Promise<{ id: string }> }) {
   await requireRole('member')

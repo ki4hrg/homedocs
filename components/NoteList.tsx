@@ -14,7 +14,7 @@ export function NoteList({ rows }: { rows: NoteRow[] }) {
           detail={[
             formatDay(note.happenedOn),
             formatQty(note.quantity, note.unit),
-            note.nextTime ? `Next time: ${note.nextTime}` : fixtureName ?? supplyName ?? spaceName,
+            note.nextTime ? `Next Time: ${note.nextTime}` : fixtureName ?? supplyName ?? spaceName,
           ]
             .filter(Boolean)
             .join(' · ')}

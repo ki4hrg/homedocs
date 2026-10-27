@@ -54,9 +54,9 @@ export function ContactForm({
     <ActionForm action={action}>
       {initial?.updatedAt ? <input type="hidden" name="updatedAt" value={initial.updatedAt} /> : null}
       <Field label="Name">
-        <TextInput name="name" defaultValue={initial?.name} placeholder="Ace Plumbing, Duke Energy, Mike Rivera" required autoFocus={!initial?.name} />
+        <TextInput name="name" defaultValue={initial?.name} placeholder="Ace Plumbing, City Water" required autoFocus={!initial?.name} />
       </Field>
-      <Field label="Company or contact person">
+      <Field label="Company or Contact Person">
         <TextInput name="company" defaultValue={initial?.company} />
       </Field>
       <Methods prefix="phone" label="Phone" type="tel" initial={initial?.phones ?? []} placeholder="(555) 123-4567" />
@@ -65,20 +65,20 @@ export function ContactForm({
         <TextInput name="website" type="url" inputMode="url" defaultValue={initial?.website} />
       </Field>
 
-      <TradeChips legend="What they do" groups={groups} chosen={chosen} onChange={setChosen} />
+      <TradeChips legend="Trades" groups={groups} chosen={chosen} onChange={setChosen} />
 
       {chosen.length ? (
         <fieldset>
-          <legend className="mb-1 text-sm font-medium text-ink-2">Go-to for</legend>
-          <p className="mb-1 text-xs text-ink-3">Shown on Home and the house guide.</p>
+          <legend className="mb-1 text-sm font-medium text-ink-2">Go-To For</legend>
+          <p className="mb-1 text-xs text-ink-3">Shown on Home and the house guide</p>
           {chosen.map((t) => (
             <Checkbox key={t} name="preferred" value={t} label={label(t)} defaultChecked={preferred.has(t)} />
           ))}
         </fieldset>
       ) : null}
 
-      <Checkbox name="inGuide" label="Show on the house guide" defaultChecked={initial?.inGuide} />
-      <Field label="Account number" hint="Never shown on the house guide.">
+      <Checkbox name="inGuide" label="Show on House Guide" defaultChecked={initial?.inGuide} />
+      <Field label="Account Number" hint="Never shown on the house guide">
         <TextInput name="accountNumber" defaultValue={initial?.accountNumber} />
       </Field>
       <Field label="Notes">

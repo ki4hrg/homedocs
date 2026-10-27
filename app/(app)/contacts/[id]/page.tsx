@@ -52,7 +52,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
                 </> : label(t.trade)}
             </Pill>
           ))}
-          {contact.inGuide ? <Pill tone="neutral">On the house guide</Pill> : null}
+          {contact.inGuide ? <Pill tone="neutral">On House Guide</Pill> : null}
         </div>
       ) : null}
 
@@ -98,7 +98,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
       ) : null}
 
       <div className="mt-4">
-        <Facts items={[{ label: 'Account number', value: contact.accountNumber }]} />
+        <Facts items={[{ label: 'Account Number', value: contact.accountNumber }]} />
       </div>
 
       {contact.notes ? (
@@ -111,14 +111,14 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
 
       <Section
         title="Notes"
-        action={canEdit ? <Link href={`/notes/new?contact=${id}`} className="text-sm text-accent">Add note</Link> : null}
+        action={canEdit ? <Link href={`/notes/new?contact=${id}`} className="text-sm text-accent">Add Note</Link> : null}
       >
-        {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">None yet.</p>}
+        {notes.length ? <NoteList rows={notes} /> : <p className="px-1 text-sm text-ink-3">None yet</p>}
       </Section>
 
       <DocumentsSection owner={{ kind: 'contact', id }} kind="correspondent" canEdit={canEdit} />
 
-      <Section title="Photos and files">
+      <Section title="Photos and Files">
         <div className="flex flex-col gap-3">
           <Photos items={photos} remove={canEdit ? removeAttachmentAction : undefined} />
           {canEdit ? <PhotoUpload owner={`contact:${id}`} /> : null}

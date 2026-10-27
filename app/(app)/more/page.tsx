@@ -17,19 +17,19 @@ export default async function MorePage() {
         <Row href="/parts" icon="part" title="Parts" />
         <Row href="/fixtures" icon="fixture" title="Fixtures" />
         <Row href="/notes" icon="note" title="Notes" />
-        <Row href="/guide" icon="guide" title="House guide" detail="For housesitters" />
+        <Row href="/guide" icon="guide" title="House Guide" detail="For housesitters" />
       </List>
       <Section title="Settings">
         <List>
-          {admin ? <Row href="/share" icon="link" title="Share links" detail="Send the house guide" /> : null}
+          {admin ? <Row href="/share" icon="link" title="Share Links" detail="Send house guide" /> : null}
           {admin ? <Row href="/family" icon="contact" title="Family" /> : null}
-          <Row href="/deleted" icon="trash" title="Recently deleted" />
+          <Row href="/deleted" icon="trash" title="Recently Deleted" />
           <Row href="/settings" icon="edit" title="Settings" />
         </List>
       </Section>
       <form action={logoutAction} className="mt-6">
         <button type="submit" className={buttonClass('secondary', 'w-full')}>
-          Sign out
+          Sign Out
         </button>
       </form>
     </>

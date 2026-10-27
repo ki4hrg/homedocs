@@ -4,7 +4,7 @@ import { Select } from './ui/Field'
 /* Options come pre-flattened from the server: "Main floor › Living room". */
 export function PlaceSelect({
   options,
-  emptyLabel = 'Whole house / not a specific place',
+  emptyLabel = 'Whole house',
   ...props
 }: ComponentProps<'select'> & { options: { id: string; label: string }[]; emptyLabel?: string }) {
   return (

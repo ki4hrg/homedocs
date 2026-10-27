@@ -27,7 +27,7 @@ import { approveAction, denyAction } from './actions'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata = { title: 'Authorize a connector — homedocs' }
+export const metadata = { title: 'Authorize Connector — homedocs' }
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>
 

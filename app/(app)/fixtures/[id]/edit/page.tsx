@@ -9,7 +9,7 @@ import { viewer } from '@/lib/web/context'
 import { deleteFixtureAction, updateFixtureAction } from '../../actions'
 import { FixtureForm } from '../../fixture-form'
 
-export const metadata = { title: 'Edit fixture' }
+export const metadata = { title: 'Edit Fixture' }
 
 export default async function EditFixturePage({ params }: { params: Promise<{ id: string }> }) {
   await requireRole('member')

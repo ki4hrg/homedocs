@@ -37,7 +37,7 @@ export default async function FixturesPage() {
           ))}
         </List>
       ) : (
-        <EmptyState>No fixtures yet.</EmptyState>
+        <EmptyState>No fixtures yet</EmptyState>
       )}
     </>
   )

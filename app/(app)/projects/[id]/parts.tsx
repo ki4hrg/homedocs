@@ -126,25 +126,25 @@ export function Checklist({
                     ) : null}
                   </span>
                   {item.status === 'changed' ? <Pill tone="warn">Changed</Pill> : null}
-                  {item.status === 'added' ? <Pill tone="warn">Not in series</Pill> : null}
-                  {item.oneOff ? <Pill>This project only</Pill> : null}
+                  {item.status === 'added' ? <Pill tone="warn">Not in Series</Pill> : null}
+                  {item.oneOff ? <Pill>This Project Only</Pill> : null}
                   {canEdit ? <DeleteButton compact what={`“${item.text}”`} label="Remove" action={() => remove(item.id)} /> : null}
                 </div>
                 {canEdit && (differs || item.oneOff) ? (
                   <div className="flex flex-wrap gap-x-4 pl-9">
                     {differs && sendToSeries ? (
                       <button type="button" disabled={pending} className={link} onClick={() => confirmSeries([item.change!]) && run(() => sendToSeries(item.id))}>
-                        Update series
+                        Update Series
                       </button>
                     ) : null}
                     {item.status === 'added' && setOneOff ? (
                       <button type="button" disabled={pending} className={link} onClick={() => run(() => setOneOff(item.id, true))}>
-                        Only this project
+                        Only This Project
                       </button>
                     ) : null}
                     {item.oneOff && setOneOff ? (
                       <button type="button" disabled={pending} className={link} onClick={() => run(() => setOneOff(item.id, false))}>
-                        Not just this project
+                        Not Just This Project
                       </button>
                     ) : null}
                   </div>
@@ -156,15 +156,15 @@ export function Checklist({
             <li key={m.id} className="flex flex-col gap-1 border-l-4 border-l-warn bg-warn-soft px-4 py-3">
               <div className="flex items-start gap-3">
                 <span className="min-w-0 flex-1 text-[15px] text-ink-2 line-through decoration-ink-3">{m.label}</span>
-                <Pill tone="warn">In series, not here</Pill>
+                <Pill tone="warn">In Series, Not Here</Pill>
               </div>
               {canEdit && copyHere && dropFromSeries ? (
                 <div className="flex flex-wrap gap-x-4">
                   <button type="button" disabled={pending} className={link} onClick={() => run(() => copyHere(m.id))}>
-                    Add here
+                    Add Here
                   </button>
                   <button type="button" disabled={pending} className={link} onClick={() => confirmSeries([m.change]) && run(() => dropFromSeries(m.id))}>
-                    Remove from series
+                    Remove from Series
                   </button>
                 </div>
               ) : null}
@@ -178,11 +178,11 @@ export function Checklist({
             <TextInput name="text" placeholder="Add a to-do" aria-label="New to-do" required />
             <SubmitButton pendingText="…">Add</SubmitButton>
           </div>
-          {inSeries ? <Checkbox name="oneOff" label="Only this project" /> : null}
+          {inSeries ? <Checkbox name="oneOff" label="Only This Project" /> : null}
           {details ? (
             <div className={`grid gap-2 ${quotes.length ? 'grid-cols-2' : 'grid-cols-1'}`}>
               <Select name="spaceId" aria-label="Where" defaultValue="">
-                <option value="">Where?</option>
+                <option value="">Choose Place</option>
                 {places.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.label}
@@ -191,7 +191,7 @@ export function Checklist({
               </Select>
               {quotes.length ? (
                 <Select name="quoteId" aria-label="Covered by quote" defaultValue="">
-                  <option value="">In a quote?</option>
+                  <option value="">Which Quote?</option>
                   {quotes.map((q) => (
                     <option key={q.id} value={q.id}>
                       {q.label}
@@ -216,13 +216,13 @@ export function QuoteForm({ add, contacts }: { add: FormAction; contacts: { id: 
   if (!open) {
     return (
       <button type="button" className={buttonClass('secondary')} onClick={() => setOpen(true)}>
-        Add a quote
+        Add Quote
       </button>
     )
   }
   return (
     <ActionForm action={add} resetOnSuccess onSuccess={() => setOpen(false)}>
-      <Field label="From" hint={contacts.length ? undefined : 'Add them under Contacts first.'}>
+      <Field label="From" hint={contacts.length ? undefined : 'Add the contact first'}>
         <Select name="contactId" defaultValue="">
           <option value="">—</option>
           {contacts.map((p) => (
@@ -240,11 +240,11 @@ export function QuoteForm({ add, contacts }: { add: FormAction; contacts: { id: 
           <TextInput name="receivedOn" type="date" />
         </Field>
       </div>
-      <Field label="What’s included">
+      <Field label="What’s Included">
         <TextArea name="notes" />
       </Field>
       <div className="flex gap-2">
-        <SubmitButton>Add quote</SubmitButton>
+        <SubmitButton>Add Quote</SubmitButton>
         <button type="button" className={buttonClass('ghost')} onClick={() => setOpen(false)}>
           Cancel
         </button>

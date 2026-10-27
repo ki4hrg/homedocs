@@ -109,24 +109,24 @@ export function Materials({
                     ) : null}
                   </span>
                   {m.status === 'changed' ? <Pill tone="warn">{m.was}</Pill> : null}
-                  {m.status === 'added' ? <Pill tone="warn">Not in series</Pill> : null}
-                  {m.oneOff ? <Pill>This project only</Pill> : null}
+                  {m.status === 'added' ? <Pill tone="warn">Not in Series</Pill> : null}
+                  {m.oneOff ? <Pill>This Project Only</Pill> : null}
                 </div>
                 {canEdit ? (
                   <div className="flex flex-wrap items-center gap-x-4">
                     {differs && sendToSeries ? (
                       <button type="button" disabled={pending} className={LINK} onClick={() => confirmSeries([m.change!]) && run(() => sendToSeries(m.id))}>
-                        Update series
+                        Update Series
                       </button>
                     ) : null}
                     {m.status === 'added' && setOneOff ? (
                       <button type="button" disabled={pending} className={LINK} onClick={() => run(() => setOneOff(m.id, true))}>
-                        Only this project
+                        Only This Project
                       </button>
                     ) : null}
                     {m.oneOff && setOneOff ? (
                       <button type="button" disabled={pending} className={LINK} onClick={() => run(() => setOneOff(m.id, false))}>
-                        Not just this project
+                        Not Just This Project
                       </button>
                     ) : null}
                     <button type="button" className={LINK} onClick={() => setEditing(m.id)}>
@@ -144,15 +144,15 @@ export function Materials({
             <li key={m.id} className="flex flex-col gap-1 border-l-4 border-l-warn bg-warn-soft px-4 py-3">
               <div className="flex items-start gap-3">
                 <span className="min-w-0 flex-1 text-[15px] text-ink-2 line-through decoration-ink-3">{m.label}</span>
-                <Pill tone="warn">In series, not here</Pill>
+                <Pill tone="warn">In Series, Not Here</Pill>
               </div>
               {canEdit && copyHere && dropFromSeries ? (
                 <div className="flex flex-wrap gap-x-4">
                   <button type="button" disabled={pending} className={LINK} onClick={() => run(() => copyHere(m.id))}>
-                    Add here
+                    Add Here
                   </button>
                   <button type="button" disabled={pending} className={LINK} onClick={() => confirmSeries([m.change]) && run(() => dropFromSeries(m.id))}>
-                    Remove from series
+                    Remove from Series
                   </button>
                 </div>
               ) : null}
@@ -160,7 +160,7 @@ export function Materials({
           ))}
         </ul>
       ) : (
-        <p className="px-1 text-sm text-ink-3">No materials yet.</p>
+        <p className="px-1 text-sm text-ink-3">No materials yet</p>
       )}
       {canEdit ? (
         adding ? (
@@ -170,7 +170,7 @@ export function Materials({
         ) : (
           <button type="button" className={buttonClass('secondary')} onClick={() => setAdding(true)}>
             <Icon name="plus" />
-            Add a material
+            Add Material
           </button>
         )
       ) : null}
@@ -204,7 +204,7 @@ function MaterialForm({
   return (
     <ActionForm action={action} onSuccess={onDone} className="flex flex-col gap-3">
       {parts.length ? (
-        <Field label="Part" hint="Optional. Fills in the name and unit.">
+        <Field label="Part" hint="Fills in the name and unit">
           <Select name="supplyId" value={partId} onChange={(e) => setPartId(e.target.value)}>
             <option value="">—</option>
             {parts.map((p) => (
@@ -220,12 +220,12 @@ function MaterialForm({
           key={partId}
           name="name"
           defaultValue={initial && initial.supplyId === (partId || null) ? initial.name : (part?.name ?? '')}
-          placeholder={part ? part.name : 'Pine straw'}
+          placeholder={part ? part.name : 'Mulch'}
           required={!part}
         />
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="How many">
+        <Field label="Amount">
           <TextInput name="quantity" inputMode="decimal" defaultValue={initial?.quantity} placeholder="8" />
         </Field>
         <Field label="Unit">
@@ -242,7 +242,7 @@ function MaterialForm({
           )}
         </Field>
       </div>
-      <Field label="Notes" hint="Where or what for: around the stairs.">
+      <Field label="Notes" hint="Where or what for">
         <TextInput name="notes" defaultValue={initial?.notes} />
       </Field>
       {places.length ? (
@@ -257,7 +257,7 @@ function MaterialForm({
           </Select>
         </Field>
       ) : null}
-      {onProject ? <Checkbox name="oneOff" label="Only this project" hint="Not offered to the series for next time." /> : null}
+      {onProject ? <Checkbox name="oneOff" label="Only This Project" hint="Not added to the series" /> : null}
       <div className="flex gap-2">
         <SubmitButton>{submit}</SubmitButton>
         <button type="button" className={buttonClass('ghost')} onClick={onDone}>
@@ -286,9 +286,8 @@ export function SeriesBanner({
     <div className="mt-4 flex flex-col gap-2 rounded-card border border-warn/30 bg-warn-soft px-4 py-3 text-warn">
       <p className="text-[15px]">
         <span className="font-semibold">
-          {changes.length === 1 ? '1 difference' : `${changes.length} differences`} from {seriesTitle}.
-        </span>{' '}
-        Marked below.
+          {changes.length === 1 ? '1 difference' : `${changes.length} differences`} from {seriesTitle}
+        </span>
       </p>
       {canEdit ? (
         <button
@@ -297,7 +296,7 @@ export function SeriesBanner({
           className={buttonClass('secondary', 'self-start')}
           onClick={() => confirmSeries(changes) && run(sendAll)}
         >
-          Update series with all changes
+          Update Series with All Changes
         </button>
       ) : null}
     </div>

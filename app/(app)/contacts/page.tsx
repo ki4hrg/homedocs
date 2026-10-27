@@ -52,8 +52,8 @@ export default async function ContactsPage() {
           })}
         </List>
       ) : (
-        <EmptyState action={canEdit ? <LinkButton href="/contacts/new" variant="primary">Add a contact</LinkButton> : null}>
-          No contacts yet.
+        <EmptyState action={canEdit ? <LinkButton href="/contacts/new" variant="primary">Add Contact</LinkButton> : null}>
+          No contacts yet
         </EmptyState>
       )}
     </>

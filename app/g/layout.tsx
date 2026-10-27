@@ -9,7 +9,7 @@
 export const dynamic = 'force-dynamic'
 
 export const metadata = {
-  title: 'House guide',
+  title: 'House Guide',
   robots: { index: false, follow: false, nocache: true },
   // No Open Graph: a link pasted into a chat must not unfurl into a preview.
   openGraph: null,

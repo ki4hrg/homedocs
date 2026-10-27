@@ -225,11 +225,11 @@ function resourceMatches(resource: string): boolean {
 /** What the consent screen says each scope means, in a person's words. */
 export const SCOPE_DESCRIPTIONS: Record<Scope, { label: string; detail: string }> = {
   'homedocs:read': {
-    label: 'Look things up',
+    label: 'Look Things Up',
     detail: 'Search and read places, fixtures, parts, notes, people and projects. Never codes or passwords.',
   },
   'homedocs:write': {
-    label: 'Add and change things',
+    label: 'Add and Change Things',
     detail: 'Add notes, fixtures, parts and people, link parts, and update projects. Nothing is deleted.',
   },
 }

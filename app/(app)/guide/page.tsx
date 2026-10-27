@@ -7,7 +7,7 @@ import { db } from '@/lib/db'
 import { auditReveal, buildGuide } from '@/lib/guide/guide'
 import { viewer } from '@/lib/web/context'
 
-export const metadata = { title: 'House guide' }
+export const metadata = { title: 'House Guide' }
 
 /*
  * The guide as family sees it. Codes are hidden until asked for, and asking is
@@ -23,15 +23,15 @@ export default async function GuidePage({ searchParams }: { searchParams: Promis
   return (
     <>
       <div className="no-print mb-4 flex flex-wrap gap-2">
-        {canEdit ? <LinkButton href="/guide/edit">Edit the guide</LinkButton> : null}
-        {user.role === 'admin' ? <LinkButton href="/share">Share with a housesitter</LinkButton> : null}
+        {canEdit ? <LinkButton href="/guide/edit">Edit Guide</LinkButton> : null}
+        {user.role === 'admin' ? <LinkButton href="/share">Share with Housesitter</LinkButton> : null}
       </div>
       <GuideView
         guide={guide}
         fileBase="/api/files"
         lockSlot={
           <Card className="flex items-center justify-between gap-3 p-4">
-            <p className="text-sm text-ink-3">Codes, the address and private notes are hidden.</p>
+            <p className="text-sm text-ink-3">Codes, address and private notes hidden</p>
             <Link href="/guide?show=codes" className={buttonClass('primary', 'shrink-0')}>
               Show
             </Link>

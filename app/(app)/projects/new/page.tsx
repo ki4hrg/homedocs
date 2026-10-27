@@ -9,7 +9,7 @@ import { viewer } from '@/lib/web/context'
 import { createProjectAction } from '../actions'
 import { ProjectForm } from '../project-form'
 
-export const metadata = { title: 'New project' }
+export const metadata = { title: 'New Project' }
 
 export default async function NewProjectPage({ searchParams }: { searchParams: Promise<{ space?: string; series?: string }> }) {
   await requireRole('member')
@@ -39,7 +39,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
             spaceIds: series.places.map((p) => p.id),
             contactId: series.contactId,
           }}
-          submit="Start it"
+          submit="Start Project"
         />
       </>
     )
@@ -47,10 +47,10 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
 
   return (
     <>
-      <PageHeader title="New project" back={{ href: '/projects', label: 'Projects' }} />
+      <PageHeader title="New Project" back={{ href: '/projects', label: 'Projects' }} />
       {allSeries.length ? (
         <div className="mb-4 flex flex-col gap-2">
-          <p className="px-1 text-sm text-ink-3">Doing one of these again? Start from it:</p>
+          <p className="px-1 text-sm text-ink-3">Start from a series</p>
           <div className="flex flex-wrap gap-2">
             {allSeries.map((s) => (
               <Link
@@ -64,7 +64,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
           </div>
         </div>
       ) : null}
-      <ProjectForm action={createProjectAction} places={places} contacts={contactOptions} initial={{ spaceIds: space ? [space] : [] }} submit="Add project" />
+      <ProjectForm action={createProjectAction} places={places} contacts={contactOptions} initial={{ spaceIds: space ? [space] : [] }} submit="Add Project" />
     </>
   )
 }

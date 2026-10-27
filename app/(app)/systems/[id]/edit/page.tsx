@@ -8,7 +8,7 @@ import { viewer } from '@/lib/web/context'
 import { deleteSystemAction, updateSystemAction } from '../../actions'
 import { SystemForm } from '../../system-form'
 
-export const metadata = { title: 'Edit system' }
+export const metadata = { title: 'Edit System' }
 
 export default async function EditSystemPage({ params }: { params: Promise<{ id: string }> }) {
   await requireRole('member')

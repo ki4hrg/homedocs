@@ -6,7 +6,7 @@ import { ownerFromParams } from '@/lib/web/owner'
 import { createPartAction } from '../actions'
 import { PartForm } from '../part-form'
 
-export const metadata = { title: 'New part' }
+export const metadata = { title: 'New Part' }
 
 export default async function NewPartPage({
   searchParams,
@@ -20,7 +20,7 @@ export default async function NewPartPage({
   return (
     <>
       <PageHeader
-        title="New part"
+        title="New Part"
         subtitle={owner ? `For ${owner.name}` : undefined}
         back={owner ? { href: owner.href, label: owner.name } : { href: '/parts', label: 'Parts' }}
       />
@@ -28,7 +28,7 @@ export default async function NewPartPage({
         action={createPartAction}
         owner={owner}
         initial={{ category: params.category && isCategory(params.category) ? params.category : undefined }}
-        submit={owner ? `Add to ${owner.name}` : 'Add part'}
+        submit={owner ? `Add to ${owner.name}` : 'Add Part'}
       />
     </>
   )

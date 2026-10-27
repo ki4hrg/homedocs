@@ -383,7 +383,7 @@ export async function lastTimeLessons(exec: Executor, scope: PropertyScope, proj
   return rows.filter((r) => r.note.nextTime !== '')
 }
 
-/** "Add to how-to": a note's lesson becomes part of the series' standing instructions. */
+/** "Add to Instructions": a note's lesson becomes part of the series' standing instructions. */
 export async function appendLessonToHowTo(
   exec: Executor,
   scope: PropertyScope,
@@ -402,7 +402,7 @@ export async function appendLessonToHowTo(
     if (!project?.seriesId) throw new ValidationError('That note isn’t from a project in a series.')
     const [series] = await tx.select().from(projectSeries).where(liveIn(projectSeries, scope.propertyId, project.seriesId)).for('update')
     assertFresh('series', series, expectedSeriesUpdatedAt)
-    if (series!.howTo.includes(note.nextTime)) throw new ValidationError('That’s already in the how-to.')
+    if (series!.howTo.includes(note.nextTime)) throw new ValidationError('That’s already in the instructions.')
     const howTo = series!.howTo ? `${series!.howTo}\n\n${note.nextTime}` : note.nextTime
     const [row] = await tx
       .update(projectSeries)

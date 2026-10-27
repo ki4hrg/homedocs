@@ -6,7 +6,7 @@ import { viewer } from '@/lib/web/context'
 import { createPlaceAction } from '../actions'
 import { PlaceForm } from '../place-form'
 
-export const metadata = { title: 'New place' }
+export const metadata = { title: 'New Place' }
 
 export default async function NewPlacePage({ searchParams }: { searchParams: Promise<{ parent?: string }> }) {
   await requireRole('member')
@@ -15,8 +15,8 @@ export default async function NewPlacePage({ searchParams }: { searchParams: Pro
   const { parent } = await searchParams
   return (
     <>
-      <PageHeader title="New place" back={{ href: parent ? `/places/${parent}` : '/places', label: 'Back' }} />
-      <PlaceForm action={createPlaceAction} places={places} initial={{ parentId: parent }} submit="Add place" />
+      <PageHeader title="New Place" back={{ href: parent ? `/places/${parent}` : '/places', label: 'Back' }} />
+      <PlaceForm action={createPlaceAction} places={places} initial={{ parentId: parent }} submit="Add Place" />
     </>
   )
 }

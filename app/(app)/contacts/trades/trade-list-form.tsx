@@ -22,11 +22,11 @@ export function TradeListForm({ action, initial }: { action: FormAction; initial
   }
 
   return (
-    <ActionForm action={action} successText="Saved.">
+    <ActionForm action={action} successText="Saved">
       <input type="hidden" name="groups" value={JSON.stringify(groups)} />
       {groups.map((g, i) => (
         <section key={i} className="flex flex-col gap-2 rounded-card border border-line bg-card p-3">
-          <TextInput value={g.label} onChange={(e) => update(i, { label: e.target.value })} aria-label="Group name" className="font-medium" />
+          <TextInput value={g.label} onChange={(e) => update(i, { label: e.target.value })} aria-label="Group Name" className="font-medium" />
           <ul className="flex flex-wrap gap-2">
             {g.trades.map((t) => (
               <li key={t} className="inline-flex min-h-11 items-center rounded-full border border-line bg-card pl-3 text-sm text-ink-2">
@@ -68,7 +68,7 @@ export function TradeListForm({ action, initial }: { action: FormAction; initial
                 setAdding((a) => a.filter((_, j) => j !== i))
               }}
             >
-              Remove group
+              Remove Group
             </Button>
           ) : null}
         </section>
@@ -81,7 +81,7 @@ export function TradeListForm({ action, initial }: { action: FormAction; initial
           setAdding((a) => [...a, ''])
         }}
       >
-        Add a group
+        Add Group
       </Button>
       <SubmitButton>Save</SubmitButton>
     </ActionForm>
